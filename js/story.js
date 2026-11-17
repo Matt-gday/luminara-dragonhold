@@ -26,7 +26,7 @@ const STORY = (() => {
   // ------------------------------------------------------------------ shared helpers for chapter scripts
   const say = (w, t) => G.say(w, t), think = t => G.think(t), nar = (t, o) => G.narrate(t, o);
   const L = t => G.say('luminara', t);
-  function journalAdd(key) { if (!G.S.journal.includes(key)) { G.S.journal.push(key); G.toast('New journal entry', 'writ'); G.tipLater('journal'); } }
+  function journalAdd(key) { if (!G.S.journal.includes(key)) { G.S.journal.push(key); G.notice('New journal entry', 'writ', { kind: 'journal', desc: ENTRIES[key] ? `<i>${ENTRIES[key][0].replace(/\{friend\}/g, G.S.friendName)}</i> · read it in Quests → Journal` : '' }); G.tipLater('journal'); } }
   function pick(list) { return list[Math.floor(Math.random() * list.length)]; }
   function startQuest(id) { if (!G.S.q[id]) G.questStart(id); }
   function finishQuest(id, xp) { if (G.S.q[id] === 'done') return; if (!G.S.q[id]) G.S.q[id] = 'active'; G.questDone(id, xp); }
@@ -44,7 +44,7 @@ const STORY = (() => {
     if (t.pickup === 'leaf') {
       const id = t.o.leafId; if (G.S.leaves.includes(id)) return;
       G.S.leaves.push(id); G.sfx('pick'); G.refresh();
-      G.toast(`Golden Leaf (${G.S.leaves.length}/${LEAVES.length})`, 'goldLeaf'); G.addXP(5, true);
+      G.notice(`Golden Leaf (${G.S.leaves.length} of ${LEAVES.length})`, 'goldLeaf', { kind: 'item' }); G.addXP(5, true);
       if (!G.S.q.leaves) await think('A golden leaf! How lucky. It practically glows.');
       return;
     }

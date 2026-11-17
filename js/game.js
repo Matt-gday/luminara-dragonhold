@@ -170,14 +170,14 @@ const G = (() => {
     if (dialog) { dialogKey(k); return; }
     if (flapGame && (k === 'jump' || k === 'act')) { flapTap(); return; }
     if (mode !== 'play') return;
-    if (k === 'mute') { AUDIO.setMuted(!AUDIO.muted); toast(AUDIO.muted ? 'Sound off' : 'Sound on'); return; }
+    if (k === 'mute') { AUDIO.setMuted(!AUDIO.muted); toast(AUDIO.muted ? 'Sound off' : 'Sound on', null, null, 3500); return; }
     if (panelOpen()) { if (k === 'esc' || k === 'inv' && curTab === 'inv' || k === 'quest' && curTab === 'quest') closePanel(); else if (k === 'inv') openPanel('inv'); else if (k === 'quest') openPanel('quest'); else if (k === 'map') { if (curTab === 'map') closePanel(); else openPanel('map'); } return; }
     if (k === 'esc') { if (held) setHeld(null); else pauseMenu(); return; }
     if (busy) return;
     if (k === 'inv' && S.flags.hasSatchel) openPanel('inv');
-    else if (k === 'inv') toast('You have no satchel yet.');
+    else if (k === 'inv') toast('You have no satchel yet.', null, null, 3500);
     if (k === 'quest') openPanel('quest');
-    if (k === 'map') { if (S.flags.sawMap) openPanel('map'); else toast("You don't have a map yet."); }
+    if (k === 'map') { if (S.flags.sawMap) openPanel('map'); else toast("You don't have a map yet.", null, null, 3500); }
   });
   window.addEventListener('keyup', e => { const k = KEYMAP[e.code]; if (k) keys[k] = false; });
   window.addEventListener('blur', () => { for (const k in keys) keys[k] = false; });
@@ -293,6 +293,7 @@ const G = (() => {
   function meet(n) { if (!n || !n.name || !S) return; S.met = S.met || {}; S.met[n.def && n.def.nameFn ? '#friend' : n.name] = 1; }
   function hasMet(n) { return !!(S.met && S.met[n.def && n.def.nameFn ? '#friend' : n.name]); }
   function doInteract(it) {
+    clearToasts();
     if (busy) return;
     if (it.type === 'npc') { const n = it.n; meet(n); faceTo(n, player); run(() => STORY.interact({ kind: 'npc', id: n.id, ent: n, act: n.def.act, def: n.def }, held)); }
     else {
@@ -308,7 +309,7 @@ const G = (() => {
   async function run(fn) {
     busy++;
     player.path = [];
-    try { await fn(); await flushTips(); } catch (e) { console.error(e); }
+    try { await fn(); await flushNotices(); await flushTips(); } catch (e) { console.error(e); }
     busy = Math.max(0, busy - 1);
     if (!busy) sceneLines = 0;
     hud();
@@ -330,6 +331,7 @@ const G = (() => {
     if (paused) return;
     S.time += dt;
     if (dialog) updateDialog(dt);
+    if (notices.length && !busy && !dialog && !tipActive && !transitioning && mode === 'play') run(async () => { });
     if (!busy && !dialog && !transitioning && !panelOpen() && !flapGame) {
       if (pressed.act) { const t = facingTarget(); if (t) doInteract(t); }
       if (pressed.jump) tryJump();
@@ -404,7 +406,7 @@ const G = (() => {
           const water = M.ground[ty][tx] === 'water';
           AUDIO.sfx(water ? 'splash' : 'land');
           if (water) for (let i = 0; i < 14; i++) particles.push({ kind: 'drop', x: p.x, y: p.y - 2, vx: (Math.random() - 0.5) * 60, vy: -40 - Math.random() * 50, t: 0.6 });
-          p.x = lastSafe.x; p.y = lastSafe.y; toast(water ? 'Splash! Jump from closer to the edge.' : 'Oof! Not quite far enough.');
+          p.x = lastSafe.x; p.y = lastSafe.y; toast(water ? 'Splash! Jump from closer to the edge.' : 'Oof! Not quite far enough.', null, null, 3500);
         }
       }
     } else if (!inLowTile(p.x, p.y) && !boxBlocked(p.x, p.y, false, player)) { lastSafe = { x: p.x, y: p.y }; }
@@ -463,7 +465,7 @@ const G = (() => {
 
   function raiseLight() {
     if (!S.flags.lanternLit) return;
-    if (S.light < 1) { AUDIO.sfx('no'); toast('Your lantern needs a moment to brighten again.'); return; }
+    if (S.light < 1) { AUDIO.sfx('no'); toast('Your lantern needs a moment to brighten again.', null, null, 3500); return; }
     S.light--; lightRegen = 0; hud();
     AUDIO.sfx('flash'); fx.push({ kind: 'flash', x: player.x, y: player.y - 14, t: 0.6, r: 0 });
     const R = 70 + S.lvl * 4 + (S.flags.sunstone ? 30 : 0);
@@ -874,7 +876,8 @@ const G = (() => {
     if (extra) return Object.assign({ ent: null }, extra);
     return { name: who, color: '#7a5530', voice: 1, ent: null };
   }
-  function say(who, text, opts = {}) {
+  async function say(who, text, opts = {}) { await flushNotices(); return sayNow(who, text, opts); }
+  function sayNow(who, text, opts = {}) {
     return new Promise(res => {
       const info = speakerInfo(who);
       if (info.ent && info.ent !== player && info.ent.def && Math.hypot(info.ent.x - player.x, info.ent.y - player.y) < 90) meet(info.ent);
@@ -892,7 +895,8 @@ const G = (() => {
     });
   }
   function think(text) { return say('luminara', text, { think: true }); }
-  function narrate(text, opts = {}) {
+  async function narrate(text, opts = {}) { await flushNotices(); return narrateNow(text, opts); }
+  function narrateNow(text, opts = {}) {
     return new Promise(res => {
       const el = document.createElement('div'); el.className = 'narr' + (opts.big ? ' big' : '');
       const body = document.createElement('div'); el.appendChild(body);
@@ -903,9 +907,10 @@ const G = (() => {
       el.addEventListener('pointerdown', e => { e.stopPropagation(); dialogKey('act'); });
     });
   }
-  function choice(who, text, options) {
+  async function choice(who, text, options) {
+    await flushNotices();
     return new Promise(res => {
-      say(who, text).then(() => {});
+      sayNow(who, text).then(() => {});
       const d = dialog; d.choiceRes = res; d.options = options; d.sel = 0;
     });
   }
@@ -1022,8 +1027,13 @@ const G = (() => {
     const el = t && document.querySelector(t); if (!el || !el.offsetParent) return null;
     const r = el.getBoundingClientRect(); return { x: r.left - sr.left, y: r.top - sr.top, w: r.width, h: r.height };
   }
-  function tip(id) {
-    if (!S || tipSeen(id) || !TIPS[id]) return Promise.resolve();
+  async function tip(id) {
+    if (!S || tipSeen(id) || !TIPS[id]) return;
+    await flushNotices();
+    if (tipSeen(id)) return;
+    return tipNow(id);
+  }
+  function tipNow(id) {
     S.flags['tip_' + id] = 1; tipQueue = tipQueue.filter(t => t !== id);
     if (DBG.auto) return Promise.resolve();
     const d = TIPS[id](); hud();
@@ -1082,39 +1092,78 @@ const G = (() => {
     $('hud').querySelectorAll('.row')[1].style.display = S.flags.lanternLit ? 'flex' : 'none';
     const lb = document.querySelector('#tbtns [data-b=light]'); if (lb) lb.style.display = S.flags.lanternLit ? '' : 'none';
   }
-  function toast(text, iconName, cls) {
+  // Small hints. They stay until tapped, or until the player's next action (or 20 seconds).
+  function toast(text, iconName, cls, ms) {
     const el = document.createElement('div'); el.className = 'toast' + (cls ? ' ' + cls : '');
     if (iconName && GFX.ICONS[iconName]) { const c = GFX.cnv(16, 16); c.getContext('2d').drawImage(GFX.ICONS[iconName], 0, 0); el.appendChild(c); }
     const sp = document.createElement('span'); sp.innerHTML = fmt(text); el.appendChild(sp);
-    $('toasts').appendChild(el); setTimeout(() => el.remove(), 3300);
+    const x = document.createElement('b'); x.className = 'tx'; x.textContent = '×'; el.appendChild(x);
+    el.born = performance.now();
+    el.addEventListener('pointerdown', e => { e.stopPropagation(); el.remove(); });
+    const box = $('toasts'); box.appendChild(el); while (box.children.length > 3) box.firstChild.remove();
+    setTimeout(() => el.remove(), ms || 20000);
+  }
+  function clearToasts(minAge = 1500) { const now = performance.now(); for (const el of [...$('toasts').children]) if (now - el.born > minAge) el.remove(); }
+
+  // Important news (quests, items, levels, journal, coins): collected, then shown together on a card
+  // that waits for the player to tap Continue, so nothing vanishes before it has been read.
+  let notices = [];
+  function notice(text, icon, o = {}) { notices.push(Object.assign({ text, icon }, o)); }
+  function iconHTML(name) { return name && GFX.ICONS[name] ? `<img class="nic" src="${GFX.ICONS[name].toDataURL ? GFX.ICONS[name].toDataURL() : ''}">` : '<span class="nic"></span>'; }
+  async function flushNotices() {
+    if (!notices.length || mode !== 'play') return;
+    const list = notices.splice(0);
+    if (DBG.auto) return;
+    while (tipActive) await wait(50);
+    const order = { quest: 0, done: 1, lvl: 2 }, rank = n => order[n.kind] ?? 3;
+    list.sort((a, b) => rank(a) - rank(b));
+    const big = list.find(n => n.kind === 'quest' || n.kind === 'done' || n.kind === 'lvl');
+    const title = big ? (big.kind === 'quest' ? (big.side ? 'New side story' : 'New quest') : big.kind === 'done' ? 'Quest complete!' : 'Level up!') : list.some(n => n.kind === 'item') ? 'In your satchel' : 'Good news';
+    let h = '';
+    for (const n of list) {
+      h += `<div class="nrow ${n.kind || ''}">${iconHTML(n.icon)}<div><div class="nt">${fmt(n.text)}</div>${n.tag ? `<span class="ntag ${n.side ? 'side' : 'main'}">${n.tag}</span>` : ''}${n.desc ? `<div class="nd">${fmt(n.desc)}</div>` : ''}</div></div>`;
+    }
+    if (list.some(n => n.kind === 'quest')) h += `<p class="nfoot">Your goal is always at the top of the screen. Every step is in <b>Quests</b>${isTouch() ? '' : ' (J)'}.</p>`;
+    return new Promise(res => {
+      const layer = document.createElement('div'); layer.className = 'tiplayer ncard-bg';
+      const box = document.createElement('div'); box.className = 'ncard';
+      box.innerHTML = `<h4>${title}</h4><div class="nlist">${h}</div><div class="tipbtns"><button class="primary">Continue ▶</button></div>`;
+      layer.appendChild(box); ui.appendChild(layer);
+      const shown = performance.now();
+      const done = () => { if (performance.now() - shown < 600) return; layer.remove(); tipActive = null; res(); };
+      tipActive = done;
+      box.querySelector('button').onclick = e => { e.stopPropagation(); done(); };
+      layer.addEventListener('pointerdown', e => { e.stopPropagation(); if (e.target !== layer) return; done(); });
+    });
   }
 
   // =================================================================== ITEMS, XP, QUESTS
   function has(id) { return S.inv.includes(id); }
   function give(id, quiet) {
     if (!S.inv.includes(id)) S.inv.push(id);
-    if (!quiet) { AUDIO.sfx('pick'); const it = STORY.ITEMS[id]; toast(`Got <b>${it ? it.name : id}</b>`, it ? it.icon : null); }
+    if (!quiet) { AUDIO.sfx('pick'); const it = STORY.ITEMS[id]; notice(`Got <b>${it ? it.name : id}</b>`, it ? it.icon : null, { kind: 'item', desc: it && it.desc }); }
     hud();
   }
   function take(id) { S.inv = S.inv.filter(i => i !== id); if (held === id) setHeld(null); hud(); }
   function addXP(n, quiet) {
     S.xp += n; tipLater('xp');
-    if (!quiet) toast(`+${n} experience`);
+    if (!quiet) notice(`+${n} experience`, 'star', { kind: 'xp' });
     while (S.lvl < LEVELS.length && S.xp >= LEVELS[S.lvl]) {
       S.lvl++; S.maxHearts = Math.min(8, S.maxHearts + 1); S.maxLight = Math.min(8, S.maxLight + 1); S.hearts = S.maxHearts; S.light = S.maxLight;
-      AUDIO.sfx('level'); toast(`✦ Level ${S.lvl}! Courage and lantern light grow stronger.`, 'lantern', 'lvl');
+      AUDIO.sfx('level'); notice(`✦ Level ${S.lvl}!`, 'lantern', { kind: 'lvl', desc: 'Your courage grows: one more heart.' });
       fx.push({ kind: 'sparkle', x: player.x, y: player.y - 14, t: 1 });
     }
     hud();
   }
-  function addCoins(n) { S.coins += n; tipLater('coins'); if (n > 0) { AUDIO.sfx('coin'); toast(`+${n} copper`, 'coin'); } hud(); }
+  function addCoins(n) { S.coins += n; tipLater('coins'); if (n > 0) { AUDIO.sfx('coin'); notice(`+${n} copper`, 'coin', { kind: 'coin' }); } hud(); }
   function questStart(id) {
     if (S.q[id]) return; S.q[id] = 'active'; AUDIO.sfx('quest');
-    const q = STORY.QUESTS[id]; toast(`New quest: <b>${q.title}</b>`, 'writ'); hud();
+    const q = STORY.QUESTS[id], first = q.steps && q.steps[0];
+    notice(`<b>${q.title}</b>`, 'writ', { kind: 'quest', side: !!q.side, tag: q.side ? 'Side story · optional' : 'Main quest', desc: q.desc + (first ? `<br>First: ${first.t}.` : '') }); hud();
   }
   function questDone(id, xp) {
     if (S.q[id] === 'done') return; S.q[id] = 'done'; AUDIO.sfx('done');
-    const q = STORY.QUESTS[id]; toast(`Quest complete: <b>${q.title}</b>`, 'sealedWrit');
+    const q = STORY.QUESTS[id]; notice(`<b>${q.title}</b>`, 'sealedWrit', { kind: 'done', side: !!q.side, tag: q.side ? 'Side story complete' : 'Main quest complete' });
     if (xp || q.xp) addXP(xp || q.xp); hud();
   }
   function setHeld(id) {
@@ -1134,7 +1183,7 @@ const G = (() => {
   document.querySelectorAll('#panel header button').forEach(b => b.addEventListener('click', () => { const t = b.dataset.tab; if (t === 'close') closePanel(); else openPanel(t); }));
   document.querySelectorAll('#bar button').forEach(b => b.addEventListener('click', e => {
     e.stopPropagation(); AUDIO.init(); if (busy || dialog) return; const k = b.dataset.k;
-    if (k === 'inv') { if (S.flags.hasSatchel) openPanel('inv'); else toast('You have no satchel yet.'); }
+    if (k === 'inv') { if (S.flags.hasSatchel) openPanel('inv'); else toast('You have no satchel yet.', null, null, 3500); }
     if (k === 'quest') openPanel('quest'); if (k === 'map') openPanel('map'); if (k === 'menu') pauseMenu();
   }));
   function renderPanel() {
@@ -1260,7 +1309,7 @@ const G = (() => {
     const acts = document.createElement('div'); acts.className = 'detail'; acts.style.border = 'none'; acts.style.padding = 0;
     const row = document.createElement('div'); row.className = 'acts';
     const mkb = (t, f) => { const b = document.createElement('button'); b.textContent = t; b.onclick = f; row.appendChild(b); };
-    mkb('Show tips again', () => { resetTips(); closePanel(); toast('Tips will appear again as you play.'); run(() => tip('goal')); });
+    mkb('Show tips again', () => { resetTips(); closePanel(); toast('Tips will appear again as you play.', null, null, 3500); run(() => tip('goal')); });
     acts.appendChild(row); d.appendChild(acts); body.appendChild(d);
     d.querySelector('#oMus').oninput = e => AUDIO.setVolumes(+e.target.value, null);
     d.querySelector('#oSfx').oninput = e => AUDIO.setVolumes(null, +e.target.value);
@@ -1665,7 +1714,7 @@ const G = (() => {
     get S() { return S; }, get M() { return M; }, get player() { return player; }, get held() { return held; }, T,
     say, think, narrate, choice, wait, fade, go, toast, give, take, has, addXP, addCoins, questStart, questDone, setHeld, emote,
     npc, walk: walkNPC, fly: flyNPC, addNPC, removeNPC, refresh, camTo, faceTo, setParty, showCredits, cargoPuzzle: () => cargoPuzzle(),
-    sfx: (n, a) => AUDIO.sfx(n, a), music: n => AUDIO.music(n), hud, shake: (t = 0.4) => { shakeT = t; },
+    notice, sfx: (n, a) => AUDIO.sfx(n, a), music: n => AUDIO.music(n), hud, shake: (t = 0.4) => { shakeT = t; },
     fx: f => fx.push(f), particles: p => particles.push(p), get followers() { return followers; }, loadMap, save,
     dbg: DBG, flapMini: (n, o) => flapMini(n, o), openPanel, tip, tipLater, chapterSummary,
     face(who, dir) { const e = entityById(who); if (e) e.dir = dir; }, entity: entityById, get time() { return time; },

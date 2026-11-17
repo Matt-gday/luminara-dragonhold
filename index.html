@@ -75,6 +75,24 @@ html,body{height:100%;background:#0b0810;overflow:hidden;color:var(--ink);
   animation:toast 3.2s forwards;white-space:nowrap;display:flex;align-items:center;gap:8px}
 .toast canvas{image-rendering:pixelated;width:calc(var(--fs)*1.6);height:calc(var(--fs)*1.6)}
 .toast.lvl{background:#fff2b0;border-color:#b8860b}
+.toast{pointer-events:auto;cursor:pointer}.toast .tx{opacity:.45;margin-left:8px;font-weight:normal}
+.ncard-bg{background:rgba(10,8,20,.35);display:flex;align-items:center;justify-content:center}
+.ncard{width:min(86%,440px);max-height:90%;display:flex;flex-direction:column;background:var(--parch);border:4px solid var(--gold);border-radius:10px;padding:10px 14px;font-size:calc(var(--fs)*.95);box-shadow:0 6px 0 rgba(0,0,0,.45);animation:npop .25s ease-out}
+@keyframes npop{from{transform:scale(.85);opacity:0}to{transform:none;opacity:1}}
+.ncard h4{font-size:calc(var(--fs)*1.25);margin-bottom:6px;color:#7a4a10;text-align:center}
+.ncard .nlist{overflow:auto;min-height:0;flex:1 1 auto}
+.ncard .nrow{display:flex;gap:10px;align-items:flex-start;padding:5px 0;border-top:2px dashed rgba(90,60,30,.18)}
+.ncard .nrow:first-of-type{border-top:0}
+.ncard .nic{width:calc(var(--fs)*2);height:calc(var(--fs)*2);image-rendering:pixelated;flex:none}
+.ncard .nt{font-size:calc(var(--fs)*1.05)}
+.ncard .nd{opacity:.8;line-height:1.3;margin-top:2px;font-size:calc(var(--fs)*.88)}
+.ncard .ntag{display:inline-block;font-size:calc(var(--fs)*.72);padding:0 6px;border-radius:5px;color:#fff;background:#b8860b;margin-top:1px}
+.ncard .ntag.side{background:#3a7a5a}
+.ncard .nrow.lvl .nt{color:#9a6a00}
+.ncard .nfoot{font-size:calc(var(--fs)*.8);opacity:.75;margin-top:6px;text-align:center}
+.ncard .tipbtns{display:flex;justify-content:center;margin-top:8px;flex:none}
+@media (max-height:500px){.ncard{padding:6px 12px}.ncard h4{margin-bottom:2px}.ncard .nrow{padding:3px 0}.ncard .nfoot{margin-top:2px}}
+.ncard button{font:inherit;font-size:var(--fs);padding:4px 18px;border:3px solid var(--edge);border-radius:8px;cursor:pointer;color:var(--ink)}
 @keyframes toast{0%{opacity:0;transform:translateY(-10px)}8%{opacity:1;transform:none}85%{opacity:1}100%{opacity:0}}
 
 /* ---------- toolbar ---------- */

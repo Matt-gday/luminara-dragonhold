@@ -116,7 +116,7 @@
 
   // ================================================================ THE COTTAGE
   ACT.satchelPick = async () => {
-    F().hasSatchel = true; G.sfx('pick'); G.toast('Got your <b>Satchel</b>', 'satchel'); G.refresh();
+    F().hasSatchel = true; G.sfx('pick'); G.notice('Got your <b>Satchel</b>', 'satchel', { kind: 'item', desc: 'Everything you pick up goes in here.' }); G.refresh();
     await think('My trusty leather satchel. Now I can carry things!');
     await G.tip('satchel');
     await checkMorning();
@@ -464,7 +464,7 @@
       await say('vB', "Here's what I promised: a light shared is a light doubled. Your mother used to say that, you know. She sewed by my window when you were small.");
       await say('vB', "And this… she left it on my windowsill the last time she came. I've kept it safe for you all these years.");
       G.give('thimble'); G.S.maxHearts = Math.min(9, G.S.maxHearts + 1); G.S.hearts = G.S.maxHearts; G.hud();
-      G.toast("Mother's thimble gives you courage: <b>+1 heart</b>", 'thimble');
+      G.notice("Mother's thimble gives you courage: <b>+1 heart</b>", 'thimble', { kind: 'lvl' });
       G.addCoins(5); G.questDone('leaves'); journalAdd('maud'); return;
     }
     await say('vB', `${n} golden leaf${n === 1 ? '' : 'ves'} so far! Keep looking — they like quiet corners and the shade of big trees.`);
@@ -576,17 +576,17 @@
 
   // ---- combining
   const COMBOS = {
-    'sugar+teaTin': async () => { G.take('teaTin'); G.take('sugar'); G.sfx('combine'); G.give('teaBlend', true); G.toast('Combined into <b>Sweet Tea Blend</b>', 'teaBlend'); await think('Floral green tea, sweetened with sugar. Just how I like it. Now for the stove!'); },
-    'bentNail+luteString': async () => { G.take('bentNail'); G.take('luteString'); G.sfx('combine'); G.give('hookLine', true); G.toast('Combined into <b>Hook and Line</b>', 'hookLine'); await think("I tied the lute string to the bent nail. A hook and line! Now, the fountain…"); },
-    'lantern+tallow': async () => { G.take('lantern'); G.take('tallow'); G.sfx('combine'); G.give('lanternTallow', true); G.toast('Lantern filled with <b>tallow</b>', 'tallow'); await think('Fresh tallow. Now it just needs a wick.'); },
-    'lantern+wick': async () => { G.take('lantern'); G.take('wick'); G.sfx('combine'); G.give('lanternWick', true); G.toast('New <b>wick</b> threaded', 'wick'); await think('A new wick. Now it just needs tallow.'); },
+    'sugar+teaTin': async () => { G.take('teaTin'); G.take('sugar'); G.sfx('combine'); G.give('teaBlend', true); G.notice('Combined into <b>Sweet Tea Blend</b>', 'teaBlend', { kind: 'item', desc: ITEMS.teaBlend.desc }); await think('Floral green tea, sweetened with sugar. Just how I like it. Now for the stove!'); },
+    'bentNail+luteString': async () => { G.take('bentNail'); G.take('luteString'); G.sfx('combine'); G.give('hookLine', true); G.notice('Combined into <b>Hook and Line</b>', 'hookLine', { kind: 'item', desc: ITEMS.hookLine.desc }); await think("I tied the lute string to the bent nail. A hook and line! Now, the fountain…"); },
+    'lantern+tallow': async () => { G.take('lantern'); G.take('tallow'); G.sfx('combine'); G.give('lanternTallow', true); G.notice('Lantern filled with <b>tallow</b>', 'tallow', { kind: 'item', desc: ITEMS.lanternTallow.desc }); await think('Fresh tallow. Now it just needs a wick.'); },
+    'lantern+wick': async () => { G.take('lantern'); G.take('wick'); G.sfx('combine'); G.give('lanternWick', true); G.notice('New <b>wick</b> threaded', 'wick', { kind: 'item', desc: ITEMS.lanternWick.desc }); await think('A new wick. Now it just needs tallow.'); },
     'lanternTallow+wick': async () => { G.take('lanternTallow'); G.take('wick'); readyLantern(); },
     'lanternWick+tallow': async () => { G.take('lanternWick'); G.take('tallow'); readyLantern(); },
     'tallow+wick': async () => { await think("They belong in my lantern. I should combine each of them with the lantern."); },
     'guildKey+strongbox': temptation,
   };
   async function readyLantern() {
-    G.sfx('combine'); G.give('lanternReady', true); F().lanternReady = true; G.toast('Your lantern is <b>ready for the road</b>', 'lantern');
+    G.sfx('combine'); G.give('lanternReady', true); F().lanternReady = true; G.notice('Your lantern is <b>ready for the road</b>', 'lantern', { kind: 'item', desc: ITEMS.lanternReady.desc });
     finishQuest('lantern');
     await think('Tallow and a twisted linen wick. My lantern is ready to light the way through the Dark Forest.');
   }
