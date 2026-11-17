@@ -340,14 +340,16 @@ const G = (() => {
     if (player.invuln > 0) player.invuln -= dt;
     autosaveT += dt; if (autosaveT > 3 && !busy && !dialog && !transitioning) { autosaveT = 0; save(); }
     // camera
-    const tx = player.x - VW / 2, ty = player.y - 12 - VH / 2;
-    cam.x += (tx - cam.x) * Math.min(1, dt * 8); cam.y += (ty - cam.y) * Math.min(1, dt * 8);
-    if (camOverride) { cam.x += (camOverride.x - VW / 2 - cam.x) * Math.min(1, dt * 3); cam.y += (camOverride.y - VH / 2 - cam.y) * Math.min(1, dt * 3); }
+    // the camera follows Luminara, or glides to a point of interest during a scene
+    const tx = camOverride ? camOverride.x - VW / 2 : player.x - VW / 2, ty = camOverride ? camOverride.y - VH / 2 : player.y - 12 - VH / 2;
+    if (camReturn > 0) camReturn -= dt;
+    const rate = camOverride || camReturn > 0 ? 2.6 : 8;
+    cam.x += (tx - cam.x) * Math.min(1, dt * rate); cam.y += (ty - cam.y) * Math.min(1, dt * rate);
     clampCam();
     if (shakeT > 0) shakeT -= dt;
     promptTarget = (!busy && !dialog) ? facingTarget() : null;
   }
-  let camOverride = null;
+  let camOverride = null, camReturn = 0;
   function clampCam() {
     const mw = M.w * T, mh = M.h * T;
     cam.x = mw <= VW ? (mw - VW) / 2 : Math.max(0, Math.min(mw - VW, cam.x));
@@ -924,19 +926,38 @@ const G = (() => {
     const d = dialog; if (!d || d.kind !== 'bubble') return;
     const e = d.ent; let x = VW / 2, y = VH * 0.35;
     if (e) {
-      const h = e === player ? 36 : e.kind === 'critter' ? 12 : e.kind === 'horse' ? 30 : e.kind === 'dragon' ? (e.def && e.def.char === 'aurelina' ? 52 : 26) : e.kind === 'owl' ? 18 : (e.char ? 26 : 38);
+      const h = e === player ? 36 : e.kind === 'critter' ? 12 : e.kind === 'horse' ? 30 : e.kind === 'dragon' ? 26 : e.kind === 'owl' ? 18 : (e.char ? 26 : 38);
       x = e.x - cam.x; y = e.y - h - (e.z || 0) - cam.y + ((e.def && e.def.perch) || 0) - (e.char ? 10 : 0);
     }
     const W = stage.clientWidth, H = stage.clientHeight;
     let px = x * scale, py = y * scale;
     const bw = d.el.offsetWidth, bh = d.el.offsetHeight;
+    // is the speaker (their head and feet) actually visible on screen?
+    const feetY = e ? (e.y - cam.y) * scale : py;
+    const offscreen = e && (px < 0 || px > W || feetY < 0 || py > H);
+    d.el.classList.toggle('off', !!offscreen);
+    let arrow = d.el.querySelector('.offarrow');
+    if (offscreen) {
+      // keep the whole bubble on screen, at the edge nearest the speaker, with an arrow pointing their way
+      const barH = ($('bar').offsetHeight || 0) + 24, top = 40, M = 14;
+      const cx = Math.max(bw / 2 + M + 20, Math.min(W - bw / 2 - M - 20, px));
+      const cy = Math.max(top + bh / 2 + 20, Math.min(H - barH - bh / 2 - 20, py));
+      d.el.classList.remove('below');
+      d.el.style.left = cx + 'px'; d.el.style.top = (cy + bh / 2) + 'px';
+      if (!arrow) { arrow = document.createElement('div'); arrow.className = 'offarrow'; arrow.textContent = '➤'; d.el.appendChild(arrow); }
+      const dx = px - cx, dy = py - cy, len = Math.hypot(dx, dy) || 1, ux = dx / len, uy = dy / len;
+      const t = Math.min((bw / 2 + 4) / Math.max(0.001, Math.abs(ux)), (bh / 2 + 4) / Math.max(0.001, Math.abs(uy)));
+      arrow.style.left = (bw / 2 + ux * t) + 'px'; arrow.style.top = (bh / 2 + uy * t) + 'px';
+      arrow.style.setProperty('--rot', Math.atan2(uy, ux) + 'rad');
+      return;
+    }
+    if (arrow) arrow.remove();
     let below = py - bh - 16 < 4;
-    if (below) py = py + (e === player || !e ? 40 : 40) * scale;
+    if (below) py = py + 40 * scale;
     const cx = Math.max(bw / 2 + 6, Math.min(W - bw / 2 - 6, px));
     d.el.classList.toggle('below', below);
     d.el.style.left = cx + 'px'; d.el.style.top = (below ? py : py - 6) + 'px';
     d.el.style.setProperty('--tail', Math.max(14, Math.min(bw - 14, bw / 2 + (px - cx))) + 'px');
-    if (py > H) d.el.style.top = (H - 10) + 'px';
   }
 
   // =================================================================== HUD, TOASTS
@@ -1201,7 +1222,7 @@ const G = (() => {
   function flyNPC(id, px, py, speed = 60) { const n = npc(id); return new Promise(res => { n.speed = speed; n.path = [{ x: px, y: py }]; n.onArrive = res; n.ghost = true; }); }
   function addNPC(d) { const n = makeNPC(d); n.dynamic = true; npcs.push(n); return n; }
   function removeNPC(id) { npcs = npcs.filter(n => n.id !== id); }
-  function camTo(x, y) { camOverride = x == null ? null : { x, y }; return wait(700); }
+  function camTo(x, y) { if (x == null && camOverride) camReturn = 1.2; camOverride = x == null ? null : { x, y }; return wait(x == null ? 900 : 1100); }
 
   // =================================================================== FLAP MINI-GAME
   let flapMini = function (target = 4, opts = {}) {

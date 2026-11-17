@@ -254,8 +254,11 @@ const STORY = (() => {
   async function arriveTown() {
     F().arrivedTown = true;
     await nar('She arrived at Kraxenville. She heard much chatter from the local villagers. There were young children playing ball on the grassy area near the front entrance.');
+    // glide the camera over to the market square so we can see who is calling out
+    G.camTo(25.5 * 16, 19 * 16); await G.wait(900);
     await say('marigold', 'Fresh nectarines! Picked this morning!');
     await say('osric', 'Come, see what we have brought in from Lesterfield today!');
+    await G.camTo(null);
     await think("My tummy's rumbling after that long walk. The Cookshop is down the alley, south of the market square.");
   }
   ACT.baker = async (t) => {
