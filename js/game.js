@@ -288,9 +288,13 @@ const G = (() => {
   }
 
   // =================================================================== INTERACTION
+  // who Luminara has actually talked to (shown as name tags on hover / when facing them)
+  function npcName(n) { return n.def && n.def.nameFn ? S.friendName : n.name; }
+  function meet(n) { if (!n || !n.name || !S) return; S.met = S.met || {}; S.met[n.def && n.def.nameFn ? '#friend' : n.name] = 1; }
+  function hasMet(n) { return !!(S.met && S.met[n.def && n.def.nameFn ? '#friend' : n.name]); }
   function doInteract(it) {
     if (busy) return;
-    if (it.type === 'npc') { const n = it.n; faceTo(n, player); run(() => STORY.interact({ kind: 'npc', id: n.id, ent: n, act: n.def.act, def: n.def }, held)); }
+    if (it.type === 'npc') { const n = it.n; meet(n); faceTo(n, player); run(() => STORY.interact({ kind: 'npc', id: n.id, ent: n, act: n.def.act, def: n.def }, held)); }
     else {
       const o = it.o;
       run(() => STORY.interact({ kind: 'obj', id: o.id, o, act: o.act, look: o.look, pickup: o.pickup, enter: o.enter, door: o.door }, held));
@@ -338,7 +342,7 @@ const G = (() => {
     updateParticles(dt);
     if (flapGame) updateFlap(dt);
     // regen
-    lightRegen += dt; if (lightRegen > 7) { lightRegen = 0; if (S.light < S.maxLight) { S.light++; hud(); } }
+    lightRegen += dt; if (lightRegen > (S.flags.sunstone ? 4.5 : 7)) { lightRegen = 0; if (S.light < S.maxLight) { S.light++; hud(); } }
     heartRegen += dt; if (heartRegen > 18) { heartRegen = 0; if (S.hearts < S.maxHearts && player.invuln <= 0) { S.hearts++; hud(); } }
     if (player.invuln > 0) player.invuln -= dt;
     autosaveT += dt; if (autosaveT > 3 && !busy && !dialog && !transitioning) { autosaveT = 0; save(); }
@@ -458,7 +462,7 @@ const G = (() => {
     if (S.light < 1) { AUDIO.sfx('no'); toast('Your lantern needs a moment to brighten again.'); return; }
     S.light--; lightRegen = 0; hud();
     AUDIO.sfx('flash'); fx.push({ kind: 'flash', x: player.x, y: player.y - 14, t: 0.6, r: 0 });
-    const R = 70 + S.lvl * 4;
+    const R = 70 + S.lvl * 4 + (S.flags.sunstone ? 30 : 0);
     for (const g of goblins) if (!g.gone && Math.hypot(g.x - player.x, g.y - player.y) < R) scareGoblin(g);
     if (STORY.onFlash) run(() => STORY.onFlash());
   }
@@ -600,6 +604,7 @@ const G = (() => {
       if (f.kind === 'beam') { ctx.fillStyle = `rgba(255,255,240,${Math.min(0.8, f.t)})`; ctx.fillRect(f.x - f.w / 2, f.y, f.w, f.h); }
     }
     // interaction prompt
+    updateNameTag();
     if (promptTarget && !held) drawPrompt(promptTarget);
     if (held && promptTarget) drawPrompt(promptTarget, true);
     ctx.restore();
@@ -752,6 +757,17 @@ const G = (() => {
     pat.forEach((row, j) => [...row].forEach((ch, i) => { if (ch === '#') ctx.fillRect(x + 2 + i, y + 1 + j, 1, 1); }));
     ctx.fillStyle = '#1c1424'; ctx.fillRect(x + 4, y + 8, 2, 2);
   }
+  function updateNameTag() {
+    const el = $('nameTag');
+    const it = !dialog && !busy && !tipActive && !panelOpen() ? ((hoverTarget && hoverTarget.type === 'npc' && hoverTarget) || (promptTarget && promptTarget.type === 'npc' && promptTarget)) : null;
+    if (!it || it.n.hidden) { el.style.display = 'none'; return; }
+    const n = it.n, met = hasMet(n);
+    const h = n.kind === 'horse' ? 34 : n.kind === 'critter' ? 16 : n.kind === 'owl' ? 20 : n.kind === 'dragon' ? 30 : 42;
+    el.textContent = met ? npcName(n) : '?';
+    el.style.background = met ? (n.color || (n.def && n.def.color) || '#7a5530') : '#6a6070';
+    el.style.left = ((n.x - cam.x) * scale) + 'px'; el.style.top = ((n.y - h - cam.y + ((n.def && n.def.perch) || 0)) * scale) + 'px';
+    el.style.display = 'block';
+  }
   function drawPrompt(it, usingItem) {
     let x = it.x + it.w / 2, y = it.y - 6;
     if (it.type === 'npc') { const n = it.n; y = n.y - (n.kind === 'horse' ? 32 : n.kind === 'dragon' ? 26 : n.kind === 'critter' ? 14 : 38) + (n.def.perch || 0); x = n.x; }
@@ -852,6 +868,7 @@ const G = (() => {
   function say(who, text, opts = {}) {
     return new Promise(res => {
       const info = speakerInfo(who);
+      if (info.ent && info.ent !== player && info.ent.def && Math.hypot(info.ent.x - player.x, info.ent.y - player.y) < 90) meet(info.ent);
       const el = document.createElement('div');
       el.className = 'bubble' + (opts.think ? ' think' : '');
       if (!opts.think) el.innerHTML = `<span class="who" style="--who:${info.color}">${info.name}</span>`;
@@ -1154,13 +1171,14 @@ const G = (() => {
     const tree = (id, depth) => {
       const q = STORY.QUESTS[id]; const stt = S.q[id]; if (!stt) return null;
       const el = document.createElement('div'); el.className = 'q' + (stt === 'done' ? ' done' : '') + (depth ? ' sub' : '');
-      el.innerHTML = `<h4>${q.title}${depth === 0 ? '<span class="tag">' + (q.tag || 'Main quest') + '</span>' : ''}</h4><div class="d">${fmt(q.desc)}${q.giver ? ' — <i>' + q.giver + '</i>' : ''}</div>`;
+      el.innerHTML = `<h4>${q.title}${depth === 0 ? (q.side ? '<span class="tag side">Side story · optional</span>' : '<span class="tag main">Main story</span>') : ''}</h4><div class="d">${fmt(q.desc)}${q.giver ? ' — <i>' + q.giver + '</i>' : ''}</div>`;
       if (q.steps && stt !== 'done') { const ul = document.createElement('ul'); q.steps.forEach(s => { if (s.hide && s.hide(S)) return; const ok = s.done(S); const li = document.createElement('li'); li.className = ok ? 'ok' : ''; li.textContent = (ok ? '✓ ' : '◇ ') + s.t; ul.appendChild(li); }); el.appendChild(ul); }
       for (const cid of Object.keys(STORY.QUESTS)) if (STORY.QUESTS[cid].parent === id) { const c = tree(cid, depth + 1); if (c) el.appendChild(c); }
       return el;
     };
     const roots = Object.keys(STORY.QUESTS).filter(id => !STORY.QUESTS[id].parent);
-    const active = roots.filter(r => S.q[r] === 'active'), done = roots.filter(r => S.q[r] === 'done');
+    const sideLast = (a, b) => (STORY.QUESTS[a].side ? 1 : 0) - (STORY.QUESTS[b].side ? 1 : 0);
+    const active = roots.filter(r => S.q[r] === 'active').sort(sideLast), done = roots.filter(r => S.q[r] === 'done').sort(sideLast);
     [...active, ...done].forEach(r => { const e = tree(r, 0); if (e) wrap.appendChild(e); });
     if (!wrap.children.length) wrap.innerHTML = '<p>No quests yet. Look around — someone will need your help soon.</p>';
     body.appendChild(wrap);
@@ -1240,6 +1258,12 @@ const G = (() => {
     d.querySelector('#oMute').onchange = e => AUDIO.setMuted(e.target.checked);
   }
 
+  // =================================================================== CHAPTER SUMMARY
+  function chapterSummary(html) {
+    if (DBG.auto) { const pr = modal({ title: 'Chapter One — Your Story', wide: true, html, buttons: [{ label: 'Continue ▶', value: true, primary: true }] }); setTimeout(() => { const b = document.querySelector('.modal.wide .primary'); if (b) b.click(); }, 30); return pr; }
+    return modal({ title: 'Chapter One — Your Story', wide: true, html, escValue: true, buttons: [{ label: 'Continue ▶', value: true, primary: true }] });
+  }
+
   // =================================================================== PAUSE MENU
   let paused = false;
   async function pauseMenu() {
@@ -1249,9 +1273,10 @@ const G = (() => {
     const ago = Math.round((Date.now() - (S.savedAt || Date.now())) / 1000);
     const v = await modal({ title: 'Paused', stack: true, escValue: 'resume',
       html: `<p class="dim">Playing as <b>${esc(S.playerName || 'Player ' + slot)}</b> · Level ${S.lvl} · ${esc(M.name)}<br>✓ Your progress saves automatically${ago < 5 ? ' (just saved)' : ''}.</p>`,
-      buttons: [{ label: 'Resume', value: 'resume', primary: true }, { label: 'Options', value: 'opts' }, { label: 'How to Play', value: 'how' }, { label: 'Players & Saves', value: 'slots' }, { label: 'Back to Title', value: 'title' }] });
+      buttons: [{ label: 'Resume', value: 'resume', primary: true }, { label: 'Options', value: 'opts' }, { label: 'How to Play', value: 'how' }, { label: 'Players & Saves', value: 'slots' }, ...(S.flags.chapter1 ? [{ label: 'Chapter Summary', value: 'sum' }] : []), { label: 'Back to Title', value: 'title' }] });
     paused = false;
     if (v === 'opts') openPanel('opts');
+    if (v === 'sum') { paused = true; await chapterSummary(STORY.summaryHTML(S)); paused = false; }
     if (v === 'how') { paused = true; await modal({ title: 'How to Play', html: HOW, escValue: true, buttons: [{ label: 'Back to the game', value: true, primary: true }] }); paused = false; }
     if (v === 'slots') { save(); toTitle(); showSlots(); }
     if (v === 'title') { save(); toTitle(); }
@@ -1352,7 +1377,7 @@ const G = (() => {
   function modal(o) {
     return new Promise(res => {
       const bg = document.createElement('div'); bg.className = 'modal-bg';
-      const box = document.createElement('div'); box.className = 'modal' + (o.stack ? ' stack' : ''); bg.appendChild(box);
+      const box = document.createElement('div'); box.className = 'modal' + (o.stack ? ' stack' : '') + (o.wide ? ' wide' : ''); bg.appendChild(box);
       box.innerHTML = `<h3>${o.title}</h3>${o.html || ''}${o.input ? `<input class="modal-in" maxlength="16" value="${esc(o.input)}">` : ''}`;
       const row = document.createElement('div'); row.className = 'modal-btns'; box.appendChild(row);
       const inp = box.querySelector('.modal-in');
@@ -1501,6 +1526,12 @@ const G = (() => {
     held = null; setHeld(null); followers = [];
     if (saved) {
       S = Object.assign(newState(), saved);
+      if (!S.met) { // saves from before name tags: work out who has already been met
+        const f = S.flags, m = S.met = {}, add = (c, ...names) => { if (c) names.forEach(n => m[n] = 1); };
+        add(f.metHollis, 'Guildmaster Hollis'); add(f.metFredrick, 'Fredrick'); add(f.metFriend, '#friend', 'Brenna'); add(f.knowFountain, 'Bertram');
+        add(f.needLordPie, 'Pemberton'); add(f.gateOpen, 'Lord Aldermere'); add(f.pieBought, 'Mistress Pell'); add(f.askedMarigold || f.marigoldThanked, 'Marigold');
+        add(f.osricTrade, 'Osric'); add(f.caravanLeft, 'Tobias'); add(f.kidsAsked || f.ballReturned, 'Pip', 'Nell'); add(S.q.leaves, 'Old Maud'); add(f.owlHoot, 'Old Hoots');
+      }
       loadMap(S.map, { x: S.x, y: S.y, dir: S.dir });
       if (S.followers && S.followers.length) setFollowers(S.followers);
       hud();
@@ -1537,7 +1568,7 @@ const G = (() => {
     },
     place(tx, ty, dir) { player.x = tx * T + 8; player.y = ty * T + 12; if (dir) player.dir = dir; lastSafe = { x: player.x, y: player.y }; },
     jump() { tryJump(); }, keys, get busy() { return busy; }, get dialog() { return !!dialog; }, combine: (a, b) => run(() => STORY.combine(a, b)),
-    get player() { return player; }, get npcs() { return npcs; }, get mode() { return mode; }, walkable, findPath, tileAt,
+    cam: () => ({ x: cam.x, y: cam.y }), get player() { return player; }, get npcs() { return npcs; }, get mode() { return mode; }, walkable, findPath, tileAt,
   };
   // auto-advance dialogue during automated tests
   const _upd = updateDialog;
@@ -1555,7 +1586,7 @@ const G = (() => {
     npc, walk: walkNPC, fly: flyNPC, addNPC, removeNPC, refresh, camTo, faceTo, setFollowers, showCredits,
     sfx: (n, a) => AUDIO.sfx(n, a), music: n => AUDIO.music(n), hud, shake: (t = 0.4) => { shakeT = t; },
     fx: f => fx.push(f), particles: p => particles.push(p), get followers() { return followers; }, loadMap, save,
-    dbg: DBG, flapMini: (n, o) => flapMini(n, o), openPanel, tip, tipLater,
+    dbg: DBG, flapMini: (n, o) => flapMini(n, o), openPanel, tip, tipLater, chapterSummary,
     face(who, dir) { const e = entityById(who); if (e) e.dir = dir; }, entity: entityById, get time() { return time; },
   };
 

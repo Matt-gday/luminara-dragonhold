@@ -29,13 +29,16 @@ const STORY = (() => {
     oil: { name: 'Flask of Lamp Oil', icon: 'oil', desc: 'Good lamp oil from the Iron Cauldron. Combine it with your lantern.' },
     bread: { name: 'Fresh Loaf', icon: 'bread', desc: '"You never know who might be hungry out there." — {friend}' },
     feather: { name: 'Owl Feather', icon: 'feather', desc: "A soft feather from Old Hoots. Your lantern seems to shine a little further while you carry it." },
+    thimble: { name: "Mother's Silver Thimble", icon: 'thimble', desc: "Mother's silver thimble, left at Old Maud's window long ago. Carrying it gives you courage: +1 heart.", self: true, selfLabel: 'Hold it close' },
+    honeyCake: { name: 'Honey Cake', icon: 'honeyCake', desc: 'A sticky honey cake from Mistress Pell. Eating it restores all your hearts.', self: true, selfLabel: 'Eat' },
+    sunstone: { name: 'Sunstone Charm', icon: 'sunstone', desc: "A warm golden stone from the far south. Your raised lantern shines further, and its light comes back faster.", self: true, selfLabel: 'Hold it up' },
     ball: { name: "Children's Ball", icon: 'ball', desc: "Pip and Nell's ball. It's a bit scuffed from the tree." },
   };
 
   // ------------------------------------------------------------------ QUESTS
   const allMorning = s => s.flags.cloak && s.flags.hasSatchel && s.flags.gotCompass && s.flags.hasLantern && s.flags.teaDrunk;
   const QUESTS = {
-    morning: { title: 'A New Dawn', tag: 'Chapter One', desc: 'Get ready for the day ahead.', xp: 15, steps: [
+    morning: { title: 'A New Dawn', desc: 'Get ready for the day ahead.', xp: 15, steps: [
       { t: 'Find your satchel', done: s => s.flags.hasSatchel },
       { t: 'Put on the blue cloak Mother made', done: s => s.flags.cloak },
       { t: "Take Father's compass from the safekeeping box", done: s => s.flags.gotCompass },
@@ -43,11 +46,13 @@ const STORY = (() => {
       { t: 'Make a cup of sweet green tea', done: s => s.flags.teaMade },
       { t: 'Drink it outside while the sun rises', done: s => s.flags.teaDrunk },
     ] },
-    totown: { title: 'Into Kraxenville', tag: 'Chapter One', desc: 'Walk into town and visit the guild.', xp: 15, steps: [
+    totown: { title: 'Into Kraxenville', desc: 'Walk into town and visit the guild.', xp: 15, steps: [
       { t: 'Walk the leafy lane to Kraxenville', done: s => s.flags.arrivedTown },
-      { t: 'Buy a hot pie at the Cookshop (south of the market)', done: s => s.flags.pieBought },
-      { t: 'Eat it on the bench by the fountain', done: s => s.flags.pieEaten },
       { t: "Visit the Merchants' Guild", done: s => s.flags.metHollis },
+    ] },
+    pie: { title: 'A Hot Pie & a Daydream', side: true, desc: "Luminara's tummy is rumbling after the long walk.", xp: 10, steps: [
+      { t: 'Buy a beef and pepper pie at the Cookshop (south of the market)', done: s => s.flags.pieBought },
+      { t: 'Eat it on the bench by the fountain', done: s => s.flags.pieEaten },
     ] },
     lightbearer: { title: 'The Light-Bearer', desc: 'Guide the guild caravan to Lesterfield, safely through the Dark Forest.', giver: 'Guildmaster Hollis', xp: 40, steps: [
       { t: 'Prepare the caravan (three tasks)', done: s => s.flags.caravanReady },
@@ -71,7 +76,7 @@ const STORY = (() => {
       { t: 'Get pepper from Osric', done: s => s.inv.includes('pepper') || s.flags.pepperGiven },
       { t: 'Give the pepper to Mistress Pell', done: s => s.flags.pepperGiven },
     ] },
-    ball: { title: 'The Runaway Ball', tag: 'Side quest', desc: "Pip and Nell's ball is stuck up in the big oak by the north gate.", giver: 'Pip & Nell', xp: 20, steps: [
+    ball: { title: 'The Runaway Ball', side: true, desc: "Pip and Nell's ball is stuck up in the big oak by the north gate.", giver: 'Pip & Nell', xp: 20, steps: [
       { t: 'Get the ball down from the big oak (try jumping!)', done: s => s.flags.ballDown },
       { t: 'Return the ball to Pip and Nell', done: s => s.flags.ballReturned },
     ] },
@@ -79,7 +84,7 @@ const STORY = (() => {
       { t: 'Find some lamp oil (try the Iron Cauldron)', done: s => s.inv.includes('oil') || s.flags.lanternFull },
       { t: 'Fill your lantern (combine the oil with it)', done: s => s.flags.lanternFull },
     ] },
-    thornroad: { title: 'The Thorn Road', tag: 'Chapter One', desc: 'Glowing thorny vines block the forest road. Find out where they come from.', giver: 'Tobias', xp: 50, steps: [
+    thornroad: { title: 'The Thorn Road', desc: 'Glowing thorny vines block the forest road. Find out where they come from.', giver: 'Tobias', xp: 50, steps: [
       { t: 'Jump the log and take the north trail', done: s => s.flags.enteredDeep },
       { t: 'Clear the wall of mist', done: s => s.flags.mistGone },
       { t: 'Find where the vines are growing from', done: s => s.flags.foundHeart },
@@ -92,16 +97,16 @@ const STORY = (() => {
     ] },
     thornheart: { parent: 'thornroad', title: 'The Thornheart', desc: 'A great root of thorns, drinking red light. A young possum is caught in it.', xp: 30, steps: [
       { t: 'Focus your lantern on the Thornheart', done: s => s.flags.heartBurned },
-      { t: 'Help the frightened possum', done: s => s.flags.possumFree },
+      { t: 'Help the frightened possum (optional)', done: s => s.flags.possumFree },
     ] },
-    owl: { title: "The Owl's Riddle", tag: 'Side quest', desc: 'Old Hoots knows something.', xp: 20, steps: [{ t: 'Answer the riddle', done: s => s.flags.owlDone }] },
-    gateway: { title: 'The Gateway', tag: 'Chapter One', desc: 'The vines grew from the west, where the rumoured gateway stands.', giver: 'Aurelina', xp: 50, steps: [
+    owl: { title: "The Owl's Riddle", side: true, desc: 'Old Hoots knows something.', xp: 20, steps: [{ t: 'Answer the riddle', done: s => s.flags.owlDone }] },
+    gateway: { title: 'The Gateway', desc: 'The thorns drank red light from the west, where the rumoured gateway stands.', giver: 'Tobias', xp: 50, steps: [
       { t: 'Follow the west road to the Gateway', done: s => s.flags.sawGateway },
     ] },
-    bard: { title: "The Bard's Song", tag: 'Side quest', desc: 'Fredrick the bard is playing an old tune you know.', xp: 10, steps: [{ t: 'Listen to Fredrick', done: s => s.flags.metFredrick }] },
-    moments: { title: 'Precious Moments', tag: 'Side quest', desc: 'Butterflies rest on the big rocks along the leafy lane.', xp: 20, steps: [
+    bard: { title: "The Bard's Song", side: true, desc: 'Fredrick the bard is playing an old tune you know.', xp: 10, steps: [{ t: 'Listen to Fredrick', done: s => s.flags.metFredrick }] },
+    moments: { title: 'Precious Moments', side: true, desc: 'Butterflies rest on the big rocks along the leafy lane.', xp: 20, steps: [
       { t: 'Watch the butterflies on the Mossy Rock', done: s => s.flags.bf_rock1 }, { t: 'Watch the butterflies on the Big Rock', done: s => s.flags.bf_rock2 }, { t: 'Watch the butterflies on the Sunny Rock', done: s => s.flags.bf_rock3 }] },
-    leaves: { title: 'Golden Leaves', tag: 'Side quest', desc: 'Old Maud says eight lucky golden leaves are hidden around the countryside.', giver: 'Old Maud', xp: 40, steps: [
+    leaves: { title: 'Golden Leaves', side: true, desc: 'Old Maud says eight lucky golden leaves are hidden around the countryside.', giver: 'Old Maud', xp: 40, steps: [
       { t: 'Find all 8 golden leaves', done: s => s.leaves.length >= 8 }, { t: 'Show them to Old Maud', done: s => s.flags.leavesDone }] },
   };
   const TOTAL_LEAVES = 8;
@@ -260,7 +265,8 @@ const STORY = (() => {
     await say('marigold', 'Fresh nectarines! Picked this morning!');
     await say('osric', 'Come, see what we have brought in from Lesterfield today!');
     await G.camTo(null);
-    await think("My tummy's rumbling after that long walk. The Cookshop is down the alley, south of the market square.");
+    await think("My tummy's rumbling after that long walk. The Cookshop is down the alley, south of the market square — but the guild is expecting me too.");
+    if (!G.S.q.pie) G.questStart('pie');
   }
   ACT.baker = async (t) => {
     const f = F();
@@ -269,7 +275,7 @@ const STORY = (() => {
       const c = await G.choice('luminara', 'What shall I have?', ['A beef and pepper pie, please (4 copper)', 'Just looking, thank you']);
       if (c === 1) return say('baker', 'Come back when your tummy rumbles!');
       if (G.S.coins < 4) return say('baker', "Oh dear, that's not quite enough copper.");
-      G.addCoins(-4); f.pieBought = true; G.give('pie');
+      G.addCoins(-4); f.pieBought = true; G.give('pie'); if (!G.S.q.pie) G.questStart('pie');
       await say('baker', "Pepper is expensive these days, but I know it's your favourite.");
       await think("I'll treat myself. I'll eat it on the bench by the fountain.");
       return;
@@ -286,6 +292,11 @@ const STORY = (() => {
     if (f.pepperGiven && !f.gateOpen && !has('lordPie')) { G.give('lordPie'); return say('baker', 'Here you are — fit for a lord!'); }
     const lines = ["Mind the pastry, it's hot!", "The secret is patience. And butter. Mostly butter.", 'Did you hear? They say a door has opened in the Dark Forest. Gives me the shivers.'];
     await say('baker', lines[Math.floor(Math.random() * lines.length)]);
+    if (has('honeyCake')) return;
+    const c = await G.choice('luminara', '*Golden honey cakes are cooling on the counter.*', ['A honey cake, please (2 copper) — restores all hearts', 'No thank you']);
+    if (c !== 0) return;
+    if (G.S.coins < 2) return say('baker', "Oh dear, that's not quite enough copper, love.");
+    G.addCoins(-2); G.give('honeyCake'); await say('baker', 'Good for the heart, and good for courage too. Save it for when you need it!');
   };
   USE.baker = async (item) => {
     if (item !== 'pepper') return false;
@@ -303,12 +314,18 @@ const STORY = (() => {
     await nar('A bench by the fountain. A lovely place to sit and watch Kraxenville go by.');
   };
   async function useSelf(id) {
+    if (id === 'honeyCake') {
+      if (G.S.hearts >= G.S.maxHearts) return think("I'm feeling brave enough right now. I'll save the honey cake for when I need it.");
+      G.take('honeyCake'); G.sfx('munch'); G.S.hearts = G.S.maxHearts; G.hud(); return think('Mmm, sticky and sweet. I feel much braver now!');
+    }
+    if (id === 'thimble') return nar("Luminara held her mother's silver thimble. It was warm from her pocket, and for a moment she could almost hear her mother humming as she sewed.");
+    if (id === 'sunstone') { G.sfx('magic'); return nar('The sunstone glows warm and golden in your hand, like a little piece of a summer afternoon.'); }
     if (id === 'pie') { if (G.M.id === 'town') return eatPie(); return think("I'd rather sit down to eat it properly — the bench by the fountain is perfect."); }
     if (id === 'teaCup') return think("Not yet — I want to drink it in my chair outside, watching the sun rise.");
     if (id === 'compass') { await nar("Luminara held her father's compass close to her heart. The needle trembled, then settled, pointing the way."); return; }
   }
   async function eatPie() {
-    G.take('pie'); F().pieEaten = true; G.sfx('munch');
+    G.take('pie'); F().pieEaten = true; G.sfx('munch'); if (G.S.q.pie !== 'done') { G.S.q.pie = G.S.q.pie || 'active'; G.questDone('pie'); }
     G.S.hearts = G.S.maxHearts; G.hud();
     await nar('Although it was hot and spicy in its flavour, she relished the pie. Its hearty filling broke her long fast. The flavours exploded in her mouth, with gravy seeping out of it.');
     await G.fade(true, 900);
@@ -392,6 +409,12 @@ const STORY = (() => {
     }
     const lines = ['Come, see what we have brought in from Lesterfield today!', 'Silks from Wockville, spices from the south, and the finest pepper in Krax!', "The road from Lesterfield goes through the Dark Forest. I'd not do it without the Light-Bearer, I tell you."];
     await say('osric', lines[Math.floor(Math.random() * lines.length)]);
+    if (has('sunstone') || G.S.q.pepper === 'active') return;
+    const c = await G.choice('luminara', '*A little golden stone glows warmly on his stall.*', ['A sunstone charm (8 copper) — makes your raised lantern stronger', 'Just looking']);
+    if (c !== 0) return;
+    if (G.S.coins < 8) return say('osric', "Eight copper, friend. Come back when your purse is heavier!");
+    G.addCoins(-8); G.give('sunstone'); F().sunstone = true;
+    await say('osric', "Hold it up with your lantern and see how the darkness runs! It soaks up sunshine all day long.");
   };
   USE.osric = async (item) => {
     if (item !== 'nectarines') return false;
@@ -406,7 +429,9 @@ const STORY = (() => {
     if (has('ball')) return USE.kids('ball');
     await say('kid1', "Our ball's stuck up in the big oak tree! It's ever so high.");
     await say('kid2', "You're tall. Can you jump for it? Pleeease?");
+    F().kidsAsked = true;
     if (!G.S.q.ball) G.questStart('ball');
+    await G.tip('jump');
   };
   USE.kids = async (item) => {
     if (item !== 'ball') return false;
@@ -421,7 +446,8 @@ const STORY = (() => {
   };
   ACT.ballTree = async () => {
     if (F().ballDown) return nar('A grand old oak, glowing orange with autumn leaves.');
-    await think(G.S.q.ball ? "Pip and Nell's ball is wedged in the low branches, just out of reach. If I stand right underneath and jump…" : "A ball is wedged in the low branches — it must belong to those two children. If I stand right underneath and jump…");
+    if (!F().kidsAsked) return think('A ball is wedged up in the branches of the old oak. It must belong to those two children on the green.');
+    await think("Pip and Nell's ball is wedged in the low branches, just out of reach. If I stand right underneath and jump…");
     if (G.S.flags.tip_jump) G.toast(document.body.classList.contains('touch') ? 'Tap <b>Jump</b>!' : 'Press <b>Space</b> to jump!'); await G.tip('jump');
   };
   ACT.ballTreeJump = async () => {
@@ -610,6 +636,9 @@ const STORY = (() => {
     f.friendChat = true;
   };
   ACT.innkeeper = async () => {
+    if (G.S.q.oil === 'active' && !has('oil') && !F().lanternFull && !F().metFriend) {
+      return say('innkeeper', "Lamp oil? Your friend {friend} has a flask set aside for you, love — she's been keeping a seat for you by the fire all morning.");
+    }
     if (G.S.q.oil === 'active' && !has('oil') && !F().lanternFull) {
       await say('innkeeper', 'Lamp oil? Of course — for the Light-Bearer, it is on the house.');
       G.give('oil'); return;
@@ -635,6 +664,9 @@ const STORY = (() => {
       f.leavesDone = true;
       await say('vB', 'All eight! Oh, look how they shine. You have the eyes of a true adventurer.');
       await say('vB', "Here's my secret, then: a light shared is a light doubled. Your mother used to say that, you know. She sewed by my window when you were small.");
+      await say('vB', "And this… your mother left it on my windowsill the last time she came. I've kept it safe for you all these years.");
+      G.give('thimble'); G.S.maxHearts = Math.min(9, G.S.maxHearts + 1); G.S.hearts = G.S.maxHearts; G.hud();
+      G.toast("Mother's thimble gives you courage: <b>+1 heart</b>", 'thimble');
       G.addCoins(5); G.questDone('leaves'); journalAdd('maud'); return;
     }
     await say('vB', `${n} golden leaf${n === 1 ? '' : 'ves'} so far! Keep looking — they like quiet corners and the shade of big trees.`);
@@ -673,6 +705,7 @@ const STORY = (() => {
     await L('Then I will light them. And I will find out where these vines are coming from.');
     await say('tobias', "Take care, lass. Clover and I will keep the fire burning till you're back.");
     await think("The north trail leads deep into the forest. A log has fallen across it — I'll have to jump over.");
+    await G.tip('jump');
     f.thornQuest = true;
     G.questStart('thornroad');
     await G.tip('light');
@@ -831,6 +864,7 @@ const STORY = (() => {
     await G.fade(true, 1200);
     await nar('End of Chapter One', { big: true });
     G.save();
+    await G.chapterSummary(summaryHTML(G.S));
     G.showCredits([
       '#Luminara the Light-Bearer', 'Chapter One', '', '',
       '#Story & World', 'Lisa', '', '',
@@ -841,6 +875,60 @@ const STORY = (() => {
     ].map(l => l.replace('{friend}', G.S.friendName)));
     await G.fade(false, 400);
   };
+
+  // ------------------------------------------------------------------ CHAPTER SUMMARY
+  const MAIN_BEATS = [
+    ['A New Dawn', "Luminara set out with her mother's cloak, her father's compass and her golden lantern."],
+    ["The Guild's Three Troubles", "Clover was shod, Lord Aldermere's seal was won with a pepper pie, and the lantern was filled."],
+    ['Stew with {friend}', 'A promise made by the fire: "I will come back and tell you everything."'],
+    ['The Thorn Road', 'Three waystones were lit again, and the Thornheart burned away to dust.'],
+    ['The Gateway', 'Something waits beyond the red door. First, Luminara must find the key.'],
+  ];
+  const SIDE_STORIES = [
+    { title: 'A Hot Pie & a Daydream', done: s => s.flags.pieEaten,
+      yes: 'Luminara treated herself to a beef and pepper pie, and dreamed of riding a fire-breathing dragon.',
+      no: s => s.flags.pieBought ? 'The pie went cold in her satchel, and the daydream of dragons never came.' : 'Luminara went the whole day without breakfast, and never had her daydream of dragons.',
+      miss: 'a daydream and 10 experience' },
+    { title: 'Precious Moments', done: s => s.flags.bf_rock1 && s.flags.bf_rock2 && s.flags.bf_rock3,
+      yes: 'She stopped to watch the butterflies on all three rocks: moments she will always treasure.',
+      no: 'Some of the butterflies fluttered away before Luminara stopped to watch them.',
+      miss: 'a journal memory and 20 experience' },
+    { title: 'The Runaway Ball', done: s => s.flags.ballReturned,
+      yes: 'Pip and Nell got their ball back, and played happily on the green all afternoon.',
+      no: "Pip and Nell's ball stayed stuck in the old oak. The green was very quiet that day.",
+      miss: "Pip's shiny copper and 20 experience" },
+    { title: 'A Wish at the Fountain', done: s => s.flags.wished,
+      yes: 'Luminara wished that everyone she loves would stay safe, always.',
+      no: 'No wish was made at the fountain.', miss: '3 experience' },
+    { title: "Old Maud's Golden Leaves", done: s => s.flags.leavesDone,
+      yes: "Old Maud shared a memory of Luminara's mother, and gave her Mother's silver thimble.",
+      no: s => s.q.leaves ? `Only ${s.leaves.length} of 8 golden leaves were found, so Old Maud's memory of Luminara's mother stays untold.` : "Old Maud never got to share her memory of Luminara's mother.",
+      miss: "Mother's silver thimble (+1 heart), 5 copper and 40 experience" },
+    { title: "The Owl's Riddle", done: s => s.flags.owlDone,
+      yes: 'Old Hoots was pleased with her answer, and gave her a feather to see further in the dark.',
+      no: 'Old Hoots kept his riddle, and his feather, to himself.',
+      miss: 'the Owl Feather and 20 experience' },
+    { title: 'The Little Possum', done: s => s.flags.possumFree,
+      yes: 'The young possum made it safely home, with a full tummy.',
+      no: 'The young possum was left trembling in the hollow. Luminara never knew if it found its way home.',
+      miss: '10 experience, and a little friend for Chapter Two' },
+  ];
+  function summaryHTML(s) {
+    const fr = t => t.replace(/\{friend\}/g, s.friendName);
+    const done = SIDE_STORIES.filter(d => d.done(s)).length;
+    const mins = Math.max(1, Math.round((s.time || 0) / 60));
+    let h = `<div class="sum"><h4 class="smain">The Story <span>main path · completed</span></h4><ul>`;
+    for (const [t, b] of MAIN_BEATS) h += `<li class="ok">✓ <b>${fr(t)}</b> — ${fr(b)}</li>`;
+    h += `</ul><h4 class="sside">Side Stories <span>optional · ${done} of ${SIDE_STORIES.length} found</span></h4><ul>`;
+    for (const d of SIDE_STORIES) {
+      if (d.done(s)) h += `<li class="ok">✓ <b>${d.title}</b> — ${typeof d.yes === 'function' ? d.yes(s) : d.yes}</li>`;
+      else h += `<li class="no">✗ <b>${d.title}</b> — ${typeof d.no === 'function' ? d.no(s) : d.no} <span class="miss">Missed: ${d.miss}</span></li>`;
+    }
+    h += `</ul><h4>Your Journey</h4><p>Level ${s.lvl} · ${s.xp} experience · ${s.leaves.length} of ${TOTAL_LEAVES} golden leaves · ${s.coins} copper · played ${mins} min</p>`;
+    if (done < SIDE_STORIES.length) h += `<p class="dim">Want to find what you missed? Start a new game in another save slot from <b>Players &amp; Saves</b>.</p>`;
+    else h += `<p class="dim">Every side story found. What a true Light-Bearer!</p>`;
+    return h + '</div>';
+  }
 
   // ------------------------------------------------------------------ COMBINING
   const COMBOS = {
@@ -952,8 +1040,7 @@ const STORY = (() => {
     if (!f.teaMade) return !has('teaBlend') ? ['Make sweet tea: find tea and sugar, then combine them', 'cottage', has('teaTin') ? 6 : 10, 3] : ['Use your sweet tea blend on the stove', 'cottage', 8, 3];
     if (!f.teaDrunk) return ['Drink your tea in the chair outside', 'hillside', 17, 7];
     if (!f.arrivedTown) return ['Walk down the leafy lane to Kraxenville', 'town', 19, 4];
-    if (!f.pieBought && !f.metHollis) return ['Buy a pie at the Cookshop, south of the market', 'town', 30, 37];
-    if (!f.pieEaten && !f.metHollis) return ['Eat your pie on the bench by the fountain', 'town', 21, 22];
+    if (!f.metHollis && has('pie')) return ["Eat your pie on the bench by the fountain — or head to the Merchants' Guild", 'town', 21, 22];
     if (!f.metHollis) return ["Visit the Merchants' Guild", 'guild', 7, 3];
     if (!f.caravanReady) {
       if (checkCaravan()) return ['Report back to Guildmaster Hollis', 'guild', 7, 3];
@@ -1027,5 +1114,5 @@ const STORY = (() => {
     return h;
   }
 
-  return { ITEMS, QUESTS, TOTAL_LEAVES, SPEAKERS, intro, interact, combine, useSelf, gate, onEnter, onLoad, onFlash, objective, compass, journal, musicFor, tintFor, darkFor };
+  return { summaryHTML, ITEMS, QUESTS, TOTAL_LEAVES, SPEAKERS, intro, interact, combine, useSelf, gate, onEnter, onLoad, onFlash, objective, compass, journal, musicFor, tintFor, darkFor };
 })();

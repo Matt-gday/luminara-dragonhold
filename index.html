@@ -109,6 +109,7 @@ html,body{height:100%;background:#0b0810;overflow:hidden;color:var(--ink);
 .q{margin-bottom:10px}
 .q h4{font-size:calc(var(--fs)*1.05)}
 .q h4 .tag{font-size:calc(var(--fs)*.7);background:var(--edge);color:#fff;border-radius:4px;padding:0 6px;margin-left:6px;vertical-align:middle}
+.q h4 .tag.main{background:#b8860b}.q h4 .tag.side{background:#3e7a32}
 .q.done h4{opacity:.55;text-decoration:line-through}
 .q .d{font-size:calc(var(--fs)*.85);opacity:.85;margin:2px 0 4px}
 .q ul{list-style:none;padding-left:14px}
@@ -132,6 +133,12 @@ html,body{height:100%;background:#0b0810;overflow:hidden;color:var(--ink);
 .modal .how{padding-left:18px;line-height:1.35}.modal .how li{margin-bottom:5px}
 .modal-in{font:inherit;font-size:calc(var(--fs)*1.1);width:100%;padding:6px 10px;border:3px solid var(--edge);border-radius:8px;background:#fffaf0;color:var(--ink);margin:4px 0 6px;user-select:text;-webkit-user-select:text}
 .modal-btns{display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap;margin-top:6px}
+.modal.wide{width:min(94%,820px);max-height:92%}
+.sum h4{margin:10px 0 4px;font-size:calc(var(--fs)*1.1)}.sum h4 span{font-size:calc(var(--fs)*.7);border-radius:5px;padding:0 6px;margin-left:6px;vertical-align:middle;color:#fff}
+.sum h4.smain span{background:#b8860b}.sum h4.sside span{background:#3e7a32}
+.sum ul{list-style:none;padding-left:4px}.sum li{margin:3px 0;line-height:1.3;font-size:calc(var(--fs)*.9)}
+.sum li.ok{color:#2a3a1a}.sum li.no{color:#6a3a30}.sum .miss{display:block;margin-left:18px;font-size:calc(var(--fs)*.78);color:#9a3a2a;font-style:italic}
+#nameTag{position:absolute;transform:translate(-50%,-100%);color:#fff;font-size:calc(var(--fs)*.75);padding:0 7px 1px;border:2px solid var(--ink);border-radius:6px;pointer-events:none;white-space:nowrap;z-index:3}
 .modal.stack{width:min(80%,340px);text-align:center}
 .modal.stack .modal-btns{flex-direction:column;align-items:stretch}
 .modal.stack .modal-btns button{font-size:calc(var(--fs)*1.1);padding:7px 14px}
@@ -155,6 +162,7 @@ button.danger{background:#e8968a!important;border-color:#8a3a2a!important}
 body.cine #cineTop,body.cine #cineBot{transform:none}
 #hud,#objective,#where,#toasts{z-index:2}
 #bar{z-index:3}
+.panel{z-index:6}
 body.touch #bar kbd{display:none}
 .narr,.bubble{z-index:4}
 body.cine .narr{bottom:calc(7% + 12px)}
@@ -205,6 +213,7 @@ body.panelopen #touch{display:none}
     </div>
     <div id="objective" style="display:none"></div>
     <div id="compassTag" style="display:none">next goal</div>
+    <div id="nameTag" style="display:none"></div>
     <div id="cineTop"></div><div id="cineBot"></div>
     <div id="where" style="display:none"></div>
     <div id="held"><canvas width="16" height="16"></canvas><span></span> <span style="opacity:.6">(Esc to drop)</span></div>

@@ -58,7 +58,9 @@ The Thorn Road (main)     glowing vines block the caravan → jump the log → D
  ├─ The Owl's Riddle     (side) Old Hoots tells of the Thornheart
  └─ The Thornheart       focus your lantern (timing game) → free the young possum → the road clears
 The Gateway               the caravan goes on → the Gateway… to be continued
-Side quests: Precious Moments (butterflies), The Bard's Song, Golden Leaves (8 hidden)
+Side stories (optional): A Hot Pie & a Daydream, Precious Moments, The Runaway Ball, a wish at the fountain,
+Old Maud's Golden Leaves (8 hidden; reward: Mother's thimble, +1 heart), The Owl's Riddle, The Little Possum.
+At the end, a chapter summary tells the story beat of every side story, including what happened to the ones you missed.
 ```
 
 Luminara levels up as she helps people. Each level gives her more courage (hearts) and more lantern light. Goblinites in the forest run from a raised lantern. Fainting is gentle: she just wakes up at the edge of the area.
