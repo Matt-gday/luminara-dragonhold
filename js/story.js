@@ -113,7 +113,7 @@ const STORY = (() => {
   // ------------------------------------------------------------------ helpers
   const say = (w, t) => G.say(w, t), think = t => G.think(t), nar = (t, o) => G.narrate(t, o);
   const L = t => G.say('luminara', t);
-  function journalAdd(key) { if (!G.S.journal.includes(key)) { G.S.journal.push(key); G.toast('New journal entry', 'writ'); } }
+  function journalAdd(key) { if (!G.S.journal.includes(key)) { G.S.journal.push(key); G.toast('New journal entry', 'writ'); G.tipLater('journal'); } }
   async function needSatchel() { await L("I'd better find my satchel first, or I'll be dropping things all day."); }
   function checkMorning() { if (allMorning(G.S) && G.S.q.morning !== 'done') { G.questDone('morning'); } }
   function checkCaravan() {
@@ -134,7 +134,7 @@ const STORY = (() => {
     G.emote('luminara', '♪');
     await think('Another beautiful autumn morning. The guild has work for me today — but first, tea!');
     G.questStart('morning');
-    G.toast(document.body.classList.contains('touch') ? 'Tap where you want to walk. Tap people and things to look, talk and pick up.' : 'Walk with the arrow keys (or click). Press E near things to look, talk and pick up.');
+    await G.tip('move'); await G.tip('goal'); await G.tip('quests'); await G.tip('menu');
   }
 
   // ------------------------------------------------------------------ ACTIONS (talk / look / use)
@@ -143,8 +143,9 @@ const STORY = (() => {
 
   // ---------- cottage
   ACT.satchelPick = async () => {
-    F().hasSatchel = true; G.sfx('pick'); G.toast('Got your <b>Satchel</b> — press <b>I</b> to look inside', 'satchel'); G.refresh();
+    F().hasSatchel = true; G.sfx('pick'); G.toast('Got your <b>Satchel</b>', 'satchel'); G.refresh();
     await think('My trusty leather satchel. Now I can carry things!');
+    await G.tip('satchel');
     checkMorning();
   };
   ACT.bed = async () => {
@@ -158,7 +159,7 @@ const STORY = (() => {
   ACT.box = async () => {
     if (F().gotCompass) return nar('Your safekeeping box. Small treasures and precious memories rest inside.');
     if (!F().hasSatchel) return needSatchel();
-    if (has('brassKey')) { await L("It's locked. I should use my little brass key on it."); G.toast('Tip: open your Satchel (I), choose the key, press <b>Use…</b>, then click the box.'); }
+    if (has('brassKey')) { await L("It's locked. I should use my little brass key on it."); if (G.S.flags.tip_use) G.toast('Satchel → tap the key → <b>Use…</b> → tap the box.'); await G.tip('use'); }
     else await nar('Your safekeeping box. It is locked tight. Where did you leave the key? You always keep it close to where you sleep.');
   };
   USE.box = async (item) => {
@@ -169,7 +170,7 @@ const STORY = (() => {
     await nar('Among the treasures was a compass. She would carry it to keep track of her direction while journeying into the Dark Forest.');
     G.give('compass'); F().gotCompass = true; journalAdd('father');
     await think('I have a feeling I might need it today.');
-    G.toast('The compass in the corner now points toward your next goal.', 'compass');
+    G.hud(); await G.tip('compass');
     checkMorning(); return true;
   };
   ACT.wardrobe = async () => {
@@ -183,17 +184,17 @@ const STORY = (() => {
   };
   ACT.cupboard = async () => {
     if (!F().hasSatchel) return needSatchel();
-    if (!F().gotTea) { F().gotTea = true; G.give('teaTin'); await think('My favourite floral green tea.'); }
+    if (!F().gotTea) { F().gotTea = true; G.give('teaTin'); await think('My favourite floral green tea.'); if (has('sugar')) await G.tip('combine'); }
     else await nar('Cups, bowls and a jar of honey for winter.');
   };
   ACT.shelf = async () => {
     if (!F().hasSatchel) return needSatchel();
-    if (!F().gotSugar) { F().gotSugar = true; G.give('sugar'); await think('A little sugar makes everything sweeter.'); }
+    if (!F().gotSugar) { F().gotSugar = true; G.give('sugar'); await think('A little sugar makes everything sweeter.'); if (has('teaTin')) await G.tip('combine'); }
     else await nar('Jars of dried herbs, buttons, string and a few well-loved books.');
   };
   ACT.stove = async () => {
     if (F().teaMade) return nar('The stove is still warm. The kettle ticks as it cools.');
-    if (has('teaBlend')) { await L('The kettle is hot. I just need to use my sweet tea blend here.'); G.toast('Tip: Satchel (I) → choose the tea → <b>Use…</b> → click the stove.'); }
+    if (has('teaBlend')) { await L('The kettle is hot. I just need to use my sweet tea blend here.'); if (G.S.flags.tip_use) G.toast('Satchel → tap the tea blend → <b>Use…</b> → tap the stove.'); await G.tip('use'); }
     else if (has('teaTin')) await think("I like my green tea sweetened. I should combine it with some sugar first.");
     else await nar('The stove is warm and the kettle is full. All you need is tea!');
   };
@@ -408,7 +409,7 @@ const STORY = (() => {
   ACT.ballTree = async () => {
     if (F().ballDown) return nar('A grand old oak, glowing orange with autumn leaves.');
     await think("The children's ball is wedged in the low branches, just out of reach. If I stand right underneath and jump…");
-    G.toast('Press <b>Space</b> to jump!');
+    if (G.S.flags.tip_jump) G.toast(document.body.classList.contains('touch') ? 'Tap <b>Jump</b>!' : 'Press <b>Space</b> to jump!'); await G.tip('jump');
   };
   ACT.ballTreeJump = async () => {
     if (F().ballDown) return;
@@ -483,7 +484,7 @@ const STORY = (() => {
     await nar('A map of the Kingdom of Krax. Kraxenville sits in the north-east. The Dark Forest sprawls across the middle of the kingdom, past the Ruined Keep, all the way to the mountains of Vosmos — where a great volcano smokes in the far north.');
     await nar('Someone has drawn a little glowing door in the far north-west of the forest, with a question mark beside it.');
     journalAdd('realm'); F().sawMap = true;
-    G.toast('You copied the map! Open it any time with <b>P</b> or the <b>Map</b> button.');
+    await G.tip('map');
     G.openPanel('map');
   };
   ACT.tavernDoor = async () => { await nar('Laughter and singing spill out of the tavern. It is far too rowdy for this early in the day.'); };
@@ -658,6 +659,7 @@ const STORY = (() => {
     await think("The north trail leads deep into the forest. A log has fallen across it — I'll have to jump over.");
     f.thornQuest = true;
     G.questStart('thornroad');
+    await G.tip('light');
   }
   ACT.vines = async () => {
     if (F().vinesGone) return;

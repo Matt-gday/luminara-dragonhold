@@ -166,6 +166,7 @@ const G = (() => {
     e.preventDefault();
     if (!keys[k]) pressed[k] = true;
     keys[k] = true;
+    if (tipActive) { if (k === 'act' || k === 'jump' || k === 'esc') tipActive(); return; }
     if (dialog) { dialogKey(k); return; }
     if (flapGame && (k === 'jump' || k === 'act')) { flapTap(); return; }
     if (mode !== 'play') return;
@@ -176,7 +177,7 @@ const G = (() => {
     if (k === 'inv' && S.flags.hasSatchel) openPanel('inv');
     else if (k === 'inv') toast('You have no satchel yet.');
     if (k === 'quest') openPanel('quest');
-    if (k === 'map') openPanel('map');
+    if (k === 'map') { if (S.flags.sawMap) openPanel('map'); else toast("You don't have a map yet."); }
   });
   window.addEventListener('keyup', e => { const k = KEYMAP[e.code]; if (k) keys[k] = false; });
   window.addEventListener('blur', () => { for (const k in keys) keys[k] = false; });
@@ -303,8 +304,9 @@ const G = (() => {
   async function run(fn) {
     busy++;
     player.path = [];
-    try { await fn(); } catch (e) { console.error(e); }
+    try { await fn(); await flushTips(); } catch (e) { console.error(e); }
     busy = Math.max(0, busy - 1);
+    if (!busy) sceneLines = 0;
     hud();
     save();
   }
@@ -348,8 +350,10 @@ const G = (() => {
     clampCam();
     if (shakeT > 0) shakeT -= dt;
     promptTarget = (!busy && !dialog) ? facingTarget() : null;
+    const cine = busy > 0 && sceneLines > 0;
+    if (cine !== cineOn) { cineOn = cine; document.body.classList.toggle('cine', cine); }
   }
-  let camOverride = null, camReturn = 0;
+  let camOverride = null, camReturn = 0, sceneLines = 0, cineOn = false;
   function clampCam() {
     const mw = M.w * T, mh = M.h * T;
     cam.x = mw <= VW ? (mw - VW) / 2 : Math.max(0, Math.min(mw - VW, cam.x));
@@ -523,7 +527,7 @@ const G = (() => {
       loadMap(M.id, sp); await fade(false, 700);
       await say('luminara', "Ooh... the goblinites caught me by surprise. I must raise my lantern high when they come near! (Press Q)");
     });
-    else if (!S.flags.hurtTip) { S.flags.hurtTip = 1; toast('Raise your lantern (Q) to scare goblinites away!'); }
+    else { tipLater('hearts'); if (!busy) run(() => flushTips()); }
   }
 
   function updateFollowers(dt) {
@@ -851,8 +855,8 @@ const G = (() => {
       el.className = 'bubble' + (opts.think ? ' think' : '');
       if (!opts.think) el.innerHTML = `<span class="who" style="--who:${info.color}">${info.name}</span>`;
       const body = document.createElement('div'); el.appendChild(body);
-      const more = document.createElement('span'); more.className = 'more'; more.textContent = '▼'; more.style.display = 'none'; el.appendChild(more);
-      ui.appendChild(el);
+      const more = document.createElement('span'); more.className = 'more'; more.textContent = 'continue ▶'; more.style.display = 'none'; el.appendChild(more);
+      ui.appendChild(el); sceneLines++;
       const full = fmt(text);
       const plain = full.replace(/<[^>]+>/g, '');
       dialog = { el, body, more, full, plain, shown: 0, res, info, choice: null, think: opts.think, ent: info.ent, kind: 'bubble' };
@@ -865,8 +869,8 @@ const G = (() => {
     return new Promise(res => {
       const el = document.createElement('div'); el.className = 'narr' + (opts.big ? ' big' : '');
       const body = document.createElement('div'); el.appendChild(body);
-      const more = document.createElement('span'); more.className = 'more'; more.textContent = '▼'; more.style.display = 'none'; el.appendChild(more);
-      ui.appendChild(el);
+      const more = document.createElement('span'); more.className = 'more'; more.textContent = 'continue ▶'; more.style.display = 'none'; el.appendChild(more);
+      ui.appendChild(el); sceneLines++;
       const full = fmt(text);
       dialog = { el, body, more, full, plain: full.replace(/<[^>]+>/g, ''), shown: 0, res, kind: 'narr', info: { voice: 0.6 } };
       el.addEventListener('pointerdown', e => { e.stopPropagation(); dialogKey('act'); });
@@ -960,7 +964,73 @@ const G = (() => {
     d.el.style.setProperty('--tail', Math.max(14, Math.min(bw - 14, bw / 2 + (px - cx))) + 'px');
   }
 
+  // =================================================================== TUTORIAL TIPS
+  // Each tip appears once per save, the first time the thing it explains matters.
+  const isTouch = () => document.body.classList.contains('touch');
+  const keyName = (k, btn) => isTouch() ? `the <b>${btn}</b> button` : `<b>${k}</b> (or the <b>${btn}</b> button)`;
+  const TIPS = {
+    move: () => ({ title: 'Welcome, Light-Bearer!', text: isTouch() ? 'Tap anywhere to walk there. Tap people and things to talk to them, look at them or pick them up.' : 'Walk with the <b>arrow keys</b> (or click where you want to go). Press <b>E</b> next to people and things — or click them — to talk, look or pick up.' }),
+    goal: () => ({ target: '#objective', title: 'Your goal', text: 'This gold <b>Goal</b> line always tells you what to do next. Check it whenever you are not sure!' }),
+    quests: () => ({ target: '#bar [data-k=quest]', title: 'Quests', text: `You just got your first quest, <i>A New Dawn</i>. It is a list of little jobs. Open ${keyName('J', 'Quests')} any time to see every quest and tick off what you have done.` }),
+    menu: () => ({ target: '#bar [data-k=menu]', title: 'Menu', text: 'The <b>☰</b> menu has sound, controls, how to play, and the save slots for each player. The game saves by itself.' }),
+    satchel: () => ({ target: '#bar [data-k=inv]', title: 'Your Satchel', text: `Everything you pick up goes in your satchel. Open ${keyName('I', 'Satchel')} to look at an item, <b>Use</b> it on something, or <b>Combine</b> two items together.` }),
+    use: () => ({ target: '#bar [data-k=inv]', title: 'Using an item', text: 'Open your <b>Satchel</b> → tap the item → press <b>Use…</b> → then tap the thing you want to use it on.' }),
+    combine: () => ({ target: '#bar [data-k=inv]', title: 'Combining items', text: 'Some items work better together! Open your <b>Satchel</b> → tap one item → press <b>Combine…</b> → then tap the other item.' }),
+    compass: () => ({ target: 'compass', title: "Father's compass", text: 'This compass is special — it does <b>not</b> point north. Its <b style="color:#c03030">red needle</b> always points the way to your <b>next goal</b>. Follow it through doors and paths, and when you are in the right place it points straight at it.' }),
+    jump: () => ({ target: isTouch() ? '#tbtns [data-b=jump]' : null, title: 'Jumping', text: isTouch() ? 'Tap <b>Jump</b> to leap — over logs, across streams, or up at things that are just out of reach.' : 'Press <b>Space</b> to jump — over logs, across streams, or up at things that are just out of reach.' }),
+    light: () => ({ target: '#hLightRow', title: 'Lantern light', text: `This bar shows your lantern's power. In the dark forest, raise your lantern with ${keyName('Q', 'Raise Light')} to scare away goblinites. It refills by itself.` }),
+    hearts: () => ({ target: '#hHearts', title: 'Courage', text: `These hearts are Luminara's courage. Goblinites take one away if they catch her — keep them back with ${keyName('Q', 'Raise Light')}. Hearts come back slowly, and if they run out she just picks herself up again.` }),
+    xp: () => ({ target: '#hLvlRow', title: 'Experience', text: 'Helping people earns <b>experience</b>. Fill the blue bar to reach a new <b>level</b> — Luminara gets braver (more hearts) and her lantern shines brighter.' }),
+    coins: () => ({ target: '#hCoinRow', title: 'Copper coins', text: 'Your copper coins. Spend them at shops and stalls around Kraxenville.' }),
+    journal: () => ({ target: '#bar [data-k=quest]', title: 'Your journal', text: 'Memories and discoveries are written in your <b>Journal</b>. Open <b>Quests</b> and choose the <b>Journal</b> tab to read it.' }),
+    map: () => ({ target: '#bar [data-k=map]', title: 'Your map', text: `You copied the map of the Kingdom of Krax! Open ${keyName('P', 'Map')} any time to see where you are.` }),
+  };
+  let tipQueue = [], tipActive = null;
+  function tipSeen(id) { return S && S.flags['tip_' + id]; }
+  function tipLater(id) { if (!S || tipSeen(id) || tipQueue.includes(id)) return; tipQueue.push(id); }
+  async function flushTips() { while (tipQueue.length && mode === 'play') await tip(tipQueue.shift()); }
+  function targetRect(t) {
+    const sr = stage.getBoundingClientRect();
+    if (t === 'compass') { const cr = cv.getBoundingClientRect(), k = cr.width / VW; return { x: (VW - 18 - 14) * k + cr.left - sr.left, y: (32 - 14) * k + cr.top - sr.top, w: 28 * k, h: 34 * k }; }
+    const el = t && document.querySelector(t); if (!el || !el.offsetParent) return null;
+    const r = el.getBoundingClientRect(); return { x: r.left - sr.left, y: r.top - sr.top, w: r.width, h: r.height };
+  }
+  function tip(id) {
+    if (!S || tipSeen(id) || !TIPS[id]) return Promise.resolve();
+    S.flags['tip_' + id] = 1; tipQueue = tipQueue.filter(t => t !== id);
+    if (DBG.auto) return Promise.resolve();
+    const d = TIPS[id](); hud();
+    return new Promise(res => {
+      const layer = document.createElement('div'); layer.className = 'tiplayer';
+      const r = targetRect(d.target);
+      const ring = document.createElement('div'); ring.className = 'tipring' + (r ? '' : ' none');
+      if (r) { const pad = 6; Object.assign(ring.style, { left: (r.x - pad) + 'px', top: (r.y - pad) + 'px', width: (r.w + pad * 2) + 'px', height: (r.h + pad * 2) + 'px' }); }
+      const box = document.createElement('div'); box.className = 'tipbox';
+      box.innerHTML = `<h4>${d.title}</h4><p>${d.text}</p><div class="tipbtns"><button class="primary">Got it ▶</button></div>`;
+      layer.appendChild(ring); layer.appendChild(box); ui.appendChild(layer);
+      // place the note next to the highlighted thing
+      const W = stage.clientWidth, H = stage.clientHeight, bw = box.offsetWidth, bh = box.offsetHeight;
+      let bx = W / 2 - bw / 2, by = H / 2 - bh / 2;
+      if (r) {
+        const cx = r.x + r.w / 2;
+        bx = Math.max(10, Math.min(W - bw - 10, cx - bw / 2));
+        by = r.y + r.h / 2 > H / 2 ? r.y - bh - 22 : r.y + r.h + 22;
+        by = Math.max(10, Math.min(H - bh - 10, by));
+        box.classList.add(r.y + r.h / 2 > H / 2 ? 'up' : 'down');
+        box.style.setProperty('--ax', Math.max(18, Math.min(bw - 18, cx - bx)) + 'px');
+      }
+      box.style.left = bx + 'px'; box.style.top = by + 'px';
+      AUDIO.sfx('ding');
+      const done = () => { layer.remove(); tipActive = null; res(); };
+      tipActive = done;
+      box.querySelector('button').onclick = e => { e.stopPropagation(); done(); };
+      layer.addEventListener('pointerdown', e => { if (e.target === layer || e.target === ring) e.stopPropagation(); });
+    });
+  }
+  function resetTips() { for (const k of Object.keys(S.flags)) if (k.startsWith('tip_')) delete S.flags[k]; }
+
   // =================================================================== HUD, TOASTS
+  let lastGoal = '';
   function hud() {
     if (!S) return;
     const h = $('hHearts'); let s = '';
@@ -973,6 +1043,13 @@ const G = (() => {
     $('hCoins').textContent = S.coins;
     const ob = STORY.objective ? STORY.objective() : '';
     $('objective').innerHTML = ob ? `<b>Goal:</b> ${ob}` : ''; $('objective').style.display = ob && mode === 'play' ? 'block' : 'none';
+    if (ob && ob !== lastGoal) { if (lastGoal) { const o = $('objective'); o.classList.remove('flash'); void o.offsetWidth; o.classList.add('flash'); } lastGoal = ob; }
+    const q = sel => document.querySelector(sel);
+    q('#bar [data-k=inv]').style.display = S.flags.hasSatchel ? '' : 'none';
+    q('#bar [data-k=map]').style.display = S.flags.sawMap ? '' : 'none';
+    q('#bar [data-k=quest]').style.display = Object.keys(S.q).length ? '' : 'none';
+    const ct = $('compassTag'); ct.style.display = S.flags.gotCompass && mode === 'play' ? 'block' : 'none';
+    ct.style.left = ((VW - 18) * scale) + 'px'; ct.style.top = ((32 + 14) * scale) + 'px';
     $('hud').style.display = mode === 'play' ? 'flex' : 'none';
     $('bar').style.display = mode === 'play' ? 'flex' : 'none';
     $('hud').querySelectorAll('.row')[1].style.display = S.flags.hasLantern ? 'flex' : 'none';
@@ -993,7 +1070,7 @@ const G = (() => {
   }
   function take(id) { S.inv = S.inv.filter(i => i !== id); if (held === id) setHeld(null); hud(); }
   function addXP(n, quiet) {
-    S.xp += n;
+    S.xp += n; tipLater('xp');
     if (!quiet) toast(`+${n} experience`);
     while (S.lvl < LEVELS.length && S.xp >= LEVELS[S.lvl]) {
       S.lvl++; S.maxHearts = Math.min(8, S.maxHearts + 1); S.maxLight = Math.min(8, S.maxLight + 1); S.hearts = S.maxHearts; S.light = S.maxLight;
@@ -1002,7 +1079,7 @@ const G = (() => {
     }
     hud();
   }
-  function addCoins(n) { S.coins += n; if (n > 0) { AUDIO.sfx('coin'); toast(`+${n} copper`, 'coin'); } hud(); }
+  function addCoins(n) { S.coins += n; tipLater('coins'); if (n > 0) { AUDIO.sfx('coin'); toast(`+${n} copper`, 'coin'); } hud(); }
   function questStart(id) {
     if (S.q[id]) return; S.q[id] = 'active'; AUDIO.sfx('quest');
     const q = STORY.QUESTS[id]; toast(`New quest: <b>${q.title}</b>`, 'writ'); hud();
@@ -1155,6 +1232,7 @@ const G = (() => {
     const mkb = (t, f) => { const b = document.createElement('button'); b.textContent = t; b.onclick = f; row.appendChild(b); };
     mkb('Save now', () => { save(); toast('Game saved'); });
     mkb('Back to title', () => { save(); closePanel(); toTitle(); });
+    mkb('Show tips again', () => { resetTips(); closePanel(); toast('Tips will appear again as you play.'); run(() => tip('goal')); });
     mkb('Players & saves', () => { save(); closePanel(); toTitle(); showSlots(); });
     mkb('Delete this save…', async () => {
       const name = S.playerName || 'Player ' + slot;
@@ -1465,7 +1543,7 @@ const G = (() => {
     npc, walk: walkNPC, fly: flyNPC, addNPC, removeNPC, refresh, camTo, faceTo, setFollowers, showCredits,
     sfx: (n, a) => AUDIO.sfx(n, a), music: n => AUDIO.music(n), hud, shake: (t = 0.4) => { shakeT = t; },
     fx: f => fx.push(f), particles: p => particles.push(p), get followers() { return followers; }, loadMap, save,
-    dbg: DBG, flapMini: (n, o) => flapMini(n, o), openPanel,
+    dbg: DBG, flapMini: (n, o) => flapMini(n, o), openPanel, tip, tipLater,
     face(who, dir) { const e = entityById(who); if (e) e.dir = dir; }, entity: entityById, get time() { return time; },
   };
 
