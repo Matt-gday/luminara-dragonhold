@@ -119,6 +119,8 @@ body.touch #touch{display:block}
 #dpad{position:absolute;left:14px;bottom:14px;width:132px;height:132px;pointer-events:auto}
 #dpad div{position:absolute;width:44px;height:44px;background:rgba(244,230,196,.55);border:3px solid rgba(122,85,48,.8);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:20px;color:#2a1c14}
 #dpad .u{left:44px;top:0}#dpad .d{left:44px;top:88px}#dpad .l{left:0;top:44px}#dpad .r{left:88px;top:44px}
+body.nodpad #dpad{display:none}
+body.panelopen #touch{display:none}
 #tbtns{position:absolute;right:14px;bottom:64px;display:flex;gap:10px;pointer-events:auto}
 #tbtns div{width:56px;height:56px;border-radius:50%;background:rgba(244,230,196,.6);border:3px solid rgba(122,85,48,.85);display:flex;align-items:center;justify-content:center;font-size:13px;color:#2a1c14;text-align:center;line-height:1}
 #rotate{display:none;position:fixed;inset:0;background:#120d1c;color:#f4e6c4;align-items:center;justify-content:center;text-align:center;font-size:24px;padding:30px;z-index:9;pointer-events:none}

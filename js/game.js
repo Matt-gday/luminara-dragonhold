@@ -206,6 +206,10 @@ const G = (() => {
   });
   // touch controls
   if ('ontouchstart' in window || navigator.maxTouchPoints > 0) document.body.classList.add('touch');
+  // on-screen D-pad can be hidden (tapping the screen to walk still works); remembered on this device
+  function setDpad(show) { document.body.classList.toggle('nodpad', !show); try { localStorage.setItem('luminara_dpad', show ? '1' : '0'); } catch (e) { } }
+  let dpadPref = '1'; try { dpadPref = localStorage.getItem('luminara_dpad') ?? '1'; } catch (e) { }
+  setDpad(dpadPref !== '0');
   document.querySelectorAll('#dpad div').forEach(el => {
     const d = el.dataset.d;
     const on = e => { e.preventDefault(); AUDIO.init(); keys[d] = true; if (dialog) dialogKey(d === 'up' ? 'up' : d === 'down' ? 'down' : 'none'); };
@@ -997,8 +1001,8 @@ const G = (() => {
   // =================================================================== PANELS
   let curTab = null, selItem = null, combineFrom = null;
   function panelOpen() { return $('panel').classList.contains('open'); }
-  function openPanel(tab) { curTab = tab; $('panel').classList.add('open'); renderPanel(); AUDIO.sfx('blip', 0.8); }
-  function closePanel() { $('panel').classList.remove('open'); combineFrom = null; curTab = null; }
+  function openPanel(tab) { curTab = tab; $('panel').classList.add('open'); document.body.classList.add('panelopen'); renderPanel(); AUDIO.sfx('blip', 0.8); }
+  function closePanel() { $('panel').classList.remove('open'); document.body.classList.remove('panelopen'); combineFrom = null; curTab = null; }
   document.querySelectorAll('#panel header button').forEach(b => b.addEventListener('click', () => { const t = b.dataset.tab; if (t === 'close') closePanel(); else openPanel(t); }));
   document.querySelectorAll('#bar button').forEach(b => b.addEventListener('click', e => {
     e.stopPropagation(); AUDIO.init(); if (busy || dialog) return; const k = b.dataset.k;
@@ -1119,6 +1123,9 @@ const G = (() => {
       Jump: <b>Space</b> &nbsp; Raise lantern: <b>Q</b> &nbsp; Satchel: <b>I</b> &nbsp; Quests: <b>J</b> &nbsp; Sound on/off: <b>M</b></p>
       <h4>Sound</h4>
       <p>Music <input type="range" id="oMus" min="0" max="0.7" step="0.05" value="${AUDIO.musicVol}"> &nbsp; Effects <input type="range" id="oSfx" min="0" max="1" step="0.05" value="${AUDIO.sfxVol}"></p>
+      <h4>Touch controls</h4>
+      <p><label style="cursor:pointer"><input type="checkbox" id="oDpad" ${document.body.classList.contains('nodpad') ? '' : 'checked'} style="transform:scale(1.4);margin-right:8px">Show the arrow pad on screen</label><br>
+      <span style="opacity:.75">Turn it off to just tap where you want Luminara to walk. The Jump, Talk and Raise Light buttons stay.</span></p>
       <h4>Game</h4><p>The game saves automatically.</p>`;
     const acts = document.createElement('div'); acts.className = 'detail'; acts.style.border = 'none'; acts.style.padding = 0;
     const row = document.createElement('div'); row.className = 'acts';
@@ -1129,6 +1136,7 @@ const G = (() => {
     acts.appendChild(row); d.appendChild(acts); body.appendChild(d);
     d.querySelector('#oMus').oninput = e => AUDIO.setVolumes(+e.target.value, null);
     d.querySelector('#oSfx').oninput = e => AUDIO.setVolumes(null, +e.target.value);
+    d.querySelector('#oDpad').onchange = e => setDpad(e.target.checked);
   }
 
   // =================================================================== SAVE / LOAD

@@ -134,7 +134,7 @@ const STORY = (() => {
     G.emote('luminara', '♪');
     await think('Another beautiful autumn morning. The guild has work for me today — but first, tea!');
     G.questStart('morning');
-    G.toast('Walk with the arrow keys (or click). Press E near things to look, talk and pick up.');
+    G.toast(document.body.classList.contains('touch') ? 'Tap where you want to walk. Tap people and things to look, talk and pick up.' : 'Walk with the arrow keys (or click). Press E near things to look, talk and pick up.');
   }
 
   // ------------------------------------------------------------------ ACTIONS (talk / look / use)
