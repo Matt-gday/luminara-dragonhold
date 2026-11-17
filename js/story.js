@@ -67,13 +67,13 @@ const STORY = (() => {
     ] },
     pepper: { parent: 'seal', title: 'Not a Pinch of Pepper', desc: 'Mistress Pell used her last pepper in your pie!', giver: 'Mistress Pell', xp: 20, steps: [
       { t: 'Find someone selling pepper', done: s => s.flags.osricTrade || s.inv.includes('pepper') || s.flags.pepperGiven },
+      { t: "Get a basket of Marigold's nectarines for Osric", done: s => s.flags.gotNectarines || s.inv.includes('pepper') || s.flags.pepperGiven, hide: s => !s.flags.osricTrade },
       { t: 'Get pepper from Osric', done: s => s.inv.includes('pepper') || s.flags.pepperGiven },
       { t: 'Give the pepper to Mistress Pell', done: s => s.flags.pepperGiven },
     ] },
-    ball: { parent: 'pepper', title: 'The Runaway Ball', desc: "Marigold can't spare her nectarines while the children's ball keeps landing in her fruit.", giver: 'Marigold', xp: 20, steps: [
-      { t: 'Get the ball down from the big oak by the north gate (try jumping!)', done: s => s.flags.ballDown },
+    ball: { title: 'The Runaway Ball', tag: 'Side quest', desc: "Pip and Nell's ball is stuck up in the big oak by the north gate.", giver: 'Pip & Nell', xp: 20, steps: [
+      { t: 'Get the ball down from the big oak (try jumping!)', done: s => s.flags.ballDown },
       { t: 'Return the ball to Pip and Nell', done: s => s.flags.ballReturned },
-      { t: 'Collect the nectarines from Marigold', done: s => s.flags.gotNectarines },
     ] },
     oil: { parent: 'lightbearer', title: 'Oil for the Lantern', desc: 'Your lantern is barely a flicker.', giver: 'Guildmaster Hollis', xp: 20, steps: [
       { t: 'Find some lamp oil (try the Iron Cauldron)', done: s => s.inv.includes('oil') || s.flags.lanternFull },
@@ -320,7 +320,7 @@ const STORY = (() => {
     G.music('town');
     G.sfx('lute');
     await nar('It wasn\'t too long after that she heard one of the local bards, plucking his lute and humming an old tune that she recognised.');
-    await think("That tune! It's Fredrick — he's by the fountain. Then I really must get to the guild.");
+    await think(F().metFredrick ? 'Good old Fredrick, still playing by the fountain. Now — to the guild!' : "That tune! It's Fredrick — he's by the fountain. Then I really must get to the guild.");
     G.addXP(5, true);
   }
   ACT.fredrick = async () => {
@@ -347,21 +347,32 @@ const STORY = (() => {
   };
   ACT.marigold = async () => {
     const f = F();
-    if (f.ballReturned && !f.gotNectarines) {
-      await say('marigold', "Bless you, Light-Bearer! Those two are happy as larks on the green, and my stall is safe at last. Here — a whole basket, as promised.");
-      f.gotNectarines = true; G.give('nectarines');
-      if (G.S.q.ball !== 'done') G.questDone('ball');
-      return;
+    const needFruit = f.osricTrade && !f.gotNectarines && !has('pepper') && !f.pepperGiven;
+    // she thanks you for the children's ball, whenever you happened to do it
+    if (f.ballReturned && !f.marigoldThanked) {
+      f.marigoldThanked = true;
+      if (f.askedMarigold) await say('marigold', "Bless you, Light-Bearer! Those two are happy as larks on the green, and my stall is safe at last.");
+      else {
+        await say('marigold', "Oh! It was you who fetched Pip and Nell's ball down from the big oak, wasn't it? They're playing on the green now, and not one nectarine has been squashed since. Thank you, dear!");
+        if (!needFruit) return say('marigold', "If you ever need anything from my stall, you just ask.");
+      }
     }
-    if (f.osricTrade && !f.gotNectarines && !has('pepper') && !f.pepperGiven) {
+    if (needFruit) {
+      if (f.ballReturned) {
+        if (!f.askedMarigold) await L("Marigold, could I have a basket of your nectarines? It's for a trade with Osric.");
+        await say('marigold', f.askedMarigold ? "And here's your basket of nectarines, just as I promised." : "After what you did for those two? Of course! Take a whole basket — the best of this morning's picking.");
+        f.gotNectarines = true; f.askedMarigold = true; G.give('nectarines');
+        return;
+      }
       if (!f.askedMarigold) {
         f.askedMarigold = true;
-        await L('Marigold, could I have a basket of your nectarines? It\'s for a trade.');
+        await L("Marigold, could I have a basket of your nectarines? It's for a trade with Osric.");
         await say('marigold', "A whole basket? I'd love to help, dear, but I can't take my eyes off this stall for a moment — those two little scamps keep kicking their ball into my fruit!");
-        await say('marigold', "And now it's stuck up in the big oak by the north gate, and they're howling about it. If somebody fetched it down, they'd play over on the green and leave my nectarines in peace.");
-        G.questStart('ball'); return;
+        await say('marigold', f.ballDown ? "Their ball went up into the big oak by the north gate… oh! You've got it? Then do give it back to them, and tell them to play on the green." : "And now it's stuck up in the big oak by the north gate, and they're howling about it. If somebody fetched it down, they'd play over on the green and leave my nectarines in peace.");
+        if (!G.S.q.ball) G.questStart('ball');
+        return;
       }
-      return say('marigold', 'The ball is stuck up in the big oak near the north gate. You\'re a good jumper, aren\'t you?');
+      return say('marigold', has('ball') ? 'Give that ball back to Pip and Nell, dear — then the basket is yours.' : "The ball is stuck up in the big oak near the north gate. You're a good jumper, aren't you?");
     }
     const lines = ['Fresh nectarines! Picked this morning!', 'Juicy as sunshine, sweet as honey!', "If you see a goose called Duchess, she owes me three nectarines."];
     await say('marigold', lines[Math.floor(Math.random() * lines.length)]);
@@ -391,11 +402,11 @@ const STORY = (() => {
   };
   ACT.kids = async () => {
     const f = F();
-    if (f.ballReturned) { const l = ['Thank you, Light-Bearer! We\'re playing on the green now, like Marigold said.', 'Can you jump that high every day?', "When I grow up I'm going to carry a lantern too!"]; return say(Math.random() < 0.5 ? 'kid1' : 'kid2', l[Math.floor(Math.random() * l.length)]); }
+    if (f.ballReturned) { const l = ['Thank you, Light-Bearer! We\'re playing on the green now, so we don\'t squash Marigold\'s fruit.', 'Can you jump that high every day?', "When I grow up I'm going to carry a lantern too!"]; return say(Math.random() < 0.5 ? 'kid1' : 'kid2', l[Math.floor(Math.random() * l.length)]); }
     if (has('ball')) return USE.kids('ball');
     await say('kid1', "Our ball's stuck up in the big oak tree! It's ever so high.");
     await say('kid2', "You're tall. Can you jump for it? Pleeease?");
-    if (G.S.q.ball !== 'active' && G.S.q.ball !== 'done' && F().osricTrade) G.questStart('ball');
+    if (!G.S.q.ball) G.questStart('ball');
   };
   USE.kids = async (item) => {
     if (item !== 'ball') return false;
@@ -403,12 +414,14 @@ const STORY = (() => {
     await say('kid1', 'Our ball! Thank you, thank you!');
     await say('kid2', "We'll play here on the green from now on. We promise not to kick it into Marigold's fruit.");
     await say('kid1', 'Here — a shiny copper from my piggy bank!');
-    G.addCoins(1); G.addXP(10);
+    G.addCoins(1);
+    if (!G.S.q.ball) G.S.q.ball = 'active';
+    G.questDone('ball');
     return true;
   };
   ACT.ballTree = async () => {
     if (F().ballDown) return nar('A grand old oak, glowing orange with autumn leaves.');
-    await think("The children's ball is wedged in the low branches, just out of reach. If I stand right underneath and jump…");
+    await think(G.S.q.ball ? "Pip and Nell's ball is wedged in the low branches, just out of reach. If I stand right underneath and jump…" : "A ball is wedged in the low branches — it must belong to those two children. If I stand right underneath and jump…");
     if (G.S.flags.tip_jump) G.toast(document.body.classList.contains('touch') ? 'Tap <b>Jump</b>!' : 'Press <b>Space</b> to jump!'); await G.tip('jump');
   };
   ACT.ballTreeJump = async () => {
@@ -416,7 +429,8 @@ const STORY = (() => {
     F().ballDown = true; G.sfx('leaf'); G.sfx('pop'); G.refresh();
     for (let i = 0; i < 12; i++) G.particles({ kind: 'leaf', x: G.player.x + (Math.random() - 0.5) * 30, y: G.player.y - 40 - Math.random() * 10, vx: (Math.random() - 0.5) * 10, vy: 10 + Math.random() * 20, ph: Math.random() * 6, c: ['#e0902a', '#e8c040', '#c05030'][i % 3], t: 3 });
     G.give('ball');
-    await think('Got it! Down came the ball — and half the leaves on the tree.');
+    if (!G.S.q.ball) G.questStart('ball');
+    await think('Got it! Down came the ball — and half the leaves on the tree. It must belong to Pip and Nell, the children on the green. I should give it back to them.');
   };
   ACT.bertram = async () => {
     const f = F();
@@ -427,7 +441,7 @@ const STORY = (() => {
       await say('bertram', "Oh, Light-Bearer, what a morning! Clover took fright at the geese and bolted round the fountain — and her shoe flew clean off! I heard it go *plop*, right into the water.");
       await say('bertram', "The fountain's deep in the middle and cold as winter. My old arms can't reach, and I've no tackle for fishing.");
       await L('If I can fish it out, can you fit it again?');
-      await say('bertram', "Quick as a wink — I've nails aplenty. Well… I had. One rolled off somewhere by the trough.");
+      await say('bertram', f.gotNail ? "Quick as a wink — I've nails aplenty." : "Quick as a wink — I've nails aplenty. Well… I had. One rolled off somewhere by the trough.");
       f.knowFountain = true;
       return think("Something to fish with… I need a hook, and a line strong enough to pull up a horseshoe.");
     }
@@ -612,7 +626,9 @@ const STORY = (() => {
     if (!G.S.q.leaves) {
       await say('vB', 'When I was a girl, we hunted for golden leaves every autumn. Lucky, they are!');
       await say('vB', "They say there are eight hidden about the countryside — in the lane, the town, even the forest. Bring me all eight and I'll tell you a secret.");
-      G.questStart('leaves'); return;
+      G.questStart('leaves');
+      if (n > 0 && n < TOTAL_LEAVES) return say('vB', `Oh! You've found ${n} already? Clever thing. Keep looking!`);
+      if (n < TOTAL_LEAVES) return;
     }
     if (f.leavesDone) return say('vB', 'Remember, dear: a light shared is a light doubled.');
     if (n >= TOTAL_LEAVES) {
@@ -936,8 +952,8 @@ const STORY = (() => {
     if (!f.teaMade) return !has('teaBlend') ? ['Make sweet tea: find tea and sugar, then combine them', 'cottage', has('teaTin') ? 6 : 10, 3] : ['Use your sweet tea blend on the stove', 'cottage', 8, 3];
     if (!f.teaDrunk) return ['Drink your tea in the chair outside', 'hillside', 17, 7];
     if (!f.arrivedTown) return ['Walk down the leafy lane to Kraxenville', 'town', 19, 4];
-    if (!f.pieBought) return ['Buy a pie at the Cookshop, south of the market', 'town', 30, 37];
-    if (!f.pieEaten) return ['Eat your pie on the bench by the fountain', 'town', 21, 22];
+    if (!f.pieBought && !f.metHollis) return ['Buy a pie at the Cookshop, south of the market', 'town', 30, 37];
+    if (!f.pieEaten && !f.metHollis) return ['Eat your pie on the bench by the fountain', 'town', 21, 22];
     if (!f.metHollis) return ["Visit the Merchants' Guild", 'guild', 7, 3];
     if (!f.caravanReady) {
       if (checkCaravan()) return ['Report back to Guildmaster Hollis', 'guild', 7, 3];
