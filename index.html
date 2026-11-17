@@ -1,0 +1,176 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>Luminara the Light-Bearer</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Jersey+10&display=swap" rel="stylesheet">
+<style>
+:root{
+  --ink:#2a1c14; --parch:#f4e6c4; --parch2:#e7d3a4; --edge:#7a5530; --gold:#e0b04a;
+  --night:#120d1c; --cloak:#23305e;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;background:#0b0810;overflow:hidden;color:var(--ink);
+  font-family:'Jersey 10','Trebuchet MS',system-ui,sans-serif;font-variant-ligatures:none;letter-spacing:.3px;-webkit-user-select:none;user-select:none;touch-action:none}
+#wrap{position:fixed;inset:0;display:flex;align-items:center;justify-content:center}
+#stage{position:relative}
+#game{display:block;image-rendering:pixelated;image-rendering:crisp-edges;background:#000}
+#ui{position:absolute;inset:0;pointer-events:none;overflow:hidden}
+#ui > *{pointer-events:auto}
+
+/* ---------- speech bubbles ---------- */
+.bubble{position:absolute;max-width:min(62%,440px);min-width:120px;background:#fffaf0;border:3px solid var(--ink);
+  border-radius:10px;padding:16px 14px 10px;font-size:var(--fs);line-height:1.3;box-shadow:0 4px 0 rgba(0,0,0,.35);
+  transform:translate(-50%,-100%);pointer-events:auto;cursor:pointer}
+.bubble::after{content:"";position:absolute;left:var(--tail,50%);bottom:-12px;width:14px;height:14px;background:#fffaf0;
+  border-right:3px solid var(--ink);border-bottom:3px solid var(--ink);transform:translateX(-50%) rotate(45deg)}
+.bubble.below{transform:translate(-50%,0)}
+.bubble.below::after{bottom:auto;top:-10px;transform:translateX(-50%) rotate(225deg)}
+.bubble .who{position:absolute;top:-14px;left:10px;background:var(--who,#7a5530);color:#fff;font-size:calc(var(--fs)*.8);
+  padding:1px 8px 2px;border-radius:6px;border:2px solid var(--ink);white-space:nowrap}
+.bubble.think{border-style:dashed;border-radius:24px;font-style:italic;background:#eef2ff}
+.bubble.think::after{border:none;background:none;width:auto;height:auto;content:"o °";color:var(--ink);bottom:-22px;transform:translateX(-50%);font-style:normal;font-size:calc(var(--fs)*.9)}
+.bubble .more{position:absolute;right:8px;bottom:2px;font-size:calc(var(--fs)*.75);animation:bob 0.8s infinite}
+@keyframes bob{50%{transform:translateY(3px)}}
+.choices{display:flex;flex-direction:column;gap:5px;margin-top:8px}
+.choices button{font:inherit;font-size:calc(var(--fs)*.95);text-align:left;padding:4px 8px;border:2px solid var(--ink);border-radius:6px;background:#f6ecd2;cursor:pointer;color:var(--ink)}
+.choices button:hover,.choices button.sel{background:var(--gold)}
+.narr{position:absolute;left:50%;bottom:4%;transform:translateX(-50%);width:min(86%,760px);background:var(--parch);
+  border:4px double var(--edge);border-radius:6px;padding:12px 18px 16px;font-size:var(--fs);line-height:1.4;
+  box-shadow:0 6px 0 rgba(0,0,0,.4);cursor:pointer}
+.narr .more{position:absolute;right:10px;bottom:4px;font-size:calc(var(--fs)*.75);animation:bob .8s infinite}
+.narr.big{top:50%;bottom:auto;transform:translate(-50%,-50%);text-align:center;font-size:calc(var(--fs)*1.25)}
+
+/* ---------- HUD ---------- */
+#hud{position:absolute;left:8px;top:8px;display:flex;flex-direction:column;gap:4px;pointer-events:none;font-size:calc(var(--fs)*.85)}
+#hud .row{display:flex;align-items:center;gap:6px;background:rgba(18,13,28,.72);color:#fff;border-radius:6px;padding:3px 8px;width:max-content}
+#hud .hearts span{display:inline-block;width:calc(var(--fs)*.9);text-align:center}
+#hud .bar{width:calc(var(--fs)*5);height:calc(var(--fs)*.45);background:#3a3050;border-radius:3px;overflow:hidden}
+#hud .bar i{display:block;height:100%;background:linear-gradient(#ffe48a,#e0a030)}
+#hud .xp i{background:linear-gradient(#a6e3ff,#4a8ad8)}
+#where{position:absolute;right:8px;top:8px;background:rgba(18,13,28,.72);color:#ffe9b0;border-radius:6px;padding:3px 10px;font-size:calc(var(--fs)*.85);pointer-events:none}
+#held{position:absolute;right:8px;top:calc(var(--fs)*2.4);background:rgba(255,236,170,.92);border:2px solid var(--ink);border-radius:6px;padding:3px 8px;font-size:calc(var(--fs)*.8);display:none;align-items:center;gap:6px}
+#held canvas{image-rendering:pixelated;width:calc(var(--fs)*1.4);height:calc(var(--fs)*1.4)}
+#objective{position:absolute;left:50%;top:8px;transform:translateX(-50%);background:rgba(18,13,28,.72);color:#fff;border-radius:6px;
+  padding:3px 12px;font-size:calc(var(--fs)*.8);pointer-events:none;max-width:46%;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#objective b{color:#ffd86a;font-weight:600}
+#toasts{position:absolute;left:50%;top:18%;transform:translateX(-50%);display:flex;flex-direction:column;align-items:center;gap:6px;pointer-events:none}
+.toast{background:var(--parch);border:3px solid var(--edge);border-radius:8px;padding:6px 14px;font-size:var(--fs);box-shadow:0 4px 0 rgba(0,0,0,.4);
+  animation:toast 3.2s forwards;white-space:nowrap;display:flex;align-items:center;gap:8px}
+.toast canvas{image-rendering:pixelated;width:calc(var(--fs)*1.6);height:calc(var(--fs)*1.6)}
+.toast.lvl{background:#fff2b0;border-color:#b8860b}
+@keyframes toast{0%{opacity:0;transform:translateY(-10px)}8%{opacity:1;transform:none}85%{opacity:1}100%{opacity:0}}
+
+/* ---------- toolbar ---------- */
+#bar{position:absolute;right:8px;bottom:8px;display:flex;gap:6px}
+#bar button,.tbtn{font:inherit;font-size:calc(var(--fs)*.8);background:var(--parch);border:3px solid var(--edge);border-radius:8px;padding:4px 10px;cursor:pointer;color:var(--ink);box-shadow:0 3px 0 rgba(0,0,0,.4)}
+#bar button:hover{background:var(--gold)}
+#bar button kbd{opacity:.6;font-family:inherit}
+
+/* ---------- panels ---------- */
+.panel{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:min(92%,820px);height:min(88%,560px);background:var(--parch);
+  border:5px double var(--edge);border-radius:10px;box-shadow:0 10px 0 rgba(0,0,0,.45);display:none;flex-direction:column;font-size:var(--fs)}
+.panel.open{display:flex}
+.panel header{display:flex;gap:6px;padding:8px 10px 0;border-bottom:3px solid var(--edge)}
+.panel header button{font:inherit;font-size:var(--fs);padding:4px 14px;background:var(--parch2);border:3px solid var(--edge);border-bottom:none;border-radius:8px 8px 0 0;cursor:pointer;color:var(--ink)}
+.panel header button.on{background:var(--parch);position:relative;top:3px}
+.panel header .x{margin-left:auto;background:#d88;border-radius:8px;margin-bottom:6px;border-bottom:3px solid var(--edge)}
+.panel .body{flex:1;overflow:auto;padding:12px 16px;display:flex;gap:14px}
+.inv-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(calc(var(--fs)*3.4),1fr));gap:8px;align-content:start;flex:1.3}
+.slot{aspect-ratio:1;background:#ead9ad;border:3px solid #b08a58;border-radius:8px;display:flex;align-items:center;justify-content:center;cursor:pointer;position:relative}
+.slot canvas{image-rendering:pixelated;width:78%;height:78%}
+.slot.sel{border-color:#d03020;background:#fff0c0}
+.slot.combine{border-color:#2a6ad0;background:#dfe9ff}
+.slot .n{position:absolute;right:3px;bottom:0;font-size:calc(var(--fs)*.75)}
+.detail{flex:1;display:flex;flex-direction:column;gap:8px;border-left:3px dashed #c4a46e;padding-left:14px;min-width:0}
+.detail h3{font-size:calc(var(--fs)*1.15)}
+.detail p{line-height:1.35}
+.detail .acts{display:flex;flex-wrap:wrap;gap:6px;margin-top:auto}
+.detail .acts button{font:inherit;font-size:calc(var(--fs)*.9);padding:5px 12px;border:3px solid var(--edge);border-radius:8px;background:#f8eccc;cursor:pointer;color:var(--ink)}
+.detail .acts button:hover{background:var(--gold)}
+.stats{display:grid;grid-template-columns:auto 1fr;gap:4px 12px;font-size:calc(var(--fs)*.9)}
+.qlist{flex:1;line-height:1.45}
+.q{margin-bottom:10px}
+.q h4{font-size:calc(var(--fs)*1.05)}
+.q h4 .tag{font-size:calc(var(--fs)*.7);background:var(--edge);color:#fff;border-radius:4px;padding:0 6px;margin-left:6px;vertical-align:middle}
+.q.done h4{opacity:.55;text-decoration:line-through}
+.q .d{font-size:calc(var(--fs)*.85);opacity:.85;margin:2px 0 4px}
+.q ul{list-style:none;padding-left:14px}
+.q li{font-size:calc(var(--fs)*.9)}
+.q li.ok{opacity:.55;text-decoration:line-through}
+.q .sub{margin-left:22px;border-left:3px solid #c4a46e;padding-left:10px;margin-top:6px}
+.journal p{margin-bottom:10px;line-height:1.4}
+.journal h4{margin:8px 0 4px}
+
+/* ---------- title ---------- */
+#title{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;padding-bottom:7%;gap:10px}
+#title .menu{display:flex;flex-direction:column;gap:8px;align-items:stretch;width:min(60%,300px)}
+#title button{font:inherit;font-size:calc(var(--fs)*1.1);padding:8px 16px;background:rgba(244,230,196,.95);border:4px solid var(--edge);border-radius:10px;cursor:pointer;color:var(--ink);box-shadow:0 4px 0 rgba(0,0,0,.5)}
+#title button:hover{background:var(--gold)}
+#title .hint{color:#d8c8a8;font-size:calc(var(--fs)*.75);text-align:center;text-shadow:0 2px 0 #000;max-width:90%}
+#fade{position:absolute;inset:0;background:#000;opacity:0;pointer-events:none;transition:opacity .5s}
+
+/* ---------- touch controls ---------- */
+#touch{position:absolute;inset:0;pointer-events:none;display:none}
+body.touch #touch{display:block}
+#dpad{position:absolute;left:14px;bottom:14px;width:132px;height:132px;pointer-events:auto}
+#dpad div{position:absolute;width:44px;height:44px;background:rgba(244,230,196,.55);border:3px solid rgba(122,85,48,.8);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:20px;color:#2a1c14}
+#dpad .u{left:44px;top:0}#dpad .d{left:44px;top:88px}#dpad .l{left:0;top:44px}#dpad .r{left:88px;top:44px}
+#tbtns{position:absolute;right:14px;bottom:64px;display:flex;gap:10px;pointer-events:auto}
+#tbtns div{width:56px;height:56px;border-radius:50%;background:rgba(244,230,196,.6);border:3px solid rgba(122,85,48,.85);display:flex;align-items:center;justify-content:center;font-size:13px;color:#2a1c14;text-align:center;line-height:1}
+#rotate{display:none;position:fixed;inset:0;background:#120d1c;color:#f4e6c4;align-items:center;justify-content:center;text-align:center;font-size:24px;padding:30px;z-index:9;pointer-events:none}
+@media (orientation:portrait) and (pointer:coarse){#rotate{display:flex}}
+#flapgame{position:absolute;left:50%;bottom:12%;transform:translateX(-50%);background:rgba(18,13,28,.8);color:#fff;border-radius:10px;padding:8px 16px;font-size:var(--fs);display:none;text-align:center}
+</style>
+</head>
+<body>
+<div id="rotate">Turn your phone sideways<br>for the best view of Kraxenville ↻</div>
+<div id="wrap"><div id="stage">
+  <canvas id="game" width="320" height="180"></canvas>
+  <div id="ui">
+    <div id="hud" style="display:none">
+      <div class="row hearts" id="hHearts"></div>
+      <div class="row">✦ Light <div class="bar"><i id="hLight"></i></div></div>
+      <div class="row">Lv <b id="hLvl">1</b> <div class="bar xp"><i id="hXp"></i></div></div>
+      <div class="row">🪙 <span id="hCoins">0</span> copper</div>
+    </div>
+    <div id="objective" style="display:none"></div>
+    <div id="where" style="display:none"></div>
+    <div id="held"><canvas width="16" height="16"></canvas><span></span> <span style="opacity:.6">(Esc to drop)</span></div>
+    <div id="toasts"></div>
+    <div id="bar" style="display:none">
+      <button data-k="inv">Satchel <kbd>I</kbd></button>
+      <button data-k="quest">Quests <kbd>J</kbd></button>
+      <button data-k="map">Map <kbd>P</kbd></button>
+      <button data-k="menu">☰</button>
+    </div>
+    <div class="panel" id="panel">
+      <header>
+        <button data-tab="inv">Satchel</button>
+        <button data-tab="quest">Quests</button>
+        <button data-tab="map">Map</button>
+        <button data-tab="journal">Journal</button>
+        <button data-tab="opts">Options</button>
+        <button class="x" data-tab="close">✕</button>
+      </header>
+      <div class="body" id="panelBody"></div>
+    </div>
+    <div id="flapgame"></div>
+    <div id="title"></div>
+    <div id="touch">
+      <div id="dpad"><div class="u" data-d="up">▲</div><div class="d" data-d="down">▼</div><div class="l" data-d="left">◀</div><div class="r" data-d="right">▶</div></div>
+      <div id="tbtns"><div data-b="light">Raise<br>Light</div><div data-b="jump">Jump</div><div data-b="act">Talk<br>/Use</div></div>
+    </div>
+    <div id="fade"></div>
+  </div>
+</div></div>
+<script src="js/audio.js"></script>
+<script src="js/gfx.js"></script>
+<script src="js/maps.js"></script>
+<script src="js/story.js"></script>
+<script src="js/game.js"></script>
+</body>
+</html>
