@@ -169,10 +169,17 @@ const AUDIO = (() => {
   }
   timer = setInterval(schedule, 60);
 
+  // pause all sound while the tab / app is in the background, and carry on when it comes back
+  let hiddenPause = false;
+  document.addEventListener('visibilitychange', () => {
+    if (!ctx) return;
+    if (document.visibilityState === 'hidden') { hiddenPause = true; ctx.suspend().catch(() => { }); }
+    else if (hiddenPause) { hiddenPause = false; ctx.resume().catch(() => { }); }
+  });
   function setMuted(m) { muted = m; if (master) master.gain.setTargetAtTime(m ? 0 : 0.8, ctx.currentTime, 0.05); }
   function setVolumes(mv, sv) {
     if (mv != null) musicVol = mv; if (sv != null) sfxVol = sv;
     if (musicBus) { musicBus.gain.value = musicVol; sfxBus.gain.value = sfxVol; }
   }
-  return { init, sfx, music, setMuted, setVolumes, get muted() { return muted; }, get musicVol() { return musicVol; }, get sfxVol() { return sfxVol; }, get current() { return trackName; } };
+  return { init, sfx, music, setMuted, setVolumes, get muted() { return muted; }, get musicVol() { return musicVol; }, get sfxVol() { return sfxVol; }, get current() { return trackName; }, get state() { return ctx ? ctx.state : 'none'; } };
 })();
