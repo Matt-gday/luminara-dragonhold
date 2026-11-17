@@ -132,6 +132,10 @@ html,body{height:100%;background:#0b0810;overflow:hidden;color:var(--ink);
 .modal .how{padding-left:18px;line-height:1.35}.modal .how li{margin-bottom:5px}
 .modal-in{font:inherit;font-size:calc(var(--fs)*1.1);width:100%;padding:6px 10px;border:3px solid var(--edge);border-radius:8px;background:#fffaf0;color:var(--ink);margin:4px 0 6px;user-select:text;-webkit-user-select:text}
 .modal-btns{display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap;margin-top:6px}
+.modal.stack{width:min(80%,340px);text-align:center}
+.modal.stack .modal-btns{flex-direction:column;align-items:stretch}
+.modal.stack .modal-btns button{font-size:calc(var(--fs)*1.1);padding:7px 14px}
+.modal .dim{opacity:.8;font-size:calc(var(--fs)*.85)}
 .modal-btns button,.slotcard button,#sBack{font:inherit;font-size:var(--fs);padding:5px 14px;border:3px solid var(--edge);border-radius:8px;background:#f8eccc;cursor:pointer;color:var(--ink);box-shadow:0 3px 0 rgba(0,0,0,.35)}
 button.primary{background:var(--gold)!important}
 button.danger{background:#e8968a!important;border-color:#8a3a2a!important}
@@ -209,7 +213,7 @@ body.panelopen #touch{display:none}
       <button data-k="inv">Satchel <kbd>I</kbd></button>
       <button data-k="quest">Quests <kbd>J</kbd></button>
       <button data-k="map">Map <kbd>P</kbd></button>
-      <button data-k="menu">☰</button>
+      <button data-k="menu">Menu <kbd>Esc</kbd></button>
     </div>
     <div class="panel" id="panel">
       <header>

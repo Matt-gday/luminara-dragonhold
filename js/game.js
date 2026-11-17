@@ -172,7 +172,7 @@ const G = (() => {
     if (mode !== 'play') return;
     if (k === 'mute') { AUDIO.setMuted(!AUDIO.muted); toast(AUDIO.muted ? 'Sound off' : 'Sound on'); return; }
     if (panelOpen()) { if (k === 'esc' || k === 'inv' && curTab === 'inv' || k === 'quest' && curTab === 'quest') closePanel(); else if (k === 'inv') openPanel('inv'); else if (k === 'quest') openPanel('quest'); else if (k === 'map') { if (curTab === 'map') closePanel(); else openPanel('map'); } return; }
-    if (k === 'esc') { if (held) setHeld(null); else openPanel('opts'); return; }
+    if (k === 'esc') { if (held) setHeld(null); else pauseMenu(); return; }
     if (busy) return;
     if (k === 'inv' && S.flags.hasSatchel) openPanel('inv');
     else if (k === 'inv') toast('You have no satchel yet.');
@@ -323,6 +323,7 @@ const G = (() => {
   }
 
   function update(dt) {
+    if (paused) return;
     S.time += dt;
     if (dialog) updateDialog(dt);
     if (!busy && !dialog && !transitioning && !panelOpen() && !flapGame) {
@@ -972,7 +973,7 @@ const G = (() => {
     move: () => ({ title: 'Welcome, Light-Bearer!', text: isTouch() ? 'Tap anywhere to walk there. Tap people and things to talk to them, look at them or pick them up.' : 'Walk with the <b>arrow keys</b> (or click where you want to go). Press <b>E</b> next to people and things — or click them — to talk, look or pick up.' }),
     goal: () => ({ target: '#objective', title: 'Your goal', text: 'This gold <b>Goal</b> line always tells you what to do next. Check it whenever you are not sure!' }),
     quests: () => ({ target: '#bar [data-k=quest]', title: 'Quests', text: `You just got your first quest, <i>A New Dawn</i>. It is a list of little jobs. Open ${keyName('J', 'Quests')} any time to see every quest and tick off what you have done.` }),
-    menu: () => ({ target: '#bar [data-k=menu]', title: 'Menu', text: 'The <b>☰</b> menu has sound, controls, how to play, and the save slots for each player. The game saves by itself.' }),
+    menu: () => ({ target: '#bar [data-k=menu]', title: 'Menu', text: `${isTouch() ? 'The <b>Menu</b> button' : '<b>Esc</b> (or the <b>Menu</b> button)'} pauses the game. From there you can change options, read how to play, switch players, or go back to the title. Your progress saves by itself — no need to save.` }),
     satchel: () => ({ target: '#bar [data-k=inv]', title: 'Your Satchel', text: `Everything you pick up goes in your satchel. Open ${keyName('I', 'Satchel')} to look at an item, <b>Use</b> it on something, or <b>Combine</b> two items together.` }),
     use: () => ({ target: '#bar [data-k=inv]', title: 'Using an item', text: 'Open your <b>Satchel</b> → tap the item → press <b>Use…</b> → then tap the thing you want to use it on.' }),
     combine: () => ({ target: '#bar [data-k=inv]', title: 'Combining items', text: 'Some items work better together! Open your <b>Satchel</b> → tap one item → press <b>Combine…</b> → then tap the other item.' }),
@@ -1107,7 +1108,7 @@ const G = (() => {
   document.querySelectorAll('#bar button').forEach(b => b.addEventListener('click', e => {
     e.stopPropagation(); AUDIO.init(); if (busy || dialog) return; const k = b.dataset.k;
     if (k === 'inv') { if (S.flags.hasSatchel) openPanel('inv'); else toast('You have no satchel yet.'); }
-    if (k === 'quest') openPanel('quest'); if (k === 'map') openPanel('map'); if (k === 'menu') openPanel('opts');
+    if (k === 'quest') openPanel('quest'); if (k === 'map') openPanel('map'); if (k === 'menu') pauseMenu();
   }));
   function renderPanel() {
     document.querySelectorAll('#panel header button').forEach(b => b.classList.toggle('on', b.dataset.tab === curTab));
@@ -1220,31 +1221,40 @@ const G = (() => {
     d.innerHTML = `<h4>Controls</h4>
       <p>Move: <b>Arrow keys / WASD</b> — or click / tap where you want to go.<br>
       Talk / look / use: <b>E</b>, <b>Enter</b> — or click on a person or thing.<br>
-      Jump: <b>Space</b> &nbsp; Raise lantern: <b>Q</b> &nbsp; Satchel: <b>I</b> &nbsp; Quests: <b>J</b> &nbsp; Sound on/off: <b>M</b></p>
+      Jump: <b>Space</b> &nbsp; Raise lantern: <b>Q</b> &nbsp; Satchel: <b>I</b> &nbsp; Quests: <b>J</b> &nbsp; Map: <b>P</b> &nbsp; Menu: <b>Esc</b> &nbsp; Sound on/off: <b>M</b></p>
       <h4>Sound</h4>
-      <p>Music <input type="range" id="oMus" min="0" max="0.7" step="0.05" value="${AUDIO.musicVol}"> &nbsp; Effects <input type="range" id="oSfx" min="0" max="1" step="0.05" value="${AUDIO.sfxVol}"></p>
-      <h4>Touch controls</h4>
+      <p>Music <input type="range" id="oMus" min="0" max="0.7" step="0.05" value="${AUDIO.musicVol}"> &nbsp; Effects <input type="range" id="oSfx" min="0" max="1" step="0.05" value="${AUDIO.sfxVol}"><br>
+      <label style="cursor:pointer"><input type="checkbox" id="oMute" ${AUDIO.muted ? 'checked' : ''} style="transform:scale(1.4);margin-right:8px">Turn all sound off</label></p>
+      <div style="display:${isTouch() ? 'block' : 'none'}"><h4>Touch controls</h4>
       <p><label style="cursor:pointer"><input type="checkbox" id="oDpad" ${document.body.classList.contains('nodpad') ? '' : 'checked'} style="transform:scale(1.4);margin-right:8px">Show the arrow pad on screen</label><br>
-      <span style="opacity:.75">Turn it off to just tap where you want Luminara to walk. The Jump, Talk and Raise Light buttons stay.</span></p>
-      <h4>Game</h4><p>Playing as <b>${S.playerName || 'Player ' + slot}</b> (save slot ${slot}). The game saves by itself every few seconds, and whenever you close or leave it.</p>`;
+      <span style="opacity:.75">Turn it off to just tap where you want Luminara to walk. The Jump, Talk and Raise Light buttons stay.</span></p></div>
+      <h4>Tips</h4><p>New-player tips appear once each. You can see them all again from the start.</p>`;
     const acts = document.createElement('div'); acts.className = 'detail'; acts.style.border = 'none'; acts.style.padding = 0;
     const row = document.createElement('div'); row.className = 'acts';
     const mkb = (t, f) => { const b = document.createElement('button'); b.textContent = t; b.onclick = f; row.appendChild(b); };
-    mkb('Save now', () => { save(); toast('Game saved'); });
-    mkb('Back to title', () => { save(); closePanel(); toTitle(); });
     mkb('Show tips again', () => { resetTips(); closePanel(); toast('Tips will appear again as you play.'); run(() => tip('goal')); });
-    mkb('Players & saves', () => { save(); closePanel(); toTitle(); showSlots(); });
-    mkb('Delete this save…', async () => {
-      const name = S.playerName || 'Player ' + slot;
-      const ok = await modal({ title: 'Delete this save?', html: `<p>This will delete <b>${esc(name)}</b>'s game in save slot ${slot} — every quest, item and golden leaf.</p><p><b>This can't be undone.</b></p>`, buttons: [{ label: 'Keep my save', value: false }, { label: 'Yes, delete it', value: true, danger: true }] });
-      if (!ok) return;
-      mode = 'title'; deleteSlot(slot); closePanel(); toTitle(); toast(`${esc(name)}'s save was deleted.`);
-    });
-    row.lastChild.classList.add('danger');
     acts.appendChild(row); d.appendChild(acts); body.appendChild(d);
     d.querySelector('#oMus').oninput = e => AUDIO.setVolumes(+e.target.value, null);
     d.querySelector('#oSfx').oninput = e => AUDIO.setVolumes(null, +e.target.value);
     d.querySelector('#oDpad').onchange = e => setDpad(e.target.checked);
+    d.querySelector('#oMute').onchange = e => AUDIO.setMuted(e.target.checked);
+  }
+
+  // =================================================================== PAUSE MENU
+  let paused = false;
+  async function pauseMenu() {
+    if (paused || mode !== 'play') return;
+    if (panelOpen()) closePanel();
+    paused = true; save(); AUDIO.sfx('blip', 0.8);
+    const ago = Math.round((Date.now() - (S.savedAt || Date.now())) / 1000);
+    const v = await modal({ title: 'Paused', stack: true, escValue: 'resume',
+      html: `<p class="dim">Playing as <b>${esc(S.playerName || 'Player ' + slot)}</b> · Level ${S.lvl} · ${esc(M.name)}<br>✓ Your progress saves automatically${ago < 5 ? ' (just saved)' : ''}.</p>`,
+      buttons: [{ label: 'Resume', value: 'resume', primary: true }, { label: 'Options', value: 'opts' }, { label: 'How to Play', value: 'how' }, { label: 'Players & Saves', value: 'slots' }, { label: 'Back to Title', value: 'title' }] });
+    paused = false;
+    if (v === 'opts') openPanel('opts');
+    if (v === 'how') { paused = true; await modal({ title: 'How to Play', html: HOW, escValue: true, buttons: [{ label: 'Back to the game', value: true, primary: true }] }); paused = false; }
+    if (v === 'slots') { save(); toTitle(); showSlots(); }
+    if (v === 'title') { save(); toTitle(); }
   }
 
   // =================================================================== SAVE / LOAD
@@ -1342,11 +1352,13 @@ const G = (() => {
   function modal(o) {
     return new Promise(res => {
       const bg = document.createElement('div'); bg.className = 'modal-bg';
-      const box = document.createElement('div'); box.className = 'modal'; bg.appendChild(box);
+      const box = document.createElement('div'); box.className = 'modal' + (o.stack ? ' stack' : ''); bg.appendChild(box);
       box.innerHTML = `<h3>${o.title}</h3>${o.html || ''}${o.input ? `<input class="modal-in" maxlength="16" value="${esc(o.input)}">` : ''}`;
       const row = document.createElement('div'); row.className = 'modal-btns'; box.appendChild(row);
       const inp = box.querySelector('.modal-in');
-      const done = v => { bg.remove(); res(v); };
+      const done = v => { bg.remove(); document.removeEventListener('keydown', onKey, true); res(v); };
+      const onKey = e => { if (e.target === inp) return; if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); done(o.escValue ?? false); } else if (e.key === 'Enter') { e.preventDefault(); e.stopPropagation(); const pb = o.buttons.find(b => b.primary); if (pb) done(pb.value); } else e.stopPropagation(); };
+      document.addEventListener('keydown', onKey, true);
       o.buttons.forEach(bt => { const b = document.createElement('button'); b.textContent = bt.label; if (bt.danger) b.classList.add('danger'); if (bt.primary) b.classList.add('primary'); b.onclick = () => done(inp && bt.value === true ? (inp.value.trim() || o.input) : bt.value); row.appendChild(b); });
       ui.appendChild(bg);
       if (inp) { inp.focus(); inp.select(); inp.addEventListener('keydown', e => { e.stopPropagation(); if (e.key === 'Enter') done(inp.value.trim() || o.input); if (e.key === 'Escape') done(false); }); }

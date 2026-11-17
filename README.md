@@ -22,10 +22,11 @@ All the art, animation, music and sound effects are made by code, so there are n
 | Satchel (use and combine items) | **I** | Satchel button |
 | Quest log | **J** | Quests button |
 | Map of Krax | **P** | Map button |
-| Sound on/off | **M** | Options menu |
+| Pause menu | **Esc** | Menu button |
+| Sound on/off | **M** | Menu → Options |
 
 The game saves by itself every few seconds, and the moment it's closed, so players carry on exactly where they left off.
-**Players & Saves** on the title screen holds three separate save slots, one per player. Each slot has a **Delete** button that asks before deleting. You can also delete the current save from **☰ → Options**.
+**Players & Saves** on the title screen holds three separate save slots, one per player. Each slot has a **Delete** button that asks before deleting. During play, **Menu** (or Esc) pauses the game and leads to Options, How to Play, Players & Saves and Back to Title.
 
 **Add it to your Home Screen:** open the link on a phone or tablet. On an iPhone or iPad, tap Share → *Add to Home Screen*; on Android, use the browser menu → *Add to Home screen* / *Install app*. It then opens full-screen like a normal app, works offline, and keeps its saves.
 
