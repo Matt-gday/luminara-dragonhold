@@ -337,7 +337,8 @@ const STORY = (() => {
     G.music('town');
     G.sfx('lute');
     await nar('It wasn\'t too long after that she heard one of the local bards, plucking his lute and humming an old tune that she recognised.');
-    await think(F().metFredrick ? 'Good old Fredrick, still playing by the fountain. Now — to the guild!' : "That tune! It's Fredrick — he's by the fountain. Then I really must get to the guild.");
+    const next = F().metHollis ? 'Now, back to work — the caravan will not get ready by itself!' : 'Now — to the guild!';
+    await think(F().metFredrick ? `Good old Fredrick, still playing by the fountain. ${next}` : `That tune! It's Fredrick — he's by the fountain. ${next}`);
     G.addXP(5, true);
   }
   ACT.fredrick = async () => {
@@ -612,8 +613,15 @@ const STORY = (() => {
       await G.fade(true, 500); G.sfx('munch'); await G.wait(400); await G.fade(false, 500);
       G.S.hearts = G.S.maxHearts; G.hud();
       await nar('The two friends shared a hearty stew and warm bread beside the crackling fire, and for a while the whole world was just the two of them, talking and laughing.');
-      await say('friend', 'So the guild is sending you into the Dark Forest? With all these rumours about a gateway?');
-      await L('Someone has to light the way.');
+      if (f.metHollis) {
+        await say('friend', 'So the guild is sending you into the Dark Forest with a whole caravan? With all these rumours about a gateway?');
+        await L('Someone has to light the way.');
+      } else {
+        await say('friend', "Off to the guild after this? Let me guess — another run through the Dark Forest.");
+        await L("Most likely. That's where they always need a light.");
+        await say('friend', 'With all these rumours about a gateway out there? Oh, Luminara…');
+        await L('Someone has to light the way.');
+      }
       await say('friend', 'Just… promise you will come back and tell me everything.');
       await L('I promise. You know I hate being apart from the people I love.');
       await say('friend', 'And you never will be. Not while I am around.');
