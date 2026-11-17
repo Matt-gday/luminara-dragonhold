@@ -80,7 +80,9 @@
     ] },
     clover: { title: 'A Shoe for Clover', side: true, desc: 'Clover is meant to pull your wagon today, but she has thrown a shoe.', giver: 'Bertram', xp: 25, steps: [
       { t: 'Hear what happened from Bertram at the Coach House', done: s => s.flags.knowFountain },
-      { t: 'Make something to fish with (combine two things)', done: s => s.inv.includes('hookLine') || s.flags.gotShoe },
+      { t: 'Find something to make a hook (Bertram lost a nail near the trough)', done: s => s.flags.gotNail || s.flags.gotShoe },
+      { t: "Find a long, strong line (Fredrick's lute string snapped this morning)", done: s => s.flags.gotString || s.flags.gotShoe },
+      { t: 'Tie them together (combine them in your satchel)', done: s => s.inv.includes('hookLine') || s.flags.gotShoe },
       { t: 'Fish the horseshoe out of the fountain', done: s => s.flags.gotShoe },
       { t: 'Bring the horseshoe to Bertram', done: s => s.flags.shod },
     ] },
@@ -304,12 +306,13 @@
       await say('fredrick', "Yes, of course! The talk is all through the town. I was turning it into a song. I, too, wonder what lies on the other side, but I won't be going into the forest any time soon, that's for sure!");
       await say('fredrick', 'Old songs speak of such danger, warning: *doors of mystery should never be opened unless the traveller has a key*.');
       await L('That is fascinating. Enjoy your day.');
+      if (!f.knowFountain) { await say('fredrick', "You too! Now, if only I had all my strings — one snapped right in the middle of a verse this morning."); f.fredMentioned = true; }
       f.metFredrick = true; journalAdd('song');
       if (!(f.knowFountain && !f.gotString && !f.shod)) return;
     }
     if (f.knowFountain && !f.gotString && !f.shod) {
       await L('Fredrick, I need something long and strong, like a fishing line…');
-      await say('fredrick', "Strange you should ask! A string snapped on my lute this very morning, right in the middle of a verse. It's no good for music now — but it's strong as anything. Take it!");
+      await say('fredrick', f.fredMentioned ? "My snapped lute string? It's no good for music now — but it's strong as anything. Take it, with my blessing!" : "Strange you should ask! A string snapped on my lute this very morning, right in the middle of a verse. It's no good for music now — but it's strong as anything. Take it!");
       f.gotString = true; G.give('luteString'); return;
     }
     G.sfx('lute'); await say('fredrick', ['♪ Through the forest dark and deep, where the old stones softly sleep… ♪', '♪ Oh, the Light-Bearer walks where the shadows grow… ♪', "I'm still looking for a word that rhymes with 'gateway'. 'Straightaway'? Hmm.", '♪ Doors of mystery, doors of night — never open without a key… ♪'][(f.fredT = ((f.fredT || 0) + 1)) % 4]);
@@ -386,10 +389,17 @@
       await say('bertram', "The fountain's deep in the middle and cold as winter. My old arms can't reach, and I've no tackle for fishing.");
       await L('If I can fish it out, can you fit it again?');
       await say('bertram', f.gotNail ? "Quick as a wink — I've nails aplenty." : "Quick as a wink — I've nails aplenty. Well… I had. One rolled off somewhere by the trough.");
+      if (!f.gotString) await say('bertram', "And if it's a line you're after, ask Fredrick by the fountain. I heard his lute string go *twang* this morning — he was cross as a wet cat!");
       f.knowFountain = true; startQuest('clover');
       return think('Something to fish with… I need a hook, and a line strong enough to pull up a horseshoe.');
     }
     await say('bertram', "Any luck with the horseshoe? It's sat at the bottom of the fountain, sure as eggs.");
+    if (f.gotShoe) return;
+    if (has('hookLine')) return say('bertram', "A hook and line! Now dangle it in the middle of the fountain.");
+    if (!f.gotNail && !f.gotString) return say('bertram', "You'll want a hook — my nail rolled off by the trough — and a good strong line. Fredrick snapped a lute string this morning, I'd wager he'd part with it.");
+    if (!f.gotNail) return say('bertram', "For a hook, look by the trough. That nail of mine rolled off somewhere there.");
+    if (!f.gotString) return say('bertram', "For a line, ask Fredrick by the fountain. Lute strings are strong as anything.");
+    return say('bertram', "You've a nail and a string? Tie them together, and you've got yourself a fishing line!");
   };
   USE.bertram = async (item) => {
     if (item !== 'horseshoe') return false;
@@ -409,13 +419,15 @@
   ACT.nailPick = async () => {
     if (!F().hasSatchel) return needSatchel();
     F().gotNail = true; G.give('bentNail'); G.refresh();
-    await think('A bent horseshoe nail, curled up like a little hook.');
+    await think(F().knowFountain ? (F().gotString ? "A bent nail — a perfect hook! Now to tie Fredrick's string to it." : "A bent nail — that's my hook! Now I need a strong line. Bertram said to ask Fredrick.") : 'A bent horseshoe nail, curled up like a little hook.');
   };
   ACT.fountain = async () => {
     const f = F();
     if (f.knowFountain && !f.gotShoe) {
       await nar('Deep in the middle of the fountain, something curved and iron glints beneath the water.');
-      return think("It's too deep and cold to reach by hand. I need a hook and a line.");
+      if (has('hookLine')) return think("I should use my hook and line here.");
+      const need = [!F().gotNail && 'a hook', !F().gotString && 'a line'].filter(Boolean);
+      return think(need.length ? `It's too deep and cold to reach by hand. I still need ${need.join(' and ')}.` : "I have a nail and a string. If I tie them together in my satchel, I'll have a hook and line!");
     }
     if (!f.wished) {
       const c = await G.choice('luminara', '*The fountain sparkles in the sunlight. Coins glitter on the bottom.*', ['Toss in a copper and make a wish', 'Just admire it']);
@@ -425,7 +437,12 @@
     await nar('The fountain sparkles. Water splashes softly from the top.');
   };
   USE.fountain = async (item) => {
-    if (item === 'luteString' || item === 'bentNail') { await think("On its own that won't work. I should combine the string and the nail."); return true; }
+    if (item === 'luteString' || item === 'bentNail') {
+      if (has('luteString') && has('bentNail')) await think("On its own that won't work. I should tie the string and the nail together in my satchel.");
+      else if (item === 'bentNail') await think("I can't reach that deep with just a nail. I need a long, strong line to tie it to.");
+      else await think("A string on its own won't catch anything. I need a hook to tie to the end.");
+      return true;
+    }
     if (item !== 'hookLine') return false;
     if (F().gotShoe) { await think("I've already fished out the horseshoe."); return true; }
     G.sfx('splash'); await nar('Luminara lowered the hook into the fountain, slowly, slowly… a tug!');
