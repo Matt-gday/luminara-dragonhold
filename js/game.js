@@ -301,9 +301,9 @@ const G = (() => {
       run(() => STORY.interact({ kind: 'obj', id: o.id, o, act: o.act, look: o.look, pickup: o.pickup, enter: o.enter, door: o.door }, held));
     }
   }
-  // After turning to someone (or wandering), an NPC turns back to the way they normally face, so nobody is
-  // left standing with their back to the camera.
-  function settleLater(n) { if (n && n.def) { n.settle = true; n.settleT = 0; } }
+  // An NPC who turned to talk keeps facing Luminara until she walks away, then turns back to the way they
+  // normally face, so nobody is left with their back to the camera. Wanderers settle a moment after stopping.
+  function settleLater(n, how = 'walkaway') { if (n && n.def) { n.settle = how; n.settleT = 0; } }
   function faceTo(a, b) {
     const dx = b.x - a.x, dy = b.y - a.y;
     if (a.kind === 'dragon' || a.kind === 'horse') { a.dir = dx < 0 ? 'left' : 'right'; return; }
@@ -486,7 +486,7 @@ const G = (() => {
       n.t += dt;
       if (n.path.length) {
         const nx = n.path[0]; const dx = nx.x - n.x, dy = nx.y - n.y, d = Math.hypot(dx, dy);
-        if (d < 1.5) { n.x = nx.x; n.y = nx.y; n.path.shift(); if (!n.path.length && n.onArrive) { const r = n.onArrive; n.onArrive = null; r(); } else if (!n.path.length && n.def.wander) settleLater(n); }
+        if (d < 1.5) { n.x = nx.x; n.y = nx.y; n.path.shift(); if (!n.path.length && n.onArrive) { const r = n.onArrive; n.onArrive = null; r(); } else if (!n.path.length && n.def.wander && n.settle !== 'walkaway') settleLater(n, 'timer'); }
         else {
           const sp = n.speed * dt; const mx = dx / d * Math.min(sp, d), my = dy / d * Math.min(sp, d);
           if (!n.def.fly && !n.ghost && boxBlocked(n.x + mx, n.y + my, false, n)) { n.blockT = (n.blockT || 0) + dt; if (n.blockT > 1.2) { n.blockT = 0; if (!n.onArrive) n.path = []; else { n.x = nx.x; n.y = nx.y; } } }
@@ -498,9 +498,10 @@ const G = (() => {
         n.frame = 0;
         if (n.settle && !busy && !dialog) {
           n.settleT += dt;
-          if (n.settleT > 1.1) { n.settle = false; const rest = n.def.dir || 'down'; if (n.dir !== rest) { n.dir = rest; if (n.kind === 'human') n.frame = 0; } }
+          const away = n.settle === 'walkaway' ? Math.hypot(player.x - n.x, player.y - n.y) > 44 : n.settleT > 1.1;
+          if (away) { n.settle = false; const rest = n.def.dir || 'down'; if (n.dir !== rest) { n.dir = rest; if (n.kind === 'human') n.frame = 0; } }
         }
-        if (n.def.wander && !busy && !dialog) {
+        if (n.def.wander && !busy && !dialog && n.settle !== 'walkaway') {
           n.wanderT -= dt;
           if (n.wanderT <= 0) {
             n.wanderT = 3 + Math.random() * 5;
