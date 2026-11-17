@@ -5,6 +5,8 @@ It is a point-and-click adventure with a little RPG mixed in.
 
 All the art, animation, music and sound effects are made by code, so there are no image or sound files.
 
+**▶ Play online: https://matt-gday.github.io/luminara-dragonhold/**
+
 ## How to play
 
 - **Play now:** open `index.html` in any modern browser.
