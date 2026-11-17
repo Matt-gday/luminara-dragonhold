@@ -45,9 +45,12 @@ const MAPS = (() => {
       return h;
     };
     m.npc = (o) => { m.npcs.push(o); return o; };
+    m.zone = (x, y, ww, hh, id, cond) => m.zones.push({ x, y, w: ww, h: hh, id, if: cond });
     m.exit = (x, y, ww, hh, to, spawn, o = {}) => m.exits.push(Object.assign({ x, y, w: ww, h: hh, to, spawn }, o));
     m.spawn = (name, x, y, dir = 'down') => { m.spawns[name] = [x, y, dir]; };
     m.keep = (x, y, ww, hh) => m.clear.push([x, y, ww, hh]);
+    // keep trees off a road (and far enough away that their canopies don't hide the walker)
+    m.keepRoad = (tile = 'path') => { for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) if (m.ground[y][x] === tile) m.keep(x - 2, y - 1, 5, 4); };
     m.isClear = (x, y) => m.clear.some(([cx, cy, cw, ch]) => x >= cx && y >= cy && x < cx + cw && y < cy + ch);
     m.scatter = (fn, n, region, okTiles, seed = 5, spacing = 2) => {
       const rnd = GFX.RNG(seed); const [rx, ry, rw, rh] = region || [0, 0, w, h];
@@ -92,7 +95,7 @@ const MAPS = (() => {
     m.spr(icon('lanternDim'), 5, 6, { solid: false, dx: 9, dy: -14, sortOff: 1, id: 'lantern_pick', name: 'Lantern', act: 'lanternPick', if: s => !s.flags.hasLantern });
     m.spr(icon('satchel'), 8, 7, { solid: false, id: 'satchel_pick', name: 'Satchel', act: 'satchelPick', if: s => !s.flags.hasSatchel, sparkle: true });
     m.spr(S.plant, 10, 8, { dx: 1 });
-    m.spr(S.barrel, 1, 8, { dx: 1 });
+    m.spr(S.barrel, 1, 8, { dx: 1, id: 'pantry', name: 'Pantry Barrel', act: 'pantry' });
     m.exit(6, 9, 1, 1, 'hillside', 'door', { gate: 'cottageDoor' });
     m.spawn('start', 2, 6, 'down'); m.spawn('door', 6, 8, 'up');
     return m;
@@ -181,7 +184,7 @@ const MAPS = (() => {
     m.spr(S.stallSpice, 30, 17, { fw: 3, id: 'stallSpice', name: 'Lesterfield Goods', act: 'osric', dx: -1 });
     m.spr(S.stallCloth, 19, 25, { fw: 3, id: 'stallCloth', name: 'Cloth Stall', look: 'Bolts of bright cloth from distant Wockville.', dx: -1 });
     m.spr(S.stallBread, 30, 25, { fw: 3, id: 'stallBread', name: 'Bread Stall', look: 'The bread stall is sold out today. Only crumbs remain.', dx: -1 });
-    m.spr(S.bench, 21, 22, { fw: 2, solid: true, id: 'bench', name: 'Bench', act: 'bench' });
+    m.spr(S.bench, 21, 22, { fw: 2, solid: true, id: 'bench', name: 'Bench', act: 'benchSquare' });
     [[18, 17], [33, 17], [18, 27], [33, 27], [23, 14], [27, 14]].forEach(([x, y]) => m.spr(S.lamp, x, y, { light: { r: 40, c: '255,220,140' }, dy: 1 }));
     m.spr(S.barrel, 34, 19); m.spr(S.crate, 35, 19); m.spr(S.sack, 18, 19, { solid: false });
     // ---- coach yard
@@ -197,16 +200,25 @@ const MAPS = (() => {
     // ---- west gate
     m.spr(S.wallV, 2, 18, { dy: 0 }); m.spr(S.wallV, 2, 19); m.spr(S.wallV, 2, 24); m.spr(S.wallV, 2, 25);
     m.spr(S.sign, 4, 19, { id: 'sign_w', name: 'Signpost', look: '"WEST ROAD — The Dark Forest. Travel with a guide!"' });
+    // ---- the caravan yard outside the Merchants' Guild
+    m.spr(S.wagon, 29, 11, { fw: 3, id: 'wagonY1', name: 'Caravan Wagon', act: 'cargo' });
+    m.spr(S.wagon, 29, 13, { fw: 3, id: 'wagonY2', name: 'Caravan Wagon', act: 'cargo' });
+    m.spr(S.barrel, 34, 14); m.spr(S.crate, 34, 15); m.spr(S.barrel, 27, 11, { solid: true });
+    m.keep(27, 10, 6, 6);
+    m.zone(26, 10, 9, 7, 'guildYard');
+    // ---- a bench outside the pie shop
+    m.spr(S.bench, 24, 38, { fw: 2, solid: true, id: 'benchPie', name: 'Bench', act: 'bench' });
     // south bridge sign
-    m.spr(S.sign, 14, 35, { id: 'sign_s', name: 'Signpost', look: '"SOUTH — Ferry road to Wockville (washed out)."' });
+    m.spr(S.sign, 14, 35, { id: 'sign_s', name: 'Signpost', look: '"SOUTH — Brushwood, Wockville and Lesterfield."' });
     leafPickup(m, 'town1', 3, 36); leafPickup(m, 'town2', 50, 6);
     // ---- trees
     m.keep(18, 0, 10, 9); m.keep(10, 3, 9, 7); m.keep(34, 17, 13, 5); m.keep(30, 11, 6, 4); m.keep(36, 1, 13, 9); m.keep(19, 33, 15, 6); m.keep(2, 34, 4, 4); m.keep(48, 4, 3, 3); m.keep(0, 19, 5, 6); m.keep(33, 10, 3, 4);
     m.scatter((x, y, r) => m.tree(x, y, TREES[Math.floor(r() * TREES.length)]), 160, [0, 0, 52, 42], GRASS, 77, 2);
     // ---- exits & spawns
     m.exit(19, 0, 2, 1, 'hillside', 'south');
-    m.exit(0, 20, 1, 4, 'forest_edge', 'east', { gate: 'westGate' });
-    m.exit(12, 41, 2, 1, null, null, { blockMsg: 'The ferry road to Wockville has washed away in the autumn rains. Not that way today.' });
+    m.exit(0, 20, 1, 4, null, null, { gate: 'westGate' });
+    m.exit(12, 41, 2, 1, 'road', 'north', { gate: 'southRoad' });
+    m.spawn('south', 12, 38, 'up');
     m.spawn('north', 19, 2, 'down'); m.spawn('guild', 24, 15, 'down'); m.spawn('cauldron', 10, 32, 'down'); m.spawn('west', 2, 21, 'right');
     m.spawn('bench', 22, 23, 'down');
     // ---- people
@@ -216,13 +228,16 @@ const MAPS = (() => {
     m.npc({ id: 'baker', char: 'baker', x: 30, y: 37, dir: 'down', name: 'Mistress Pell', act: 'baker', color: '#a87440', voice: 1.1 });
     m.npc({ id: 'bertram', char: 'bertram', x: 40, y: 20, dir: 'down', name: 'Bertram', act: 'bertram', color: '#8a6a3a', voice: 0.65 });
     m.npc({ id: 'clover', char: 'horse', x: 38, y: 19, dir: 'left', name: 'Clover', act: 'clover', horse: true, voice: 0.5, fw: 2 });
-    m.npc({ id: 'pemberton', char: 'pemberton', x: 41, y: 11, dir: 'down', name: 'Pemberton', act: 'pemberton', color: '#3a3a4a', voice: 0.9, if: s => !s.flags.gateOpen });
+    m.npc({ id: 'pemberton', char: 'pemberton', x: 43, y: 11, dir: 'left', name: 'Pemberton', act: 'pemberton', color: '#3a3a4a', voice: 0.9 });
     m.npc({ id: 'kid1', char: 'kid1', x: 12, y: 7, dir: 'right', name: 'Pip', act: 'kids', color: '#c84a3a', voice: 1.7 });
     m.npc({ id: 'kid2', char: 'kid2', x: 15, y: 7, dir: 'left', name: 'Nell', act: 'kids', color: '#3e7a32', voice: 1.8 });
     m.npc({ id: 'vA', char: 'villagerA', x: 29, y: 24, dir: 'left', name: 'Farmer Joss', act: 'villagerA', color: '#4a4a7a', wander: 3, voice: 0.85 });
     m.npc({ id: 'vB', char: 'villagerB', x: 12, y: 22, dir: 'down', name: 'Old Maud', act: 'villagerB', color: '#a04a6a', wander: 2, voice: 1.2 });
-    m.npc({ id: 'vC', char: 'villagerC', x: 32, y: 13, dir: 'down', name: 'Hamish', act: 'villagerC', color: '#345a5a', wander: 2, voice: 0.75 });
-    m.npc({ id: 'tobias', char: 'tobias', x: 6, y: 22, dir: 'right', name: 'Tobias', act: 'tobias', color: '#7a5a3a', voice: 0.7, if: s => !s.flags.caravanLeft });
+    m.npc({ id: 'vC', char: 'villagerC', x: 15, y: 23, dir: 'down', name: 'Hamish', act: 'villagerC', color: '#345a5a', wander: 2, voice: 0.75 });
+    m.npc({ id: 'tilda', char: 'tilda', x: 22, y: 25, dir: 'left', name: 'Tilda', act: 'tilda', color: '#7a4aa0', voice: 1.2 });
+    m.npc({ id: 'gerald', char: 'gerald', x: 31, y: 15, dir: 'left', name: 'Gerald', act: 'crew', color: '#a83a2a', voice: 0.8, if: s => !s.flags.departed });
+    m.npc({ id: 'aldric', char: 'aldric', x: 28, y: 11, dir: 'right', name: 'Aldric', act: 'crew', color: '#3a6a9a', voice: 1.05, if: s => !s.flags.departed });
+    m.npc({ id: 'ronald', char: 'ronald', x: 28, y: 13, dir: 'right', name: 'Ronald', act: 'crew', color: '#7a5a3a', voice: 0.7, if: s => !s.flags.departed });
     return m;
   };
 
@@ -241,7 +256,7 @@ const MAPS = (() => {
     m.spr(S.noticeBoard, 2, 5, { fw: 2, id: 'gboard', name: 'Job Board', act: 'noticeBoard' });
     m.exit(7, 10, 2, 1, 'town', 'guild');
     m.spawn('door', 7, 9, 'up');
-    m.npc({ id: 'hollis', char: 'guildmaster', x: 7, y: 3, dir: 'down', name: 'Guildmaster Hollis', act: 'hollis', color: '#2c6a3a', voice: 0.75 });
+    m.npc({ id: 'henry', char: 'henry', x: 7, y: 3, dir: 'down', name: 'Guild Master Henry', act: 'henry', color: '#2c6a3a', voice: 0.75 });
     return m;
   };
 
@@ -262,102 +277,64 @@ const MAPS = (() => {
     m.spr(S.barrel, 1, 9); m.spr(S.plant, 14, 9);
     m.exit(7, 10, 2, 1, 'town', 'cauldron');
     m.spawn('door', 7, 9, 'up');
-    m.npc({ id: 'friend', char: 'friend', x: 5, y: 6, dir: 'left', name: 'Friend', act: 'friend', color: '#2c4a8a', voice: 1.25, nameFn: true });
     m.npc({ id: 'innkeeper', char: 'innkeeper', x: 13, y: 4, dir: 'left', name: 'Brenna', act: 'innkeeper', color: '#7a3a2a', voice: 1.05 });
-    m.npc({ id: 'patron', char: 'villagerC', x: 12, y: 7, dir: 'left', name: 'Hamish', act: 'patron', color: '#345a5a', voice: 0.75, if: s => false });
+    m.npc({ id: 'patron', char: 'tobias', x: 5, y: 6, dir: 'left', name: 'Old Tom', act: 'patron', color: '#7a5a3a', voice: 0.7 });
     return m;
   };
 
-  // =============================================================== FOREST EDGE
-  build.forest_edge = () => {
-    const m = B('forest_edge', 34, 24, 'forest', 31);
-    m.name = 'Edge of the Dark Forest'; m.music = 'forest'; m.dark = 0.55; m.tint = 'dusk'; m.particles = 'fireflies'; m.darkPines = false;
-    m.path([[33, 11], [6, 11]], 'fpath', 2);
-    m.path([[0, 11], [6, 11]], 'fpath', 2);
-    m.path([[15, 11], [15, 0]], 'fpath', 2);
-    m.fill(17, 8, 8, 6, 'fpath');
-    m.spr(S.wagon, 19, 9, { fw: 3, fh: 1, dx: 0, id: 'wagon', name: 'Caravan Wagon', look: 'The guild wagon, piled with crates for Lesterfield.', if: s => !s.flags.caravanGone });
-    m.npc({ id: 'cloverF', char: 'horse', x: 22, y: 9, dir: 'left', name: 'Clover', act: 'clover', horse: true, fw: 2, if: s => !s.flags.caravanGone });
-    m.npc({ id: 'tobias', char: 'tobias', x: 20, y: 12, dir: 'left', name: 'Tobias', act: 'tobias', color: '#7a5a3a', voice: 0.7, if: s => !s.flags.caravanGone });
-    m.spr(S.vines[0], 7, 10, { fw: 3, fh: 3, dx: -1, dy: 2, id: 'vines', name: 'Thorny Vines', act: 'vines', anim: S.vines, light: { r: 22, c: '255,60,100' }, if: s => !s.flags.vinesGone });
-    m.spr(S.log, 15, 5, { fw: 2, id: 'log', name: 'Fallen Log', look: 'A fallen log across the trail. You could probably jump over it.', low: true, dx: 0 });
-    m.spr(S.waystone[1], 26, 13, { light: { r: 44, c: '255,220,120' }, id: 'ws0', name: 'Waystone', look: 'A guild waystone. Its little lamp still burns, marking the forest road.' });
-    m.spr(S.mushrooms, 12, 14, { solid: false }); m.spr(S.mushrooms, 28, 7, { solid: false });
-    leafPickup(m, 'edge', 31, 4);
-    m.keep(17, 8, 9, 7); m.keep(14, 0, 4, 12); m.keep(30, 3, 3, 3); m.keep(5, 9, 6, 6);
-    m.scatter((x, y, r) => r() < 0.85 ? m.pine(x, y) : m.dead(x, y), 220, [0, 0, 34, 24], FOREST, 13, 2);
-    m.exit(33, 10, 1, 4, 'town', 'west');
-    m.exit(14, 0, 4, 1, 'deep_forest', 'south', { gate: 'northTrail' });
-    m.exit(0, 10, 1, 4, 'gateway', 'east', { gate: 'westTrail' });
-    m.spawn('east', 31, 11, 'left'); m.spawn('north', 15, 2, 'down'); m.spawn('west', 3, 11, 'right'); m.spawn('caravan', 17, 11, 'left');
+  // =============================================================== THE BRUSHWOOD ROAD
+  build.road = () => {
+    const m = B('road', 30, 46, 'grass', 71);
+    m.name = 'The Brushwood Road'; m.music = 'town'; m.particles = 'leaves';
+    for (let y = 0; y < 46; y++) for (let x = 0; x < 30; x++) if (GFX.hash(x, y, 12) < 0.2) m.set(x, y, 'leafy');
+    m.path([[14, 0], [14, 8], [10, 14], [10, 20], [16, 26], [18, 32], [14, 38], [14, 45]], 'path', 2);
+    m.fill(20, 5, 8, 6, 'wheat'); m.fill(2, 30, 7, 6, 'wheat'); m.fill(22, 36, 6, 5, 'flowers');
+    m.spr(S.bigRock, 4, 10, { fw: 2, id: 'rockR1', name: 'Large Rock', look: 'A large rock surrounded by overgrown shrubbery.' });
+    m.spr(S.bigRock, 22, 17, { fw: 2, id: 'rockR2', name: 'Large Rock', look: 'Moss grows on the shady side of the rock.' });
+    m.spr(S.bigRock, 6, 39, { fw: 2, id: 'rockR3', name: 'Large Rock', look: 'A smooth, sun-warmed rock.' });
+    m.spr(S.bush, 7, 11); m.spr(S.bush, 24, 18); m.spr(S.rock, 19, 28); m.spr(S.rock, 11, 33);
+    m.spr(S.sign, 17, 3, { id: 'signR', name: 'Signpost', look: '"KRAXENVILLE — north. BRUSHWOOD — south."' });
+    m.spr(S.fenceH, 20, 11); m.spr(S.fenceH, 21, 11); m.spr(S.fenceH, 22, 11); m.spr(S.fenceH, 23, 11);
+    m.keep(6, 18, 18, 5); m.keep(12, 0, 6, 4); m.keep(12, 42, 6, 4); m.keepRoad();
+    m.scatter((x, y, r) => m.tree(x, y, TREES[Math.floor(r() * TREES.length)]), 130, [0, 0, 30, 46], GRASS, 31, 2);
+    m.zone(7, 18, 11, 3, 'foxCrossing');
+    m.exit(13, 0, 4, 1, 'town', 'south', { gate: 'roadNorth' });
+    m.exit(13, 45, 4, 1, 'brushwood', 'north');
+    m.spawn('north', 14, 2, 'down'); m.spawn('south', 14, 43, 'up');
     return m;
   };
 
-  // =============================================================== DEEP DARK FOREST
-  build.deep_forest = () => {
-    const m = B('deep_forest', 42, 36, 'forest', 41);
-    m.name = 'The Dark Forest'; m.music = 'forest'; m.dark = 0.9; m.particles = 'fireflies'; m.darkPines = true; m.fog = true;
-    // stream
-    for (let x = 0; x < 42; x++) { const yc = 16 + Math.round(Math.sin(x / 5) * 1); m.fill(x, yc, 1, 3, 'water'); }
-    // trails
-    m.path([[20, 35], [20, 26], [8, 26], [8, 22]], 'fpath', 2);
-    m.path([[20, 26], [33, 26], [33, 22]], 'fpath', 2);
-    m.path([[27, 22], [27, 20]], 'fpath', 2);
-    m.path([[27, 14], [27, 10], [12, 10], [12, 6]], 'fpath', 2);
-    m.path([[27, 10], [33, 10], [33, 0]], 'fpath', 2);
-    m.path([[12, 10], [6, 10], [6, 5]], 'fpath', 2);
-    // stepping stones across the stream at x 27-28
-    for (let y = 13; y < 21; y++) for (let x = 27; x < 29; x++) if (m.get(x, y) === 'water') m.set(x, y, (y % 2 === 0) ? 'stepstone' : 'water');
-    m.spr(S.waystone[0], 7, 21, { id: 'ws1', name: 'Waystone', act: 'waystone', wsId: 1, light: null });
-    m.spr(S.waystone[0], 34, 21, { id: 'ws2', name: 'Waystone', act: 'waystone', wsId: 2, light: null });
-    m.spr(S.waystone[0], 5, 4, { id: 'ws3', name: 'Waystone', act: 'waystone', wsId: 3, light: null });
-    m.spr(S.vines[0], 32, 2, { fw: 3, fh: 2, dx: -1, id: 'mist', name: 'Wall of Mist and Thorns', act: 'mist', anim: S.vines, light: { r: 20, c: '255,60,100' }, if: s => !s.flags.mistGone, mist: true });
-    m.dead(10, 7); m.spr(S.stoneCircle, 13, 6, { dx: 1 }); m.spr(S.stoneCircle, 9, 5);
-    m.obj({ img: GFX.deadSprite(4), x: 3, y: 9, dx: -7, dy: 2, id: 'owlTree', name: 'Hollow Tree', act: 'owl', kind: 'tree' });
-    m.npc({ id: 'owl', char: 'owl', x: 3, y: 9, dir: 'down', name: 'Old Hoots', act: 'owl', perch: -30, color: '#8a6a44', voice: 0.6, static: true });
-    m.spr(S.mushrooms, 22, 28, { solid: false }); m.spr(S.mushrooms, 14, 12, { solid: false }); m.spr(S.mushrooms, 36, 12, { solid: false });
-    m.spr(S.stump, 24, 25, { solid: true }); m.spr(S.log, 16, 26, { fw: 2, low: true, id: 'log2', name: 'Fallen Log', look: 'A mossy log. Jump!' });
-    leafPickup(m, 'deep1', 38, 30); leafPickup(m, 'deep2', 2, 14);
-    m.keep(18, 24, 18, 4); m.keep(6, 20, 4, 4); m.keep(33, 20, 3, 4); m.keep(3, 3, 12, 9); m.keep(25, 8, 10, 4); m.keep(31, 0, 5, 4); m.keep(26, 12, 4, 10); m.keep(36, 28, 4, 4); m.keep(1, 12, 3, 3); m.keep(19, 28, 3, 8);
-    m.scatter((x, y, r) => r() < 0.82 ? m.pine(x, y) : m.dead(x, y), 360, [0, 0, 42, 36], FOREST, 99, 2);
-    m.exit(19, 35, 3, 1, 'forest_edge', 'north');
-    m.exit(32, 0, 3, 1, 'hollow', 'south');
-    m.spawn('south', 20, 33, 'up'); m.spawn('north', 33, 2, 'down');
-    m.goblins = [[14, 25], [30, 25], [9, 12], [20, 10], [33, 6]];
-    return m;
-  };
-
-  // =============================================================== THE HOLLOW
-  build.hollow = () => {
-    const m = B('hollow', 24, 18, 'forest', 51);
-    m.name = 'The Hollow'; m.music = 'forest'; m.dark = 0.85; m.particles = 'fireflies'; m.darkPines = true;
-    m.fill(6, 4, 12, 10, 'mud'); m.path([[11, 17], [11, 13]], 'fpath', 2);
-    for (let y = 4; y < 14; y++) for (let x = 6; x < 18; x++) if ((x === 6 || x === 17 || y === 4 || y === 13) && GFX.hash(x, y, 2) < 0.5) m.set(x, y, 'forest');
-    m.spr(S.hole, 9, 7, { fw: 4, fh: 2, decal: true, solid: false, id: 'holeDecal', dy: 6, dx: 4 });
-    m.spr(S.thornheart[0], 9, 7, { fw: 4, fh: 2, id: 'thornheart', name: 'The Thornheart', act: 'thornheart', anim: S.thornheart, light: { r: 48, c: '255,40,80' }, if: s => !s.flags.heartBurned });
-    m.obj({ x: 9, y: 7, fw: 4, fh: 2, solid: true, invisible: true, id: 'ashes', name: 'Ashes', look: 'Nothing is left of the Thornheart but grey ash, and the smell of a snuffed candle.', if: s => s.flags.heartBurned });
-    m.keep(5, 3, 14, 15);
-    m.scatter((x, y, r) => r() < 0.8 ? m.pine(x, y) : m.dead(x, y), 120, [0, 0, 24, 18], FOREST, 71, 2);
-    m.exit(10, 17, 3, 1, 'deep_forest', 'north');
-    m.spawn('south', 11, 15, 'up'); m.spawn('heart', 11, 10, 'up');
-    m.npc({ id: 'possum', char: 'possum', x: 14, y: 9, dir: 'left', name: 'Little Possum', act: 'possum', color: '#8e8a90', voice: 2, if: s => !s.flags.possumFree });
-    m.goblins = [[6, 6], [17, 6]];
-    return m;
-  };
-
-  // =============================================================== THE GATEWAY
-  build.gateway = () => {
-    const m = B('gateway', 28, 22, 'forest', 61);
-    m.name = 'The Gateway'; m.music = 'tension'; m.dark = 0.8; m.particles = 'sparks'; m.darkPines = true;
-    m.path([[27, 16], [14, 16], [14, 13]], 'fpath', 2);
-    m.fill(9, 10, 12, 5, 'fpath');
-    for (let y = 0; y < 22; y++) { m.fill(0, y, 3 + Math.round(Math.sin(y / 3) * 1), 1, 'water'); }
-    m.spr(S.portalFrame, 12, 9, { fw: 4, fh: 1, id: 'portal', name: 'The Gateway', act: 'portal', portal: true, light: { r: 70, c: '255,40,90' } });
-    [[9, 11], [21, 11], [8, 15], [22, 15], [10, 7], [20, 7]].forEach(([x, y]) => m.spr(S.stoneCircle, x, y, { dx: 1 }));
-    m.keep(7, 5, 16, 12); m.keep(12, 15, 16, 4);
-    m.scatter((x, y, r) => r() < 0.8 ? m.pine(x, y) : m.dead(x, y), 160, [0, 0, 28, 22], FOREST, 33, 2);
-    m.exit(27, 15, 1, 3, 'forest_edge', 'west');
-    m.spawn('east', 25, 16, 'left');
+  // =============================================================== BRUSHWOOD
+  build.brushwood = () => {
+    const m = B('brushwood', 34, 26, 'grass', 81);
+    m.name = 'Brushwood'; m.music = 'dawn'; m.particles = 'leaves';
+    for (let y = 0; y < 26; y++) for (let x = 0; x < 34; x++) if (GFX.hash(x, y, 14) < 0.18) m.set(x, y, 'leafy');
+    m.path([[16, 0], [16, 7]], 'path', 2);
+    m.fill(6, 7, 21, 8, 'path');
+    m.path([[8, 14], [4, 20], [4, 25]], 'path', 2);
+    m.fill(22, 17, 10, 7, 'wheat'); m.fill(10, 17, 8, 3, 'flowers');
+    m.house('brushTavern', 12, 3, { w: 8, roofH: 2, wallH: 2, door: 3, windows: [0, 1, 5, 6, 7], chimney: 6, sign: 'tavern', signAt: 4, roof: 'red', flowers: true, name: 'Brushwood Tavern', look: 'The Brushwood Tavern. It smells of fresh bread and woodsmoke.', act: 'brushTavern' });
+    m.house('bwA', 2, 2, { w: 5, roofH: 2, wallH: 2, wall: 'wood', door: 2, windows: [0, 4], chimney: 3, name: 'A cottage', look: "A farmer's cottage with muddy boots by the door." });
+    m.house('bwB', 25, 2, { w: 6, roofH: 2, wallH: 2, door: 2, windows: [0, 4, 5], chimney: 1, roof: 'slate', name: 'A cottage', look: 'Herbs hang drying in the window.' });
+    m.spr(S.wagon, 7, 9, { fw: 3, id: 'wagonB1', name: 'Wagon', act: 'lastBarrel' });
+    m.spr(S.wagon, 12, 9, { fw: 3, id: 'wagonB2', name: 'Wagon', act: 'lastBarrel' });
+    m.spr(S.wagon, 18, 9, { fw: 3, id: 'wagonB3', name: 'Wagon', act: 'lastBarrel' });
+    m.spr(S.well, 24, 12, { fw: 2, id: 'well', name: 'Well', act: 'well' });
+    m.spr(S.barrel, 20, 6); m.spr(S.barrel, 21, 6); m.spr(S.hay, 4, 8); m.spr(S.trough, 1, 12, { fw: 2 });
+    m.spr(S.sign, 18, 1, { id: 'signB', name: 'Signpost', look: '"BRUSHWOOD. Lesterfield — south-west, by way of the Dark Forest."' });
+    m.keep(5, 6, 23, 10); m.keep(14, 0, 5, 3); m.keep(2, 15, 5, 11); m.keepRoad();
+    m.scatter((x, y, r) => m.tree(x, y, TREES[Math.floor(r() * TREES.length)]), 70, [0, 0, 34, 26], GRASS, 41, 2);
+    m.exit(15, 0, 3, 1, 'road', 'south', { gate: 'roadNorth' });
+    m.exit(3, 25, 3, 1, null, null, { gate: 'brushSouth' });
+    m.spawn('north', 16, 2, 'down');
+    m.npc({ id: 'horseL', char: 'horse', x: 7, y: 11, dir: 'left', name: 'Clover', act: 'horseB', horse: true, fw: 2, voice: 0.5, if: s => s.flags.shod });
+    m.npc({ id: 'horseL', char: 'horseCream', x: 7, y: 11, dir: 'left', name: 'Biscuit', act: 'horseB', horse: true, fw: 2, voice: 0.5, if: s => !s.flags.shod });
+    m.npc({ id: 'juniper', char: 'horseDark', x: 12, y: 11, dir: 'left', name: 'Juniper', act: 'horseB', horse: true, fw: 2, voice: 0.5 });
+    m.npc({ id: 'bramble', char: 'horseGrey', x: 18, y: 11, dir: 'left', name: 'Bramble', act: 'horseB', horse: true, fw: 2, voice: 0.5 });
+    m.npc({ id: 'kalen', char: 'kalen', x: 16, y: 8, dir: 'down', name: 'Kalen', act: 'kalen', color: '#5a8a3a', voice: 1.0 });
+    m.npc({ id: 'winston', char: 'winston', x: 19, y: 13, dir: 'left', name: 'Winston', act: 'winston', color: '#8a6a3a', voice: 0.8 });
+    m.npc({ id: 'aldric', char: 'aldric', x: 15, y: 13, dir: 'down', name: 'Aldric', act: 'aldricB', color: '#3a6a9a', voice: 1.05 });
+    m.npc({ id: 'ronald', char: 'ronald', x: 22, y: 10, dir: 'left', name: 'Ronald', act: 'ronaldB', color: '#7a5a3a', voice: 0.7 });
     return m;
   };
 

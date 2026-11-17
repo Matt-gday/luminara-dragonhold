@@ -18,7 +18,6 @@ All the art, animation, music and sound effects are made by code, so there are n
 | Walk | Arrow keys / WASD | Click or tap where to go |
 | Talk, look, pick up, open doors | **E** or Enter | Click the person or thing |
 | Jump | **Space** | Jump button |
-| Raise lantern (scares goblinites) | **Q** | Raise Light button |
 | Satchel (use and combine items) | **I** | Satchel button |
 | Quest log | **J** | Quests button |
 | Map of Krax | **P** | Map button |
@@ -32,50 +31,48 @@ The game saves by itself every few seconds, and the moment it's closed, so playe
 
 ## What is in Chapter One
 
-The chapter follows *Luminara the Light-Bearer, Chapter 1*, then carries on into the Dark Forest and ends at the Gateway.
+The chapter follows *Luminara the Light-## The story
+
+The game follows Lisa's book, *Luminara the Light-Bearer*, scene by scene. Lisa's own words are used for the narration wherever possible.
 *The Three Dragons* is Lisa's separate children's story, so it will be a separate game.
 
-**Places:** Luminara's cottage, the Leafy Lane, Kraxenville (laid out like Lisa's map), the Merchants' Guild, the Iron Cauldron, the edge of the Dark Forest, the deep Dark Forest, the Hollow and the Gateway.
+| Game chapter | Book chapters | Status |
+|---|---|---|
+| One: The Light-Bearer | 1 The Light-Bearer, 2 The Journey | **Playable** |
+| Two: The Dark Forest | 3 to 6 (the forest, Lesterfield, Gwendolyn, the market) | Coming next |
+| Three: The Dragon Tamer | 7 to 8 (Savaric, the guild's quest, the cottage) | Planned |
+| Four: The Gateway | 9 to 11 (the Ruined Keep, the wolves, the gateway) | Planned |
+| Five: Vaeloria | 12 to 13 (the cyan realm, locking the gateway) | Planned |
 
-**Map:** press **P** for a map of the Kingdom of Krax. It shows the mountains of Vosmos to the north and west, with the volcano in the middle of them, in the far north.
+### What is in Chapter One
 
-### Quest tree
-
-Each big quest needs smaller ones done first.
+**Places:** Luminara's cottage, the leafy lane, Kraxenville, the Merchants' Guild and its caravan yard, the Iron Cauldron, the Brushwood road and Brushwood.
 
 ```
-A New Dawn             satchel → key under pillow → compass box (USE the key)
-                       → cloak → tea + sugar (COMBINE) → stove (USE) → drink outside
-Into Kraxenville       pie at the Cookshop → eat it on the bench (daydream!) → Fredrick → the Guild
-The Light-Bearer  (main)
- ├─ A Shoe for Clover    Bertram → bent nail + Fredrick's lute string (COMBINE) → fish the fountain
- ├─ The Lord's Seal      Pemberton wants a pepper pie for Lord Aldermere
- │   └─ Not a Pinch of Pepper    Mistress Pell is out → Osric wants nectarines
- │       └─ The Runaway Ball     JUMP to knock the ball out of the oak → children → Marigold
- └─ Oil for the Lantern  {friend} at the Iron Cauldron → lantern + oil (COMBINE)
-The Thorn Road (main)     glowing vines block the caravan → jump the log → Dark Forest at night
- ├─ Light the Waystones  three waystones (cross the stream on stepping stones) → the mist melts
- ├─ The Owl's Riddle     (side) Old Hoots tells of the Thornheart
- └─ The Thornheart       focus your lantern (timing game) → free the young possum → the road clears
-The Gateway               the caravan goes on → the Gateway… to be continued
-Side stories (optional): A Hot Pie & a Daydream, Precious Moments, The Runaway Ball, a wish at the fountain,
-Old Maud's Golden Leaves (8 hidden; reward: Mother's thimble, +1 heart), The Owl's Riddle, The Little Possum.
+A New Dawn            satchel → tea + sugar (COMBINE) → stove (USE) → drink it in the chair outside at sunrise
+                      → Mother's blue cloak → key under the pillow → Father's compass (USE the key) → lantern → rations
+Into Kraxenville      beef and pepper pie → eat it outside the pie shop (daydream of dragons) → Fredrick's warning
+The Journey           the caravan yard: Gerald, Aldric ("I can make it fit") and Ronald ("I doubt that")
+                      → the cargo puzzle → Guild Master Henry's strongbox and key (keep it safe, don't open it!)
+ └─ Light for the Road  tallow from Brenna + a linen wick from Tilda (COMBINE with the lantern)
+First Stop: Brushwood  "Hiyah!" → the road (a tiny fox) → Kalen and Winston → feed and water three horses
+                      → the last barrel → fill your water pouch → collect the coins → on towards the Dark Forest
+Side stories (optional): Precious Moments (butterflies), The Runaway Ball (JUMP), A Wish at the Fountain,
+A Shoe for Clover (bent nail + lute string, fish the fountain), Old Maud's Golden Leaves (5 hidden; reward:
+Mother's thimble, +1 heart), A Rare Sight (the fox).
+```
+
 At the end, a chapter summary tells the story beat of every side story, including what happened to the ones you missed.
-```
+Luminara levels up as she helps people. Each level gives her more courage (hearts).
 
-Luminara levels up as she helps people. Each level gives her more courage (hearts) and more lantern light. Goblinites in the forest run from a raised lantern. Fainting is gentle: she just wakes up at the edge of the area.
-
-## Code layout
-
-| File | What it holds |
-|---|---|
-| `js/gfx.js` | Pixel-art generator: characters, dragons, creatures, buildings, tiles, item icons |
+Pixel-art generator: characters, dragons, creatures, buildings, tiles, item icons |
 | `js/maps.js` | Every location, built with a small map-building toolkit |
-| `js/story.js` | Items, quests, every conversation and puzzle (the file to edit for story changes) |
+| `js/story.js` | The story engine shared by every chapter: quests, goals and the compass, journal, chapter summary |
+| `js/ch1.js` | Chapter One: its items, quests, every conversation and puzzle (one file per chapter) |
 | `js/game.js` | Engine: movement, jumping, lighting, speech bubbles, satchel, quest log, saving, title screen |
 | `js/audio.js` | Synthesised music and sound effects |
 | `build.py` | Rebuilds `luminara-single-file.html` after any change (`python3 build.py`) |
 
-**Renaming the friend:** the blonde friend's name is in `newState()` in `js/game.js` (`friendName: 'Elowen'`). It is used everywhere she is mentioned.
+**Adding a chapter:** create `js/chN.js` that calls `STORY.register({ n: N, ... })` (copy the shape of `js/ch1.js`), add it to `index.html` and `sw.js`, and add its places to `js/maps.js`.
 
 *Story & world by Lisa. Made with love by Dad.*

@@ -420,10 +420,10 @@ const GFX = (() => {
       p.outline(OUT); return p.c;
     });
   }
-  function horse() {
+  function horse(b = ['#8a5a32', '#6a4024', '#a87448'], m = '#efe0c0') {
     const fr = [0, 1].map(f => {
       const p = new Pix(36, 30);
-      const b = ['#8a5a32', '#6a4024', '#a87448'], bd = '#4e2e18', m = '#efe0c0', md = '#c8b48e';
+      const bd = dk(b[1], 0.3), md = dk(m, 0.18);
       // tail
       p.poly([[29, 10], [33, 12 + f], [34, 22 + f], [31, 20]], md); p.poly([[29, 10], [32, 12 + f], [32, 20 + f]], m);
       // far legs
@@ -446,6 +446,20 @@ const GFX = (() => {
       p.outline(OUT); return p;
     });
     return { left: fr.map(p => p.c), right: fr.map(p => p.flipped()), w: 36, h: 30 };
+  }
+  function fox() {
+    return [0, 1].map(f => {
+      const p = new Pix(20, 13);
+      const o = '#d8702a', od = '#a84e1a', ol = '#f0a058';
+      p.e(16, 7, 3.5, 2.6 + f * 0.4, o); p.e(18, 6.5, 1.8, 1.8, '#f4ece0');                 // bushy tail, white tip
+      p.e(10, 7.5, 5.2, 3, o); p.e(10, 9, 4, 1.6, od); p.e(9, 6.2, 3.5, 1.2, ol);           // body
+      p.r(6 + f, 9, 1, 3, '#2a1a14'); p.r(8 - f, 9, 1, 3, '#2a1a14'); p.r(12 + f, 9, 1, 3, '#2a1a14'); p.r(14 - f, 9, 1, 3, '#2a1a14');
+      p.e(4.5, 5.5, 2.8, 2.4, o); p.e(4, 7, 2.2, 1.2, '#f4ece0');                          // head, white cheeks
+      p.poly([[0.5, 6], [3, 5], [3, 7]], o); p.p(0, 6, '#2a1a14');                         // snout
+      p.poly([[3, 4], [3.5, 1], [5, 3.5]], o); p.poly([[5, 3.5], [6.5, 1], [7, 4]], od); p.p(4, 2, '#2a1a14');
+      p.p(4, 5, '#1c1424'); p.p(3, 5, '#ffffff');
+      p.outline(OUT); return p.c;
+    });
   }
   function monster() {
     const p = new Pix(44, 44);
@@ -931,6 +945,15 @@ const GFX = (() => {
   icon('thimble', p => { p.poly([[4, 14], [5, 4], [8, 2], [11, 4], [12, 14]], '#c8ccd8'); p.e(8, 3.5, 3.2, 2, '#e8ecf4'); for (let y = 6; y < 13; y += 2) for (let x = 6 + (y % 4 ? 1 : 0); x < 11; x += 2) p.p(x, y, '#8a8e9a'); p.r(4, 13, 8, 2, '#a8acb8'); p.r(5, 5, 1, 7, '#ffffff'); });
   icon('honeyCake', p => { p.e(8, 11, 7, 3.5, '#b8742a'); p.r(2, 7, 12, 4, '#d8963a'); p.e(8, 7, 6, 2.5, '#f0c050'); p.p(5, 7, '#fff0a0'); p.p(9, 6, '#fff0a0'); p.r(4, 9, 1, 3, '#f0c050'); p.r(10, 9, 1, 2, '#f0c050'); });
   icon('sunstone', p => { p.e(8, 8, 6, 6, '#e8a020'); p.e(8, 8, 4.5, 4.5, '#ffd050'); p.e(7, 7, 2, 2, '#fff4b0'); for (let i = 0; i < 8; i++) { const a = i / 8 * 6.28; p.p(8 + Math.cos(a) * 7.5, 8 + Math.sin(a) * 7.5, '#ffe080'); } });
+  icon('flint', p => { p.e(5, 9, 4, 3.4, '#6a6a74'); p.e(4, 8, 2.5, 1.8, '#8a8a94'); p.r(8, 5, 6, 3, '#4a4a54'); p.r(8, 5, 6, 1, '#9a9aa4'); p.r(12, 3, 2, 7, '#4a4a54'); p.p(7, 4, '#ffd040'); p.p(6, 3, '#ff9030'); });
+  icon('rations', p => { p.e(8, 10, 6.5, 4.5, '#c8b088'); p.r(5, 3, 6, 4, '#b09870'); p.r(5, 6, 6, 1, '#7a5a3a'); [[5, 9, '#8a5a30'], [8, 8, '#c84a3a'], [10, 11, '#8a5a30'], [6, 12, '#e8a040'], [11, 9, '#6a3a5a']].forEach(([x, y, c]) => p.r(x, y, 2, 2, c)); });
+  icon('tallow', p => { p.r(3, 6, 10, 8, '#8a6a4a'); p.r(3, 6, 10, 2, '#a88a6a'); p.e(8, 6, 5, 1.6, '#f0e6c8'); p.e(8, 5.6, 3.5, 1, '#fff8e0'); p.r(4, 13, 8, 1, '#5a4430'); });
+  icon('wick', p => { for (let i = 0; i < 12; i++) p.p(3 + i, 13 - i + (i % 2), i % 2 ? '#e8e0c8' : '#c8bc9c'); p.p(14, 2, '#5a4a3a'); p.p(13, 3, '#5a4a3a'); });
+  icon('strongbox', p => { p.r(1, 5, 14, 9, '#8a5a30'); p.r(1, 3, 14, 4, '#a87440'); p.r(1, 3, 14, 1, '#c8925a'); p.r(1, 7, 14, 1, '#4a4a54'); p.r(1, 3, 2, 11, '#4a4a54'); p.r(13, 3, 2, 11, '#4a4a54'); p.r(6, 7, 4, 4, '#8a6a3a'); p.r(7, 8, 2, 2, '#3a2a1a'); p.p(9, 10, '#b86a3a'); p.r(0, 9, 1, 2, '#4a4a54'); p.r(15, 9, 1, 2, '#4a4a54'); });
+  icon('oddKey', p => { p.e(4.5, 5, 3.5, 3.5, '#c09040'); p.r(7, 6, 7, 2, '#c09040'); p.r(10, 8, 1, 3, '#c09040'); p.r(12, 8, 1, 2, '#c09040'); p.r(13, 8, 1, 4, '#c09040'); p.p(3, 3, '#ffe8a0'); p.r(6, 6, 8, 1, '#e8c070'); });
+  ICONS.oddKey.getContext('2d').clearRect(3, 4, 2, 2);
+  icon('carrots', p => { for (let i = 0; i < 3; i++) { p.poly([[4 + i * 3, 5], [7 + i * 3, 5], [5.5 + i * 3, 15]], '#e8762a'); p.r(4 + i * 3, 2, 1, 3, '#4f8f3a'); p.r(6 + i * 3, 1, 1, 4, '#5aa042'); } p.ln(5, 8, 7, 8, '#c85a1a'); });
+  icon('pail', p => { p.poly([[3, 5], [13, 5], [12, 14], [4, 14]], '#8a8a94'); p.r(3, 5, 10, 2, '#4a80c8'); p.r(4, 5, 8, 1, '#8ab8f0'); p.r(4, 9, 8, 1, '#6a6a74'); p.ln(3, 5, 8, 0, '#5a5a64'); p.ln(13, 5, 8, 0, '#5a5a64'); });
   icon('coin', p => { p.e(8, 8, 6, 6, '#c08040'); p.e(8, 8, 4, 4, '#e0a050'); p.r(7, 5, 2, 6, '#a06020'); });
   icon('stew', p => { p.e(8, 10, 7, 4.5, '#7a4a26'); p.e(8, 8, 5.5, 2.2, '#b8642a'); p.p(6, 8, '#e8a040'); p.p(10, 8, '#6a8a3a'); p.r(6, 2, 1, 3, '#ffffff88'); p.r(10, 3, 1, 3, '#ffffff88'); });
 
@@ -956,6 +979,13 @@ const GFX = (() => {
     CHAR.villagerA = L({ outfit: 'tunic', top: ['#6a6aa0', '#4a4a7a', '#8a8ac0'], legs: ['#5a4a3a', '#3e3226'], hair: P.hBrown, hairStyle: 'short', hat: 'cap', hatCol: ['#8a5a30', '#6a4024', '#a87440'] });
     CHAR.villagerB = L({ outfit: 'dress', top: ['#a04a6a', '#7a3450', '#c06a8a'], hair: P.hDark, hairStyle: 'bun', apron: true });
     CHAR.villagerC = L({ outfit: 'tunic', top: ['#4a7a7a', '#345a5a', '#6a9a9a'], legs: ['#6a5a3a', '#4a3e26'], hair: P.hGrey, hairStyle: 'bald', beard: '#c4c0bc', skin: P.skinDeep });
+    CHAR.henry = L({ outfit: 'robe', top: ['#2c6a3a', '#1c4a28', '#4a8a5a'], trim: '#e0b04a', hair: P.hGrey, hairStyle: 'short', beard: '#a8a4a0', belt: '#5a3a1a', eye: '#3a5a8a' });
+    CHAR.gerald = L({ outfit: 'tunic', top: ['#a83a2a', '#7a2a1e', '#c85a4a'], legs: ['#4a3a2a', '#30261a'], hair: P.hDark, hairStyle: 'short', hat: 'cap', hatCol: ['#3a3a4a', '#26263a', '#5a5a6a'], moustache: '#30180e', skin: ['#f0c0a0', '#d89a80'], belt: '#2a1a10' });
+    CHAR.aldric = L({ outfit: 'tunic', top: ['#3a6a9a', '#2a4a7a', '#5a8aba'], legs: ['#5a4a3a', '#3e3226'], hair: P.hBlonde, hairStyle: 'short', eye: '#3a6a3a' });
+    CHAR.ronald = L({ outfit: 'tunic', top: ['#7a5a3a', '#5a402a', '#9a7a5a'], legs: ['#3a3a4a', '#2a2a36'], hair: P.hGrey, hairStyle: 'short', beard: '#8e8a86', skin: P.skinTan });
+    CHAR.kalen = L({ outfit: 'tunic', top: ['#5a8a3a', '#3e6a2a', '#7aaa5a'], legs: ['#6a5a3a', '#4a3e26'], hair: P.hRed, hairStyle: 'short', apron: true });
+    CHAR.winston = L({ outfit: 'tunic', top: ['#e8e0d0', '#c0b8a8', '#ffffff'], legs: ['#4a3a2a', '#30261a'], hair: P.hDark, hairStyle: 'bald', beard: '#4a2e1e', apron: true, skin: P.skinDeep });
+    CHAR.tilda = L({ outfit: 'dress', top: ['#7a4aa0', '#5a3478', '#9a6ac0'], hair: P.hBlack, hairStyle: 'bun', eye: '#5a3a1e' });
     CHAR.innkeeper = L({ outfit: 'dress', top: ['#7a3a2a', '#5a2a1e', '#9a5a4a'], hair: P.hBrown, hairStyle: 'bun', apron: true, skin: P.skinTan });
 
     // great dragons for the skies over Dragonhold
@@ -963,7 +993,7 @@ const GFX = (() => {
     CHAR.wyrmGreen = dragon(['#3a7a4a', '#22502e', '#6aaa6a', '#d8e0a0'], 1.5, { eye: '#ffd040' });
     CHAR.wyrmBronze = dragon(['#b8803a', '#80541e', '#e0b060', '#f4e0b0'], 1.2, { eye: '#ffd040' });
     CHAR.goblinite = goblinite();
-    CHAR.owl = owl(); CHAR.bird = bird(); CHAR.possum = possum(); CHAR.horse = horse(); CHAR.monster = monster();
+    CHAR.owl = owl(); CHAR.bird = bird(); CHAR.possum = possum(); CHAR.horse = horse(); CHAR.horseCream = horse(['#d8b888', '#b89868', '#ecd0a8'], '#f8f0e0'); CHAR.horseGrey = horse(['#9a9692', '#76726e', '#b8b4b0'], '#ecebe6'); CHAR.horseDark = horse(['#4e3628', '#36241a', '#6e4e3a'], '#2a1a14'); CHAR.fox = fox(); CHAR.monster = monster();
     CHAR.butterflies = ['#f0a040', '#80b0f0', '#f070a0', '#f0e060'].map(butterfly);
     CHAR.redBird = bird(['#c84a3a', '#9a3426', '#f0c040']);
   }

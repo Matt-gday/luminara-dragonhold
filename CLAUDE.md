@@ -4,11 +4,13 @@ A browser game for Lisa's story, made by her dad. Everything (art, music, sound)
 It plays at https://matt-gday.github.io/luminara-dragonhold/ (GitHub Pages, from `main`, repo root).
 
 ## Story rules
-- Use only material Lisa sent herself: her emails and texts. Never use the "Game File" documents Dad sent her.
+- The source is Lisa's book *Luminara the Light-Bearer* (13 chapters; Dad emailed it as "Full book game file").
+  Follow it scene by scene and use her wording for narration. Small invented side stories are fine if they fit her world.
+- Chapter plan: game ch1 = book 1–2 (done), ch2 = book 3–6, ch3 = book 7–8, ch4 = book 9–11, ch5 = book 12–13.
 - *The Three Dragons* (Sianna, Yennefer, Rosanna, Aurelina) is a **separate children's game**. Keep it out of Luminara's game.
 - Lisa's world: Kingdom of Krax (Kraxenville NE, Brushwood, Wockville, Lesterfield; a big forest between Wockville and
   Lesterfield), the Dark Forest with the Ruined Keep, the Gateway, and Vosmos (mountains N and NW, volcano in the north centre).
-- Her blonde friend's name is still unknown: it's `friendName` in `newState()` (js/game.js).
+- Her friend is Gwendolyn ("Gwen", golden hair, blue eyes), met at the Lesterfield Inn in book chapter 5 (`friendName` in js/game.js).
 
 ## Edge cases and order of play (check every chapter before shipping)
 Players wander. For every quest step, ask: *what if they do this first, last, twice, or skip the person who explains it?*
@@ -17,7 +19,7 @@ Players wander. For every quest step, ask: *what if they do this first, last, tw
 - Characters must react to what has **actually** happened, not to the order the designer expected: never thank someone
   for a quest they weren't given, and never reference a meeting that hasn't happened.
 - Quest steps that only apply on some routes use `hide:` so the log never shows impossible steps.
-- `goal()` must never point backwards at something skipped. Gate old goals on later progress (see the pie / `metHollis` check).
+- `goal()` must never point backwards at something skipped. Gate old goals on later progress (see the `metCrew` cargo check in ch1).
 - Repeat interactions need sensible repeat lines. Closing the app mid-scene must be safe (arrival scenes replay via `onEnter`).
 - Every new feature, button or mechanic gets a one-time tip (`TIPS` in js/game.js) when it first matters,
   with touch wording on phones.
@@ -30,5 +32,7 @@ Players wander. For every quest step, ask: *what if they do this first, last, tw
 - Look at screenshots on desktop (1280×720) and phone landscape.
 
 ## Code map
-`js/gfx.js` art · `js/maps.js` places · `js/story.js` quests, dialogue, goals · `js/game.js` engine, UI, tips, saves ·
-`js/audio.js` music/sfx · `sw.js` offline cache · `manifest.webmanifest` home-screen app.
+`js/gfx.js` art · `js/maps.js` places · `js/story.js` shared story engine · `js/chN.js` one file per chapter
+(items, quests, dialogue, goals, summary) · `js/game.js` engine, UI, tips, saves, party, cargo puzzle ·
+`js/audio.js` music/sfx · `sw.js` offline cache (add new files and bump `CACHE`) · `manifest.webmanifest` home-screen app.
+Changing what a save means? Bump `SAVE_VERSION` in js/game.js so old saves get the "Start fresh" card.

@@ -36,8 +36,9 @@ const G = (() => {
   // =================================================================== STATE
   function newState() {
     return { map: 'cottage', x: 0, y: 0, dir: 'down', inv: [], flags: {}, q: {}, xp: 0, lvl: 1, hearts: 3, maxHearts: 3,
-      light: 3, maxLight: 3, coins: 10, leaves: [], journal: [], time: 0, friendName: 'Elowen', version: 1 };
+      light: 3, maxLight: 3, coins: 10, leaves: [], journal: [], time: 0, friendName: 'Gwendolyn', version: SAVE_VERSION, chapter: 1, party: [] };
   }
+  const SAVE_VERSION = 2; // bump when the story changes so old saves can't break
   const LEVELS = [0, 30, 80, 150, 240, 350, 480, 640];
 
   // =================================================================== SIZING
@@ -60,7 +61,7 @@ const G = (() => {
     const fw = d.fw || 1;
     return { id: d.id, def: d, x: (d.x + fw / 2) * T, y: (d.y + 1) * T - 3, dir: d.dir || 'down', frame: 0, t: Math.random() * 10,
       home: { x: d.x, y: d.y }, path: [], speed: 32, name: d.name, color: d.color, voice: d.voice || 1, fw, wanderT: 2 + Math.random() * 4,
-      kind: d.horse ? 'horse' : d.dragon ? 'dragon' : d.char === 'owl' ? 'owl' : d.char === 'possum' ? 'critter' : 'human', z: 0 };
+      kind: d.horse ? 'horse' : d.dragon ? 'dragon' : d.char === 'owl' ? 'owl' : (d.char === 'possum' || d.char === 'fox') ? 'critter' : 'human', z: 0 };
   }
   function loadMap(id, spawn) {
     M = MAPS.get(id);
@@ -78,8 +79,7 @@ const G = (() => {
     player = player || { z: 0, vz: 0, frame: 0, t: 0, path: [], invuln: 0 };
     Object.assign(player, { x: sx, y: sy, dir: dir || 'down', z: 0, vz: 0, path: [], pendingAct: null, kb: null });
     lastSafe = { x: sx, y: sy };
-    trail = []; for (let i = 0; i < 80; i++) trail.push({ x: sx, y: sy });
-    followers.forEach((f, i) => { f.x = sx; f.y = sy; });
+    seedTrail();
     rebuildSolid();
     AUDIO.music(STORY.musicFor ? STORY.musicFor(id) || M.music : M.music);
     snapCam();
@@ -408,7 +408,7 @@ const G = (() => {
         }
       }
     } else if (!inLowTile(p.x, p.y) && !boxBlocked(p.x, p.y, false, player)) { lastSafe = { x: p.x, y: p.y }; }
-    trail.unshift({ x: p.x, y: p.y }); if (trail.length > 90) trail.pop();
+    if (!trail.length || Math.hypot(p.x - trail[0].x, p.y - trail[0].y) >= 1) { trail.unshift({ x: p.x, y: p.y }); if (trail.length > 160) trail.pop(); }
     // knockback
     if (p.kb) { const nx = p.x + p.kb.x * dt, ny = p.y + p.kb.y * dt; if (!boxBlocked(nx, ny, false, player)) { p.x = nx; p.y = ny; } p.kb.t -= dt; if (p.kb.t <= 0) p.kb = null; }
   }
@@ -431,6 +431,11 @@ const G = (() => {
         go(e.to, e.spawn); return;
       }
     }
+    for (const z of M.zones || []) {
+      if (tx >= z.x && tx < z.x + z.w && ty >= z.y && ty < z.y + z.h && !S.flags['zone_' + z.id] && (!z.if || z.if(S))) {
+        S.flags['zone_' + z.id] = 1; run(() => STORY.zone(z.id)); return;
+      }
+    }
   }
   function bounceBack() { player.x = lastSafe.x; player.y = lastSafe.y; player.path = []; const [dx, dy] = DIRV[player.dir]; const nx = player.x - dx * 6, ny = player.y - dy * 6; if (!boxBlocked(nx, ny, false, player)) { player.x = nx; player.y = ny; } }
 
@@ -440,7 +445,6 @@ const G = (() => {
     AUDIO.sfx(opts.silent ? null : 'door');
     await fade(true);
     loadMap(mapId, spawn);
-    if (followers.length) followers.forEach(f => { f.x = player.x; f.y = player.y; });
     await wait(120);
     await fade(false);
     transitioning = false;
@@ -458,7 +462,7 @@ const G = (() => {
   }
 
   function raiseLight() {
-    if (!S.flags.hasLantern) return;
+    if (!S.flags.lanternLit) return;
     if (S.light < 1) { AUDIO.sfx('no'); toast('Your lantern needs a moment to brighten again.'); return; }
     S.light--; lightRegen = 0; hud();
     AUDIO.sfx('flash'); fx.push({ kind: 'flash', x: player.x, y: player.y - 14, t: 0.6, r: 0 });
@@ -536,11 +540,15 @@ const G = (() => {
   }
 
   function updateFollowers(dt) {
-    followers.forEach((f, i) => {
-      const tp = trail[Math.min(trail.length - 1, 16 + i * 14)];
-      const off = (i % 2 ? 1 : -1) * 8;
-      f.x += ((tp.x + off) - f.x) * Math.min(1, dt * 6); f.y += (tp.y - 4 - f.y) * Math.min(1, dt * 6);
-      f.dir = (player.x < f.x) ? 'left' : 'right'; f.t = (f.t || 0) + dt;
+    let idx = 0;
+    followers.forEach(f => {
+      idx += f.gap || 16;
+      const tp = trail[Math.min(trail.length - 1, idx)], ahead = trail[Math.max(0, idx - 4)];
+      const ox = f.x, oy = f.y;
+      f.x += (tp.x - f.x) * Math.min(1, dt * 6); f.y += (tp.y - f.y) * Math.min(1, dt * 6);
+      const dx = ahead.x - tp.x, dy = ahead.y - tp.y, moving = Math.hypot(f.x - ox, f.y - oy) > 0.15;
+      if (Math.abs(dx) + Math.abs(dy) > 0.5) f.dir = f.kind === 'human' ? (Math.abs(dx) > Math.abs(dy) ? (dx < 0 ? 'left' : 'right') : (dy < 0 ? 'up' : 'down')) : (dx < 0 ? 'left' : dx > 0 ? 'right' : f.dir);
+      f.t = (f.t || 0) + dt; f.frame = moving ? Math.floor(f.t * 7) % 4 : 0;
     });
   }
 
@@ -586,7 +594,7 @@ const G = (() => {
     }
     for (const n of npcs) if (!n.hidden) list.push({ y: n.y + (n.def.perch ? 40 : 0) + (n.def.inHole ? -6 : 0) + (n.def.fly ? 8 : 0), d: () => drawNPC(n) });
     for (const g of goblins) if (!g.gone) list.push({ y: g.y, d: () => drawGoblin(g) });
-    for (const f of followers) list.push({ y: f.y + 10, d: () => drawFollower(f) });
+    for (const f of followers) list.push({ y: f.y, d: () => drawFollower(f) });
     list.push({ y: player.y, d: drawPlayer });
     for (const c of creatures) list.push({ y: (c.o.y + c.o.fh) * T + 30, d: () => drawCreature(c) });
     list.sort((a, b) => a.y - b.y);
@@ -667,7 +675,7 @@ const G = (() => {
     if (p.invuln > 0 && Math.floor(time * 12) % 2) return;
     const fr = c.frames[p.dir][p.z > 0 ? 1 : p.frame];
     ctx.drawImage(fr, Math.round(p.x - c.ax), Math.round(p.y - c.ay - p.z));
-    if (S.flags.hasLantern && S.flags.cloak && !S.flags.playerSprite) { // lantern glow pixel
+    if (S.flags.lanternLit && S.flags.cloak && !S.flags.playerSprite) { // lantern glow pixel
       const gl = 0.5 + Math.sin(time * 9) * 0.15; ctx.fillStyle = `rgba(255,230,140,${gl * 0.35})`;
       const off = p.dir === 'left' ? [-8, -9] : p.dir === 'right' ? [8, -9] : p.dir === 'down' ? [6, -8] : [6, -11];
       ctx.beginPath(); ctx.arc(p.x + off[0], p.y + off[1] - p.z, 4, 0, 7); ctx.fill();
@@ -694,9 +702,11 @@ const G = (() => {
     ctx.drawImage(fr, Math.round(n.x - c.ax), Math.round(n.y - c.ay - (n.z || 0)));
   }
   function drawFollower(f) {
-    const c = GFX.CHAR[f.char]; const fr = c[f.dir][Math.floor(f.t * 8) % 3];
-    shadow(f.x, f.y + 10, 5, 0.18);
-    ctx.drawImage(fr, Math.round(f.x - c.w / 2), Math.round(f.y - c.h - 6 + Math.sin(f.t * 4) * 2));
+    if (f.kind === 'sprite') { const img = GFX.SPR[f.sprite]; shadow(f.x, f.y, 20, 0.25); ctx.drawImage(img, Math.round(f.x - img.width / 2), Math.round(f.y - img.height + 4)); return; }
+    const c = GFX.CHAR[f.char];
+    if (f.kind === 'horse') { const fr = c[f.dir === 'right' ? 'right' : 'left'][f.frame % 2]; shadow(f.x, f.y, 14, 0.25); ctx.drawImage(fr, Math.round(f.x - 18), Math.round(f.y - 28)); return; }
+    const fr = c.frames[f.dir === 'left' || f.dir === 'right' || f.dir === 'up' ? f.dir : 'down'][f.frame || 0];
+    shadow(f.x, f.y, 6, 0.28); ctx.drawImage(fr, Math.round(f.x - c.ax), Math.round(f.y - c.ay));
   }
   function drawGoblin(g) {
     const c = GFX.CHAR.goblinite; shadow(g.x, g.y, 7, 0.3);
@@ -779,7 +789,7 @@ const G = (() => {
   }
   function lightsList() {
     const L = [];
-    if (S.flags.hasLantern && !S.flags.playerSprite) {
+    if (S.flags.lanternLit && !S.flags.playerSprite) {
       const r = (S.flags.lanternFull ? 62 : 40) + S.lvl * 3 + Math.sin(time * 9) * 1.5;
       L.push({ x: player.x, y: player.y - 10 - player.z, r, c: '255,210,120' });
     } else L.push({ x: player.x, y: player.y - 10, r: 22, c: '200,200,255' });
@@ -794,7 +804,6 @@ const G = (() => {
     for (const p of particles) if (p.kind === 'fly') L.push({ x: p.x, y: p.y, r: 6, c: '220,255,120', weak: true });
     for (const n of npcs) if (n.def.char === 'aurelina' || n.glow) L.push({ x: n.x, y: n.y - 20, r: n.glow || 80, c: '255,255,240' });
     for (const f of fx) if (f.kind === 'flash') L.push({ x: f.x, y: f.y, r: 40 + (1 - f.t / 0.6) * 80, c: '255,250,210' });
-    for (const f of followers) L.push({ x: f.x, y: f.y - 10, r: 16, c: f.char === 'sianna' ? '120,230,255' : f.char === 'yennefer' ? '255,230,120' : '255,140,220' });
     for (const f of fx) if (f.kind === 'beam') L.push({ x: f.x, y: f.y + f.h / 2, r: 90, c: '255,255,240' });
     return L;
   }
@@ -1070,7 +1079,8 @@ const G = (() => {
     ct.style.left = ((VW - 18) * scale) + 'px'; ct.style.top = ((32 + 14) * scale) + 'px';
     $('hud').style.display = mode === 'play' ? 'flex' : 'none';
     $('bar').style.display = mode === 'play' ? 'flex' : 'none';
-    $('hud').querySelectorAll('.row')[1].style.display = S.flags.hasLantern ? 'flex' : 'none';
+    $('hud').querySelectorAll('.row')[1].style.display = S.flags.lanternLit ? 'flex' : 'none';
+    const lb = document.querySelector('#tbtns [data-b=light]'); if (lb) lb.style.display = S.flags.lanternLit ? '' : 'none';
   }
   function toast(text, iconName, cls) {
     const el = document.createElement('div'); el.className = 'toast' + (cls ? ' ' + cls : '');
@@ -1184,7 +1194,7 @@ const G = (() => {
     body.appendChild(wrap);
   }
   // ---------- the realm map (Kingdom of Krax & Vosmos)
-  const MAP_SPOT = { cottage: [520, 78], hillside: [516, 92], town: [508, 108], guild: [508, 108], cauldron: [508, 108], forest_edge: [446, 124], deep_forest: [330, 128], hollow: [372, 96], gateway: [176, 142] };
+  const MAP_SPOT = { cottage: [520, 78], hillside: [516, 92], town: [508, 108], guild: [508, 108], cauldron: [508, 108], road: [514, 150], brushwood: [520, 196] };
   function renderMap(body) {
     const W = 640, H = 400, c = GFX.cnv(W, H), g = c.getContext('2d');
     c.style.cssText = 'width:100%;height:auto;max-height:100%;object-fit:contain;border:3px solid #7a5530;border-radius:6px;background:#e8d4a4';
@@ -1259,9 +1269,68 @@ const G = (() => {
   }
 
   // =================================================================== CHAPTER SUMMARY
-  function chapterSummary(html) {
-    if (DBG.auto) { const pr = modal({ title: 'Chapter One — Your Story', wide: true, html, buttons: [{ label: 'Continue ▶', value: true, primary: true }] }); setTimeout(() => { const b = document.querySelector('.modal.wide .primary'); if (b) b.click(); }, 30); return pr; }
-    return modal({ title: 'Chapter One — Your Story', wide: true, html, escValue: true, buttons: [{ label: 'Continue ▶', value: true, primary: true }] });
+  function chapterSummary(html, title) {
+    title = title || ('Chapter ' + ['One', 'Two', 'Three', 'Four', 'Five'][(S.chapter || 1) - 1] + ' — Your Story');
+    if (DBG.auto) { const pr = modal({ title, wide: true, html, buttons: [{ label: 'Continue ▶', value: true, primary: true }] }); setTimeout(() => { const b = document.querySelector('.modal.wide .primary'); if (b) b.click(); }, 30); return pr; }
+    return modal({ title, wide: true, html, escValue: true, buttons: [{ label: 'Continue ▶', value: true, primary: true }] });
+  }
+
+  // =================================================================== CARGO PUZZLE (Chapter One: "I can make it fit!")
+  // A 4 x 3 wagon bed. Every piece must fit: one big crate, two long casks and four small barrels.
+  function cargoPuzzle() {
+    if (DBG.auto) return Promise.resolve();
+    return new Promise(res => {
+      const W = 4, H = 3;
+      const start = () => [
+        { id: 'big', kind: 'bigcrate', w: 2, h: 2, x: 1, y: 1 },
+        { id: 'c1', kind: 'cask', w: 2, h: 1, x: 1, y: 0 },
+        { id: 'c2', kind: 'cask', w: 2, h: 1, x: null, y: null },
+        { id: 'b1', kind: 'barrel', w: 1, h: 1, x: 0, y: 0 }, { id: 'b2', kind: 'barrel', w: 1, h: 1, x: 3, y: 0 },
+        { id: 'b3', kind: 'barrel', w: 1, h: 1, x: 0, y: 2 }, { id: 'b4', kind: 'barrel', w: 1, h: 1, x: 3, y: 2 },
+      ];
+      let pieces = start(), sel = null, moves = 0;
+      const bg = document.createElement('div'); bg.className = 'modal-bg';
+      const box = document.createElement('div'); box.className = 'modal cargo'; bg.appendChild(box);
+      box.innerHTML = `<h3>Make it fit!</h3><p class="dim">Tap a piece to pick it up, then tap where it should go on the wagon. Long casks can be turned with <b>↻ Turn</b>. Everything must fit — even the great cask on the ground!</p>
+        <div class="cg-area"><div class="cg-grid"></div></div><div class="cg-tray"><span class="cg-label">On the ground:</span></div><p class="cg-msg"></p>
+        <div class="modal-btns"><button class="cg-hint">Hint</button><button class="cg-reset">Start again</button><button class="cg-rot">↻ Turn</button></div>`;
+      ui.appendChild(bg);
+      const grid = box.querySelector('.cg-grid'), tray = box.querySelector('.cg-tray'), msg = box.querySelector('.cg-msg');
+      const occupied = (except) => { const o = {}; for (const p of pieces) if (p !== except && p.x != null) for (let j = 0; j < p.h; j++) for (let i = 0; i < p.w; i++) o[(p.x + i) + ',' + (p.y + j)] = p; return o; };
+      const fits = (p, x, y) => { if (x < 0 || y < 0 || x + p.w > W || y + p.h > H) return false; const o = occupied(p); for (let j = 0; j < p.h; j++) for (let i = 0; i < p.w; i++) if (o[(x + i) + ',' + (y + j)]) return false; return true; };
+      const pieceEl = p => { const e = document.createElement('div'); e.className = `cg-piece ${p.kind} ${p.w > p.h ? 'wide' : p.h > p.w ? 'tall' : ''} ${sel === p ? 'sel' : ''}`; e.style.setProperty('--w', p.w); e.style.setProperty('--h', p.h); e.onclick = ev => { ev.stopPropagation(); sel = sel === p ? null : p; AUDIO.sfx('blip', 1.1); draw(); }; return e; };
+      function draw() {
+        grid.innerHTML = ''; tray.querySelectorAll('.cg-piece').forEach(e => e.remove());
+        for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) { const c = document.createElement('div'); c.className = 'cg-cell'; c.style.gridColumn = x + 1; c.style.gridRow = y + 1; c.onclick = () => placeAt(x, y); grid.appendChild(c); }
+        for (const p of pieces) { const e = pieceEl(p); if (p.x != null) { e.style.gridColumn = `${p.x + 1} / span ${p.w}`; e.style.gridRow = `${p.y + 1} / span ${p.h}`; grid.appendChild(e); } else tray.appendChild(e); }
+        box.querySelector('.cg-rot').disabled = !(sel && sel.kind === 'cask');
+      }
+      function placeAt(x, y) {
+        if (!sel) { const o = occupied(null)[x + ',' + y]; if (o) { sel = o; draw(); } return; }
+        for (const [dx, dy] of [[0, 0], [-1, 0], [0, -1], [-1, -1]]) {
+          if (fits(sel, x + dx, y + dy)) { sel.x = x + dx; sel.y = y + dy; sel = null; moves++; AUDIO.sfx('land'); draw(); check(); return; }
+        }
+        AUDIO.sfx('no'); msg.textContent = "That won't fit there — something is in the way.";
+      }
+      tray.onclick = () => { if (sel && sel.x != null) { sel.x = sel.y = null; sel = null; AUDIO.sfx('blip', 0.9); draw(); } };
+      box.querySelector('.cg-rot').onclick = () => {
+        if (!sel || sel.kind !== 'cask') return;
+        [sel.w, sel.h] = [sel.h, sel.w];
+        if (sel.x != null && !fits(sel, sel.x, sel.y)) { sel.x = sel.y = null; msg.textContent = 'No room to turn it there, so it went back on the ground.'; }
+        AUDIO.sfx('swish'); draw();
+      };
+      box.querySelector('.cg-reset').onclick = () => { pieces = start(); sel = null; msg.textContent = ''; draw(); };
+      box.querySelector('.cg-hint').onclick = () => { msg.innerHTML = moves < 3 ? 'Try putting the <b>big crate</b> into a corner first.' : 'Big crate in a corner, the two <b>long casks</b> side by side next to it, and the <b>little barrels</b> in a row along the other side.'; };
+      function check() {
+        if (pieces.every(p => p.x != null)) {
+          msg.innerHTML = '<b>Everything fits!</b>'; AUDIO.sfx('combine');
+          const b = document.createElement('button'); b.className = 'primary'; b.textContent = 'Rope it all down ▶';
+          b.onclick = () => { bg.remove(); res(); };
+          box.querySelector('.modal-btns').replaceChildren(b);
+        } else msg.textContent = pieces.filter(p => p.x == null).length + ' still on the ground.';
+      }
+      draw(); check();
+    });
   }
 
   // =================================================================== PAUSE MENU
@@ -1273,10 +1342,10 @@ const G = (() => {
     const ago = Math.round((Date.now() - (S.savedAt || Date.now())) / 1000);
     const v = await modal({ title: 'Paused', stack: true, escValue: 'resume',
       html: `<p class="dim">Playing as <b>${esc(S.playerName || 'Player ' + slot)}</b> · Level ${S.lvl} · ${esc(M.name)}<br>✓ Your progress saves automatically${ago < 5 ? ' (just saved)' : ''}.</p>`,
-      buttons: [{ label: 'Resume', value: 'resume', primary: true }, { label: 'Options', value: 'opts' }, { label: 'How to Play', value: 'how' }, { label: 'Players & Saves', value: 'slots' }, ...(S.flags.chapter1 ? [{ label: 'Chapter Summary', value: 'sum' }] : []), { label: 'Back to Title', value: 'title' }] });
+      buttons: [{ label: 'Resume', value: 'resume', primary: true }, { label: 'Options', value: 'opts' }, { label: 'How to Play', value: 'how' }, { label: 'Players & Saves', value: 'slots' }, ...(S.flags.ch1Done ? [{ label: 'Chapter Summary', value: 'sum' }] : []), { label: 'Back to Title', value: 'title' }] });
     paused = false;
     if (v === 'opts') openPanel('opts');
-    if (v === 'sum') { paused = true; await chapterSummary(STORY.summaryHTML(S)); paused = false; }
+    if (v === 'sum') { paused = true; await chapterSummary(STORY.summaryHTML(S, 1)); paused = false; }
     if (v === 'how') { paused = true; await modal({ title: 'How to Play', html: HOW, escValue: true, buttons: [{ label: 'Back to the game', value: true, primary: true }] }); paused = false; }
     if (v === 'slots') { save(); toTitle(); showSlots(); }
     if (v === 'title') { save(); toTitle(); }
@@ -1293,11 +1362,12 @@ const G = (() => {
   (function migrateOldSave() { const old = store.get(SAVE_KEY); if (old) { if (!store.get(SLOT_KEY(1))) { store.set(SLOT_KEY(1), old); store.set(LAST_KEY, '1'); } store.del(SAVE_KEY); } })();
   let slot = 1;
   function readSlot(n) { try { return JSON.parse(store.get(SLOT_KEY(n))); } catch (e) { return null; } }
+  const compatible = d => d && d.version === SAVE_VERSION;
   function lastSlot() { const n = +store.get(LAST_KEY); if (n && readSlot(n)) return n; for (let i = 1; i <= SLOTS; i++) if (readSlot(i)) return i; return 0; }
   function deleteSlot(n) { store.del(SLOT_KEY(n)); if (+store.get(LAST_KEY) === n) store.del(LAST_KEY); }
   function save() {
     if (!S || mode !== 'play' || !player) return;
-    S.x = player.x; S.y = player.y; S.dir = player.dir; S.followers = followers.map(f => f.char);
+    S.x = player.x; S.y = player.y; S.dir = player.dir;
     S.savedAt = Date.now(); S.where = M ? M.name : ''; S.goal = STORY.objective ? STORY.objective() : '';
     store.set(SLOT_KEY(slot), JSON.stringify(S)); store.set(LAST_KEY, String(slot));
   }
@@ -1309,6 +1379,17 @@ const G = (() => {
   let autosaveT = 0;
 
   // =================================================================== FOLLOWERS (dragon sisters)
+  function setParty(list) {
+    S.party = list.map(p => Object.assign({}, p));
+    followers = list.map(p => Object.assign({ x: player.x, y: player.y, dir: 'down', t: Math.random() * 3, frame: 0, color: '#7a5530', voice: 1 }, p));
+    seedTrail();
+  }
+  // Lay the trail out behind the player (followers walk along it, one pixel per point), and put followers in place.
+  function seedTrail() {
+    const d = { up: [0, 1], down: [0, -1], left: [1, 0], right: [-1, 0] }[player.dir] || [0, -1];
+    trail = []; for (let i = 0; i < 160; i++) trail.push({ x: player.x + d[0] * i, y: player.y + d[1] * i });
+    let idx = 0; followers.forEach(f => { idx += f.gap || 16; const tp = trail[Math.min(trail.length - 1, idx)]; f.x = tp.x; f.y = tp.y; f.dir = player.dir; });
+  }
   function setFollowers(list) { followers = list.map(ch => ({ id: ch, char: ch, x: player.x, y: player.y, dir: 'right', t: Math.random() * 3, name: GFX.CHAR[ch] ? ch[0].toUpperCase() + ch.slice(1) : ch, color: ch === 'sianna' ? '#1f8ea8' : ch === 'yennefer' ? '#b8901a' : '#a02a80', voice: 1.6, kind: 'dragon' })); }
 
   // =================================================================== SCRIPT HELPERS
@@ -1394,25 +1475,25 @@ const G = (() => {
   const HOW = `<ul class="how">
     <li><b>Walk:</b> arrow keys / WASD, or click or tap where you want to go.</li>
     <li><b>Talk, look, pick up, open doors:</b> press E (or Enter), or click/tap on the person or thing.</li>
-    <li><b>Jump:</b> Space — over logs, streams and more.</li>
+    <li><b>Jump:</b> Space — to reach things up high, and over logs and streams.</li>
     <li><b>Satchel (I):</b> look at items, <i>Use</i> them on things, or <i>Combine</i> two together.</li>
     <li><b>Quests (J):</b> every task, and the little tasks inside each big one. <b>Map (P)</b> shows the Kingdom of Krax.</li>
-    <li><b>Raise your lantern (Q)</b> in the Dark Forest to scare away goblinites.</li>
     <li>Help people to earn experience — level up to grow braver and brighter.</li>
     <li>The game <b>saves by itself</b> every few seconds and when you close it. Each player has their own save slot.</li></ul>`;
   function toTitle() {
     if (mode === 'play') save();
     mode = 'title'; AUDIO.music('title'); hud(); $('toasts').innerHTML = '';
     $('where').style.display = 'none'; $('objective').style.display = 'none'; $('held').style.display = 'none';
-    const ls = lastSlot(), last = ls ? readSlot(ls) : null;
+    const ls = lastSlot(), last0 = ls ? readSlot(ls) : null, last = compatible(last0) ? last0 : null;
     titleEl.style.display = 'flex';
     titleEl.innerHTML = `
       <div style="position:absolute;top:9%;left:0;right:0;text-align:center;pointer-events:none">
         <div style="font-size:calc(var(--fs)*2.6);color:#ffe08a;text-shadow:0 4px 0 #6a3a10,0 0 18px rgba(255,200,90,.6);letter-spacing:2px;font-weight:600">Luminara</div>
         <div style="font-size:calc(var(--fs)*1.2);color:#f4e6c4;text-shadow:0 2px 0 #000">the Light-Bearer</div>
-        <div style="font-size:calc(var(--fs)*.8);color:#c8b8e8;margin-top:6px;text-shadow:0 2px 0 #000">Chapter One · The Dark Forest</div>
+        <div style="font-size:calc(var(--fs)*.8);color:#c8b8e8;margin-top:6px;text-shadow:0 2px 0 #000">${STORY.CHAPTERS.length > 1 ? STORY.CHAPTERS.length + ' chapters' : STORY.CHAPTERS[0].subtitle}</div>
       </div>
       <div class="menu">
+        ${!last && last0 ? `<div class="hint" style="font-size:calc(var(--fs)*.8)">The story has been rebuilt from Lisa's book — older saves need a fresh start.</div>` : ''}
         ${last ? `<button id="tCont">Continue · ${esc(last.playerName || 'Player ' + ls)}</button>` : '<button id="tNew">Begin the Story</button>'}
         <button id="tSlots">Players &amp; Saves</button>
         <button id="tHow">How to Play</button>
@@ -1436,7 +1517,11 @@ const G = (() => {
     const cards = [];
     for (let n = 1; n <= SLOTS; n++) {
       const d = readSlot(n);
-      if (d) cards.push(`<div class="slotcard"><div class="sn">${esc(d.playerName || 'Player ' + n)}</div>
+      if (d && !compatible(d)) cards.push(`<div class="slotcard"><div class="sn">${esc(d.playerName || 'Player ' + n)}</div>
+        <div class="si">This save is from an earlier version of the story, before it was rebuilt from Lisa's book.</div>
+        <div class="si dim">Start fresh to play the new Chapter One.</div>
+        <div class="sb"><button data-fresh="${n}" class="primary">Start fresh</button><button data-del="${n}" class="danger">Delete</button></div></div>`);
+      else if (d) cards.push(`<div class="slotcard"><div class="sn">${esc(d.playerName || 'Player ' + n)}</div>
         <div class="si">Level ${d.lvl || 1} · ${esc(d.where || '')}</div>
         <div class="si">${d.flags && d.flags.chapter1 ? '<b>Chapter One complete!</b>' : 'Goal: ' + esc(d.goal || '')}</div>
         <div class="si dim">Played ${fmtTime(d.time)}${d.savedAt ? ' · last played ' + fmtDate(d.savedAt) : ''}</div>
@@ -1447,6 +1532,7 @@ const G = (() => {
     titleEl.innerHTML = `<div class="slots"><h2>Players &amp; Saves</h2><div class="slotgrid">${cards.join('')}</div><button id="sBack">Back</button></div>`;
     $('sBack').onclick = () => toTitle();
     titleEl.querySelectorAll('[data-play]').forEach(b => b.onclick = () => { AUDIO.init(); slot = +b.dataset.play; startGame(readSlot(slot)); });
+    titleEl.querySelectorAll('[data-fresh]').forEach(b => b.onclick = () => { AUDIO.init(); const n = +b.dataset.fresh, d = readSlot(n); slot = n; startGame(null, d.playerName || 'Player ' + n); });
     titleEl.querySelectorAll('[data-new]').forEach(b => b.onclick = () => { AUDIO.init(); newGameIn(+b.dataset.new); });
     titleEl.querySelectorAll('[data-del]').forEach(b => b.onclick = async () => {
       const n = +b.dataset.del, d = readSlot(n), name = esc(d.playerName || 'Player ' + n);
@@ -1526,14 +1612,9 @@ const G = (() => {
     held = null; setHeld(null); followers = [];
     if (saved) {
       S = Object.assign(newState(), saved);
-      if (!S.met) { // saves from before name tags: work out who has already been met
-        const f = S.flags, m = S.met = {}, add = (c, ...names) => { if (c) names.forEach(n => m[n] = 1); };
-        add(f.metHollis, 'Guildmaster Hollis'); add(f.metFredrick, 'Fredrick'); add(f.metFriend, '#friend', 'Brenna'); add(f.knowFountain, 'Bertram');
-        add(f.needLordPie, 'Pemberton'); add(f.gateOpen, 'Lord Aldermere'); add(f.pieBought, 'Mistress Pell'); add(f.askedMarigold || f.marigoldThanked, 'Marigold');
-        add(f.osricTrade, 'Osric'); add(f.caravanLeft, 'Tobias'); add(f.kidsAsked || f.ballReturned, 'Pip', 'Nell'); add(S.q.leaves, 'Old Maud'); add(f.owlHoot, 'Old Hoots');
-      }
+      S.met = S.met || {};
       loadMap(S.map, { x: S.x, y: S.y, dir: S.dir });
-      if (S.followers && S.followers.length) setFollowers(S.followers);
+      if (S.party && S.party.length) setParty(S.party);
       hud();
       run(async () => { if (STORY.onLoad) await STORY.onLoad(); if (STORY.onEnter) await STORY.onEnter(S.map); });
     } else {
@@ -1583,7 +1664,7 @@ const G = (() => {
   const API = {
     get S() { return S; }, get M() { return M; }, get player() { return player; }, get held() { return held; }, T,
     say, think, narrate, choice, wait, fade, go, toast, give, take, has, addXP, addCoins, questStart, questDone, setHeld, emote,
-    npc, walk: walkNPC, fly: flyNPC, addNPC, removeNPC, refresh, camTo, faceTo, setFollowers, showCredits,
+    npc, walk: walkNPC, fly: flyNPC, addNPC, removeNPC, refresh, camTo, faceTo, setParty, showCredits, cargoPuzzle: () => cargoPuzzle(),
     sfx: (n, a) => AUDIO.sfx(n, a), music: n => AUDIO.music(n), hud, shake: (t = 0.4) => { shakeT = t; },
     fx: f => fx.push(f), particles: p => particles.push(p), get followers() { return followers; }, loadMap, save,
     dbg: DBG, flapMini: (n, o) => flapMini(n, o), openPanel, tip, tipLater, chapterSummary,
