@@ -816,7 +816,7 @@ const STORY = (() => {
       '#Made with love by', 'Dad', '', '',
       '#Starring', 'Luminara, the Light-Bearer', '{friend}', 'Fredrick the Bard', 'Mistress Pell', 'Guildmaster Hollis', 'Bertram & Clover', 'Lord Aldermere & Pemberton', 'Marigold, Osric, Pip & Nell', 'Old Hoots', 'Tobias', 'and one very brave little possum', '', '',
       `#Your journey`, `Level ${G.S.lvl} · ${G.S.xp} experience`, `Golden leaves: ${G.S.leaves.length} / ${TOTAL_LEAVES}`, '', '',
-      '#To be continued…', 'The Gateway awaits.', '', '', '',
+      '#Played by', G.S.playerName || '', '', '', '#To be continued…', 'The Gateway awaits.', '', '', '',
     ].map(l => l.replace('{friend}', G.S.friendName)));
     await G.fade(false, 400);
   };

@@ -2,7 +2,16 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#120d1c">
+<meta name="description" content="Luminara the Light-Bearer — a pixel-art adventure based on Lisa's story.">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Luminara">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
 <title>Luminara the Light-Bearer</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -15,7 +24,7 @@
 *{box-sizing:border-box;margin:0;padding:0}
 html,body{height:100%;background:#0b0810;overflow:hidden;color:var(--ink);
   font-family:'Jersey 10','Trebuchet MS',system-ui,sans-serif;font-variant-ligatures:none;letter-spacing:.3px;-webkit-user-select:none;user-select:none;touch-action:none}
-#wrap{position:fixed;inset:0;display:flex;align-items:center;justify-content:center}
+#wrap{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left)}
 #stage{position:relative}
 #game{display:block;image-rendering:pixelated;image-rendering:crisp-edges;background:#000}
 #ui{position:absolute;inset:0;pointer-events:none;overflow:hidden}
@@ -111,6 +120,27 @@ html,body{height:100%;background:#0b0810;overflow:hidden;color:var(--ink);
 #title button{font:inherit;font-size:calc(var(--fs)*1.1);padding:8px 16px;background:rgba(244,230,196,.95);border:4px solid var(--edge);border-radius:10px;cursor:pointer;color:var(--ink);box-shadow:0 4px 0 rgba(0,0,0,.5)}
 #title button:hover{background:var(--gold)}
 #title .hint{color:#d8c8a8;font-size:calc(var(--fs)*.75);text-align:center;text-shadow:0 2px 0 #000;max-width:90%}
+/* ---------- pop-up dialogs & save slots ---------- */
+.modal-bg{position:absolute;inset:0;background:rgba(10,6,18,.6);display:flex;align-items:center;justify-content:center;z-index:20;pointer-events:auto}
+.modal{width:min(90%,520px);max-height:90%;overflow:auto;background:var(--parch);border:5px double var(--edge);border-radius:10px;padding:14px 18px;font-size:var(--fs);box-shadow:0 8px 0 rgba(0,0,0,.45)}
+.modal h3{font-size:calc(var(--fs)*1.25);margin-bottom:8px}
+.modal p{margin-bottom:8px;line-height:1.35}
+.modal .how{padding-left:18px;line-height:1.35}.modal .how li{margin-bottom:5px}
+.modal-in{font:inherit;font-size:calc(var(--fs)*1.1);width:100%;padding:6px 10px;border:3px solid var(--edge);border-radius:8px;background:#fffaf0;color:var(--ink);margin:4px 0 6px;user-select:text;-webkit-user-select:text}
+.modal-btns{display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap;margin-top:6px}
+.modal-btns button,.slotcard button,#sBack{font:inherit;font-size:var(--fs);padding:5px 14px;border:3px solid var(--edge);border-radius:8px;background:#f8eccc;cursor:pointer;color:var(--ink);box-shadow:0 3px 0 rgba(0,0,0,.35)}
+button.primary{background:var(--gold)!important}
+button.danger{background:#e8968a!important;border-color:#8a3a2a!important}
+.slots{position:absolute;inset:4%;display:flex;flex-direction:column;align-items:center;gap:10px;pointer-events:auto}
+.slots h2{color:#ffe08a;font-size:calc(var(--fs)*1.6);text-shadow:0 3px 0 #000;font-weight:400}
+.slotgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;width:100%;min-height:0;overflow:auto;align-items:start}
+@media (max-width:560px){.slotgrid{grid-template-columns:1fr}}
+.slotcard{background:var(--parch);border:4px solid var(--edge);border-radius:10px;padding:10px 12px;display:flex;flex-direction:column;gap:4px;font-size:calc(var(--fs)*.85);box-shadow:0 5px 0 rgba(0,0,0,.4)}
+.slotcard.empty{background:rgba(244,230,196,.75);border-style:dashed}
+.slotcard .sn{font-size:calc(var(--fs)*1.3)}
+.slotcard .dim{opacity:.7}
+.slotcard .sb{margin-top:auto;display:flex;gap:6px;flex-wrap:wrap;padding-top:6px}
+#sBack{background:var(--parch)}
 #fade{position:absolute;inset:0;background:#000;opacity:0;pointer-events:none;transition:opacity .5s}
 
 /* ---------- touch controls ---------- */
@@ -169,6 +199,10 @@ body.panelopen #touch{display:none}
     <div id="fade"></div>
   </div>
 </div></div>
+<script>
+  // offline support & home-screen app (only when served from a website)
+  if ('serviceWorker' in navigator && location.protocol.startsWith('http')) window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));
+</script>
 <script src="js/audio.js"></script>
 <script src="js/gfx.js"></script>
 <script src="js/maps.js"></script>

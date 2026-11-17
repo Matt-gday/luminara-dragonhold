@@ -42,7 +42,8 @@ const G = (() => {
 
   // =================================================================== SIZING
   function resize() {
-    const w = window.innerWidth, h = window.innerHeight;
+    const wcs = getComputedStyle(document.getElementById('wrap'));
+    const w = window.innerWidth - parseFloat(wcs.paddingLeft) - parseFloat(wcs.paddingRight), h = window.innerHeight - parseFloat(wcs.paddingTop) - parseFloat(wcs.paddingBottom);
     let s = Math.min(w / VW, h / VH);
     if (s >= 2) s = Math.floor(s * 2) / 2;
     scale = Math.max(1, s);
@@ -337,6 +338,7 @@ const G = (() => {
     lightRegen += dt; if (lightRegen > 7) { lightRegen = 0; if (S.light < S.maxLight) { S.light++; hud(); } }
     heartRegen += dt; if (heartRegen > 18) { heartRegen = 0; if (S.hearts < S.maxHearts && player.invuln <= 0) { S.hearts++; hud(); } }
     if (player.invuln > 0) player.invuln -= dt;
+    autosaveT += dt; if (autosaveT > 3 && !busy && !dialog && !transitioning) { autosaveT = 0; save(); }
     // camera
     const tx = player.x - VW / 2, ty = player.y - 12 - VH / 2;
     cam.x += (tx - cam.x) * Math.min(1, dt * 8); cam.y += (ty - cam.y) * Math.min(1, dt * 8);
@@ -1126,13 +1128,20 @@ const G = (() => {
       <h4>Touch controls</h4>
       <p><label style="cursor:pointer"><input type="checkbox" id="oDpad" ${document.body.classList.contains('nodpad') ? '' : 'checked'} style="transform:scale(1.4);margin-right:8px">Show the arrow pad on screen</label><br>
       <span style="opacity:.75">Turn it off to just tap where you want Luminara to walk. The Jump, Talk and Raise Light buttons stay.</span></p>
-      <h4>Game</h4><p>The game saves automatically.</p>`;
+      <h4>Game</h4><p>Playing as <b>${S.playerName || 'Player ' + slot}</b> (save slot ${slot}). The game saves by itself every few seconds, and whenever you close or leave it.</p>`;
     const acts = document.createElement('div'); acts.className = 'detail'; acts.style.border = 'none'; acts.style.padding = 0;
     const row = document.createElement('div'); row.className = 'acts';
     const mkb = (t, f) => { const b = document.createElement('button'); b.textContent = t; b.onclick = f; row.appendChild(b); };
     mkb('Save now', () => { save(); toast('Game saved'); });
     mkb('Back to title', () => { save(); closePanel(); toTitle(); });
-    mkb('Start over', () => { if (confirm('Start a brand new game? Your current progress will be lost.')) { localStorage.removeItem(SAVE_KEY); closePanel(); toTitle(); } });
+    mkb('Players & saves', () => { save(); closePanel(); toTitle(); showSlots(); });
+    mkb('Delete this save…', async () => {
+      const name = S.playerName || 'Player ' + slot;
+      const ok = await modal({ title: 'Delete this save?', html: `<p>This will delete <b>${esc(name)}</b>'s game in save slot ${slot} — every quest, item and golden leaf.</p><p><b>This can't be undone.</b></p>`, buttons: [{ label: 'Keep my save', value: false }, { label: 'Yes, delete it', value: true, danger: true }] });
+      if (!ok) return;
+      mode = 'title'; deleteSlot(slot); closePanel(); toTitle(); toast(`${esc(name)}'s save was deleted.`);
+    });
+    row.lastChild.classList.add('danger');
     acts.appendChild(row); d.appendChild(acts); body.appendChild(d);
     d.querySelector('#oMus').oninput = e => AUDIO.setVolumes(+e.target.value, null);
     d.querySelector('#oSfx').oninput = e => AUDIO.setVolumes(null, +e.target.value);
@@ -1140,13 +1149,30 @@ const G = (() => {
   }
 
   // =================================================================== SAVE / LOAD
+  // Three save slots, one per player. Everything is kept on this device (browser storage).
+  const SLOTS = 3, SLOT_KEY = n => 'luminara_save_slot_' + n, LAST_KEY = 'luminara_last_slot';
+  const store = {
+    get(k) { try { return localStorage.getItem(k); } catch (e) { return null; } },
+    set(k, v) { try { localStorage.setItem(k, v); return true; } catch (e) { return false; } },
+    del(k) { try { localStorage.removeItem(k); } catch (e) { } },
+  };
+  (function migrateOldSave() { const old = store.get(SAVE_KEY); if (old) { if (!store.get(SLOT_KEY(1))) { store.set(SLOT_KEY(1), old); store.set(LAST_KEY, '1'); } store.del(SAVE_KEY); } })();
+  let slot = 1;
+  function readSlot(n) { try { return JSON.parse(store.get(SLOT_KEY(n))); } catch (e) { return null; } }
+  function lastSlot() { const n = +store.get(LAST_KEY); if (n && readSlot(n)) return n; for (let i = 1; i <= SLOTS; i++) if (readSlot(i)) return i; return 0; }
+  function deleteSlot(n) { store.del(SLOT_KEY(n)); if (+store.get(LAST_KEY) === n) store.del(LAST_KEY); }
   function save() {
     if (!S || mode !== 'play' || !player) return;
     S.x = player.x; S.y = player.y; S.dir = player.dir; S.followers = followers.map(f => f.char);
-    try { localStorage.setItem(SAVE_KEY, JSON.stringify(S)); } catch (e) { }
+    S.savedAt = Date.now(); S.where = M ? M.name : ''; S.goal = STORY.objective ? STORY.objective() : '';
+    store.set(SLOT_KEY(slot), JSON.stringify(S)); store.set(LAST_KEY, String(slot));
   }
-  function hasSave() { try { return !!localStorage.getItem(SAVE_KEY); } catch (e) { return false; } }
-  function loadSave() { try { return JSON.parse(localStorage.getItem(SAVE_KEY)); } catch (e) { return null; } }
+  // save whenever it is safe: every few seconds, and the moment the app is hidden or closed
+  function saveIfSafe() { if (mode === 'play' && !busy && !transitioning) save(); }
+  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') saveIfSafe(); });
+  window.addEventListener('pagehide', saveIfSafe);
+  window.addEventListener('beforeunload', saveIfSafe);
+  let autosaveT = 0;
 
   // =================================================================== FOLLOWERS (dragon sisters)
   function setFollowers(list) { followers = list.map(ch => ({ id: ch, char: ch, x: player.x, y: player.y, dir: 'right', t: Math.random() * 3, name: GFX.CHAR[ch] ? ch[0].toUpperCase() + ch.slice(1) : ch, color: ch === 'sianna' ? '#1f8ea8' : ch === 'yennefer' ? '#b8901a' : '#a02a80', voice: 1.6, kind: 'dragon' })); }
@@ -1212,10 +1238,37 @@ const G = (() => {
   // =================================================================== TITLE SCREEN
   const titleEl = $('title');
   let titleT = 0, titleDragons = [];
+  function esc(t) { return String(t).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])); }
+  // small pop-up dialog: modal({title, html, input, buttons:[{label, value, danger}]}) -> Promise(value)
+  function modal(o) {
+    return new Promise(res => {
+      const bg = document.createElement('div'); bg.className = 'modal-bg';
+      const box = document.createElement('div'); box.className = 'modal'; bg.appendChild(box);
+      box.innerHTML = `<h3>${o.title}</h3>${o.html || ''}${o.input ? `<input class="modal-in" maxlength="16" value="${esc(o.input)}">` : ''}`;
+      const row = document.createElement('div'); row.className = 'modal-btns'; box.appendChild(row);
+      const inp = box.querySelector('.modal-in');
+      const done = v => { bg.remove(); res(v); };
+      o.buttons.forEach(bt => { const b = document.createElement('button'); b.textContent = bt.label; if (bt.danger) b.classList.add('danger'); if (bt.primary) b.classList.add('primary'); b.onclick = () => done(inp && bt.value === true ? (inp.value.trim() || o.input) : bt.value); row.appendChild(b); });
+      ui.appendChild(bg);
+      if (inp) { inp.focus(); inp.select(); inp.addEventListener('keydown', e => { e.stopPropagation(); if (e.key === 'Enter') done(inp.value.trim() || o.input); if (e.key === 'Escape') done(false); }); }
+    });
+  }
+  function fmtTime(sec) { sec = Math.floor(sec || 0); const h = Math.floor(sec / 3600), m = Math.floor(sec / 60) % 60; return h ? `${h} h ${m} min` : `${Math.max(1, m)} min`; }
+  function fmtDate(t) { if (!t) return ''; const d = new Date(t); return d.toLocaleDateString(undefined, { day: 'numeric', month: 'short' }) + ', ' + d.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' }); }
+  const HOW = `<ul class="how">
+    <li><b>Walk:</b> arrow keys / WASD, or click or tap where you want to go.</li>
+    <li><b>Talk, look, pick up, open doors:</b> press E (or Enter), or click/tap on the person or thing.</li>
+    <li><b>Jump:</b> Space — over logs, streams and more.</li>
+    <li><b>Satchel (I):</b> look at items, <i>Use</i> them on things, or <i>Combine</i> two together.</li>
+    <li><b>Quests (J):</b> every task, and the little tasks inside each big one. <b>Map (P)</b> shows the Kingdom of Krax.</li>
+    <li><b>Raise your lantern (Q)</b> in the Dark Forest to scare away goblinites.</li>
+    <li>Help people to earn experience — level up to grow braver and brighter.</li>
+    <li>The game <b>saves by itself</b> every few seconds and when you close it. Each player has their own save slot.</li></ul>`;
   function toTitle() {
-    mode = 'title'; AUDIO.music('title'); hud();
+    if (mode === 'play') save();
+    mode = 'title'; AUDIO.music('title'); hud(); $('toasts').innerHTML = '';
     $('where').style.display = 'none'; $('objective').style.display = 'none'; $('held').style.display = 'none';
-    const cont = hasSave();
+    const ls = lastSlot(), last = ls ? readSlot(ls) : null;
     titleEl.style.display = 'flex';
     titleEl.innerHTML = `
       <div style="position:absolute;top:9%;left:0;right:0;text-align:center;pointer-events:none">
@@ -1224,17 +1277,46 @@ const G = (() => {
         <div style="font-size:calc(var(--fs)*.8);color:#c8b8e8;margin-top:6px;text-shadow:0 2px 0 #000">Chapter One · The Dark Forest</div>
       </div>
       <div class="menu">
-        ${cont ? '<button id="tCont">Continue</button>' : ''}
-        <button id="tNew">${cont ? 'New Game' : 'Begin the Story'}</button>
+        ${last ? `<button id="tCont">Continue · ${esc(last.playerName || 'Player ' + ls)}</button>` : '<button id="tNew">Begin the Story</button>'}
+        <button id="tSlots">Players &amp; Saves</button>
         <button id="tHow">How to Play</button>
       </div>
       <div class="hint">A story by Lisa · Made with love by Dad</div>`;
-    if (cont) $('tCont').onclick = () => { AUDIO.init(); startGame(loadSave()); };
-    $('tNew').onclick = () => { AUDIO.init(); if (cont && !confirm('Start a new game? Your saved progress will be replaced.')) return; startGame(null); };
-    $('tHow').onclick = () => { AUDIO.init(); alert('HOW TO PLAY\n\n• Move with the arrow keys or WASD — or click/tap where you want to walk.\n• Press E (or Enter, or click) to talk, look at things, pick them up and open doors.\n• Space makes Luminara jump — over logs, streams and more.\n• Open your Satchel (I) to look at items, USE them on things, or COMBINE two items together.\n• Your Quest log (J) shows every task, and the little tasks inside each big one.\n• In the Dark Forest, press Q to raise your lantern and scare away goblinites.\n• Earn experience by helping people — level up to grow braver and brighter.\n\nThe game saves automatically.'); };
+    if (last) $('tCont').onclick = () => { AUDIO.init(); slot = ls; startGame(readSlot(ls)); };
+    else $('tNew').onclick = () => { AUDIO.init(); newGameIn(1); };
+    $('tSlots').onclick = () => { AUDIO.init(); showSlots(); };
+    $('tHow').onclick = () => { AUDIO.init(); modal({ title: 'How to Play', html: HOW, buttons: [{ label: 'Got it!', value: true, primary: true }] }); };
     titleDragons = [
       { c: 'wyrmRed', x: -60, y: 30, s: 16 }, { c: 'wyrmGreen', x: -200, y: 60, s: 22 }, { c: 'wyrmBronze', x: -320, y: 82, s: 26 },
     ];
+  }
+  async function newGameIn(n) {
+    const name = await modal({ title: "Who's playing?", html: '<p>Type a name for this save.</p>', input: 'Player ' + n, buttons: [{ label: 'Cancel', value: false }, { label: 'Begin the story', value: true, primary: true }] });
+    if (!name) return;
+    slot = n; startGame(null, name);
+  }
+  function showSlots() {
+    titleEl.style.display = 'flex';
+    const cards = [];
+    for (let n = 1; n <= SLOTS; n++) {
+      const d = readSlot(n);
+      if (d) cards.push(`<div class="slotcard"><div class="sn">${esc(d.playerName || 'Player ' + n)}</div>
+        <div class="si">Level ${d.lvl || 1} · ${esc(d.where || '')}</div>
+        <div class="si">${d.flags && d.flags.chapter1 ? '<b>Chapter One complete!</b>' : 'Goal: ' + esc(d.goal || '')}</div>
+        <div class="si dim">Played ${fmtTime(d.time)}${d.savedAt ? ' · last played ' + fmtDate(d.savedAt) : ''}</div>
+        <div class="sb"><button data-play="${n}" class="primary">Play</button><button data-del="${n}" class="danger">Delete</button></div></div>`);
+      else cards.push(`<div class="slotcard empty"><div class="sn">Empty slot ${n}</div><div class="si dim">Start a fresh adventure here. Other saves stay safe.</div>
+        <div class="sb"><button data-new="${n}" class="primary">New game</button></div></div>`);
+    }
+    titleEl.innerHTML = `<div class="slots"><h2>Players &amp; Saves</h2><div class="slotgrid">${cards.join('')}</div><button id="sBack">Back</button></div>`;
+    $('sBack').onclick = () => toTitle();
+    titleEl.querySelectorAll('[data-play]').forEach(b => b.onclick = () => { AUDIO.init(); slot = +b.dataset.play; startGame(readSlot(slot)); });
+    titleEl.querySelectorAll('[data-new]').forEach(b => b.onclick = () => { AUDIO.init(); newGameIn(+b.dataset.new); });
+    titleEl.querySelectorAll('[data-del]').forEach(b => b.onclick = async () => {
+      const n = +b.dataset.del, d = readSlot(n), name = esc(d.playerName || 'Player ' + n);
+      const ok = await modal({ title: 'Delete this save?', html: `<p>This will delete <b>${name}</b>'s game — Level ${d.lvl || 1}, played ${fmtTime(d.time)}.</p><p>The other saves are not touched. <b>This can't be undone.</b></p>`, buttons: [{ label: 'Keep it', value: false }, { label: 'Yes, delete it', value: true, danger: true }] });
+      if (ok) { deleteSlot(n); showSlots(); }
+    });
   }
   const stars = [...Array(70)].map((_, i) => [GFX.hash(i, 1) * VW, GFX.hash(i, 2) * 90, GFX.hash(i, 3)]);
   let titleBg = null;
@@ -1299,8 +1381,10 @@ const G = (() => {
   }
 
   // =================================================================== START
-  function startGame(saved) {
+  function startGame(saved, playerName) {
     titleEl.style.display = 'none';
+    try { if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => { }); } catch (e) { }
+    autosaveT = 0;
     mode = 'play';
     MAPS.reset();
     held = null; setHeld(null); followers = [];
@@ -1309,10 +1393,11 @@ const G = (() => {
       loadMap(S.map, { x: S.x, y: S.y, dir: S.dir });
       if (S.followers && S.followers.length) setFollowers(S.followers);
       hud();
-      if (STORY.onLoad) run(() => STORY.onLoad());
+      run(async () => { if (STORY.onLoad) await STORY.onLoad(); if (STORY.onEnter) await STORY.onEnter(S.map); });
     } else {
-      S = newState();
+      S = newState(); S.playerName = playerName || 'Player ' + slot;
       loadMap('cottage', 'start');
+      save();
       hud();
       run(() => STORY.intro());
     }

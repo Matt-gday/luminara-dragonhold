@@ -24,7 +24,10 @@ All the art, animation, music and sound effects are made by code, so there are n
 | Map of Krax | **P** | Map button |
 | Sound on/off | **M** | Options menu |
 
-The game saves automatically in the browser.
+The game saves by itself every few seconds, and the moment it's closed, so players carry on exactly where they left off.
+**Players & Saves** on the title screen holds three separate save slots, one per player. Each slot has a **Delete** button that asks before deleting. You can also delete the current save from **☰ → Options**.
+
+**Add it to your Home Screen:** open the link on a phone or tablet. On an iPhone or iPad, tap Share → *Add to Home Screen*; on Android, use the browser menu → *Add to Home screen* / *Install app*. It then opens full-screen like a normal app, works offline, and keeps its saves.
 
 ## What is in Chapter One
 
