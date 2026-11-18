@@ -143,10 +143,14 @@ html,body{height:100%;background:#0b0810;overflow:hidden;color:var(--ink);
 
 /* ---------- title ---------- */
 #title{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;padding-bottom:7%;gap:10px}
+#title.home{align-items:flex-end;padding:0 4% 5% 0}
 #title .menu{display:flex;flex-direction:column;gap:8px;align-items:stretch;width:min(60%,300px)}
+#title.home .menu{width:min(34%,300px)}
+#title button small{display:block;font-size:calc(var(--fs)*.65);opacity:.75;margin-top:2px}
 #title button{font:inherit;font-size:calc(var(--fs)*1.1);padding:8px 16px;background:rgba(244,230,196,.95);border:4px solid var(--edge);border-radius:10px;cursor:pointer;color:var(--ink);box-shadow:0 4px 0 rgba(0,0,0,.5)}
 #title button:hover{background:var(--gold)}
 #title .hint{color:#d8c8a8;font-size:calc(var(--fs)*.75);text-align:center;text-shadow:0 2px 0 #000;max-width:90%}
+#title.home .hint{max-width:min(34%,300px)}
 /* ---------- pop-up dialogs & save slots ---------- */
 .modal-bg{position:absolute;inset:0;background:rgba(10,6,18,.6);display:flex;align-items:center;justify-content:center;z-index:20;pointer-events:auto}
 .modal{width:min(90%,520px);max-height:90%;overflow:auto;background:var(--parch);border:5px double var(--edge);border-radius:10px;padding:14px 18px;font-size:var(--fs);box-shadow:0 8px 0 rgba(0,0,0,.45)}
@@ -227,6 +231,15 @@ body.cine #touch{opacity:.35}
 /* ---------- touch controls ---------- */
 #touch{position:absolute;inset:0;pointer-events:none;display:none}
 body.touch #touch{display:block}
+body.touch:not(.inplay) #touch{display:none}
+@media (max-height:500px){
+  #title .ttl{top:3%!important}
+  #title .ttl div:first-child{font-size:calc(var(--fs)*2.1)!important}
+  #title .ttl div:nth-child(2){font-size:calc(var(--fs)*1)!important}
+  #title.home{padding:0 3% 3% 0}
+  #title.home .menu{gap:5px;width:min(30%,300px)}
+  #title.home button{font-size:calc(var(--fs)*.95);padding:4px 10px;border-width:3px}
+}
 #dpad{position:absolute;left:14px;bottom:14px;width:132px;height:132px;pointer-events:auto}
 #dpad div{position:absolute;width:44px;height:44px;background:rgba(244,230,196,.55);border:3px solid rgba(122,85,48,.8);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:20px;color:#2a1c14}
 #dpad .u{left:44px;top:0}#dpad .d{left:44px;top:88px}#dpad .l{left:0;top:44px}#dpad .r{left:88px;top:44px}
@@ -3972,6 +3985,7 @@ const G = (() => {
     const ct = $('compassTag'); ct.style.display = S.flags.gotCompass && mode === 'play' ? 'block' : 'none';
     ct.style.left = ((VW - 18) * scale) + 'px'; ct.style.top = ((32 + 14) * scale) + 'px';
     $('hud').style.display = mode === 'play' ? 'flex' : 'none';
+    document.body.classList.toggle('inplay', mode === 'play');
     $('bar').style.display = mode === 'play' ? 'flex' : 'none';
     $('hud').querySelectorAll('.row')[1].style.display = S.flags.lanternLit ? 'flex' : 'none';
     const lb = document.querySelector('#tbtns [data-b=light]'); if (lb) lb.style.display = S.flags.lanternLit ? '' : 'none';
@@ -4452,35 +4466,48 @@ const G = (() => {
     mode = 'title'; AUDIO.music('title'); hud(); $('toasts').innerHTML = '';
     $('where').style.display = 'none'; $('objective').style.display = 'none'; $('held').style.display = 'none';
     const ls = lastSlot(), last0 = ls ? readSlot(ls) : null, last = compatible(last0) ? last0 : null;
-    titleEl.style.display = 'flex';
+    titleEl.style.display = 'flex'; titleEl.classList.add('home');
     titleEl.innerHTML = `
-      <div style="position:absolute;top:9%;left:0;right:0;text-align:center;pointer-events:none">
+      <div class="ttl" style="position:absolute;top:9%;left:0;right:0;text-align:center;pointer-events:none">
         <div style="font-size:calc(var(--fs)*2.6);color:#ffe08a;text-shadow:0 4px 0 #6a3a10,0 0 18px rgba(255,200,90,.6);letter-spacing:2px;font-weight:600">Luminara</div>
         <div style="font-size:calc(var(--fs)*1.2);color:#f4e6c4;text-shadow:0 2px 0 #000">the Light-Bearer</div>
-        <div style="font-size:calc(var(--fs)*.8);color:#c8b8e8;margin-top:6px;text-shadow:0 2px 0 #000">${STORY.CHAPTERS.length > 1 ? STORY.CHAPTERS.length + ' chapters' : STORY.CHAPTERS[0].subtitle}</div>
+        <div style="font-size:calc(var(--fs)*.8);color:#f0d8c8;margin-top:6px;text-shadow:0 2px 0 #000">${chapterLine(last)}</div>
       </div>
       <div class="menu">
         ${!last && last0 ? `<div class="hint" style="font-size:calc(var(--fs)*.8)">The story has been rebuilt from Lisa's book — older saves need a fresh start.</div>` : ''}
-        ${last ? `<button id="tCont">Continue · ${esc(last.playerName || 'Player ' + ls)}</button>` : '<button id="tNew">Begin the Story</button>'}
+        ${last ? `<button id="tCont">Continue<small>${esc(last.playerName || 'Player ' + ls)} · ${esc(last.where || '')} · Level ${last.lvl || 1}</small></button>` : '<button id="tNew">Begin the Story</button>'}
         <button id="tSlots">Players &amp; Saves</button>
         <button id="tHow">How to Play</button>
       </div>
       <div class="hint">A story by Lisa · Made with love by Dad</div>`;
+    titleWisps = [];
     if (last) $('tCont').onclick = () => { AUDIO.init(); slot = ls; startGame(readSlot(ls)); };
     else $('tNew').onclick = () => { AUDIO.init(); newGameIn(1); };
     $('tSlots').onclick = () => { AUDIO.init(); showSlots(); };
     $('tHow').onclick = () => { AUDIO.init(); modal({ title: 'How to Play', html: HOW, buttons: [{ label: 'Got it!', value: true, primary: true }] }); };
     titleDragons = [
-      { c: 'wyrmRed', x: -60, y: 30, s: 16 }, { c: 'wyrmGreen', x: -200, y: 60, s: 22 }, { c: 'wyrmBronze', x: -320, y: 82, s: 26 },
+      { c: 'wyrmRed', x: -60, y: 20, s: 16 }, { c: 'wyrmGreen', x: -220, y: 34, s: 22 }, { c: 'wyrmBronze', x: -360, y: 12, s: 26 },
     ];
   }
+  // "Chapter One", or "Chapter Two · The Dark Forest" (the first chapter shares the game's name, so it isn't repeated)
+  function chapterLine(save) {
+    const n = (save && save.chapter) || 1, c = STORY.CHAPTERS.find(c => c.n === n) || STORY.CHAPTERS[0];
+    const [num, name] = c.subtitle.split(' · ');
+    const done = save && save.flags && save.flags['ch' + n + 'Done'];
+    return (name === 'The Light-Bearer' ? num : c.subtitle) + (done ? ' · complete' : '');
+  }
+  // tapping the night sky on the title screen releases a little lumina wisp
+  titleEl.addEventListener('pointerdown', e => {
+    if (mode !== 'title' || e.target !== titleEl) return;
+    const r = cv.getBoundingClientRect(); addTitleWisp((e.clientX - r.left) / r.width * VW, (e.clientY - r.top) / r.height * VH, true);
+  });
   async function newGameIn(n) {
     const name = await modal({ title: "Who's playing?", html: '<p>Type a name for this save.</p>', input: 'Player ' + n, buttons: [{ label: 'Cancel', value: false }, { label: 'Begin the story', value: true, primary: true }] });
     if (!name) return;
     slot = n; startGame(null, name);
   }
   function showSlots() {
-    titleEl.style.display = 'flex';
+    titleEl.style.display = 'flex'; titleEl.classList.remove('home');
     const cards = [];
     for (let n = 1; n <= SLOTS; n++) {
       const d = readSlot(n);
@@ -4507,53 +4534,143 @@ const G = (() => {
       if (ok) { deleteSlot(n); showSlots(); }
     });
   }
-  const stars = [...Array(70)].map((_, i) => [GFX.hash(i, 1) * VW, GFX.hash(i, 2) * 90, GFX.hash(i, 3)]);
-  let titleBg = null;
+  // The title scene, after Lisa's pictures: Dragonhold (grey basalt castle with red dragon banners) on a hill above the
+  // pines, snowy mountains behind, the volcano of Vosmos smoking to the right, and Luminara on the left with her lantern.
+  const stars = [...Array(60)].map((_, i) => [GFX.hash(i, 1) * VW, GFX.hash(i, 2) * 48, GFX.hash(i, 3)]);
+  let titleBg = null, titleWisps = [];
   function buildTitleBg() {
-    const c = GFX.cnv(VW, VH), g = c.getContext('2d');
-    const sky = g.createLinearGradient(0, 0, 0, VH); sky.addColorStop(0, '#1a1236'); sky.addColorStop(0.45, '#5a2a5a'); sky.addColorStop(0.75, '#e0784a'); sky.addColorStop(1, '#f0b060');
+    const c = GFX.cnv(VW, VH), g = c.getContext('2d'), H = GFX.hash;
+    const px = (x, y, w, h, col) => { g.fillStyle = col; g.fillRect(Math.round(x), Math.round(y), w, h); };
+    // dusk sky
+    const sky = g.createLinearGradient(0, 0, 0, 130);
+    sky.addColorStop(0, '#121a3a'); sky.addColorStop(0.35, '#33305e'); sky.addColorStop(0.62, '#8a4a62'); sky.addColorStop(0.82, '#e0844e'); sky.addColorStop(1, '#f6c272');
     g.fillStyle = sky; g.fillRect(0, 0, VW, VH);
-    // far mountains
-    const mtn = (col, base, amp, seed, step) => { g.fillStyle = col; g.beginPath(); g.moveTo(0, VH); for (let x = 0; x <= VW; x += step) { g.lineTo(x, base - Math.abs(Math.sin(x * 0.03 + seed) * amp) - GFX.hash(x, seed) * amp * 0.4); } g.lineTo(VW, VH); g.fill(); };
-    mtn('#6a4a7a', 118, 34, 1, 6);
-    // snow caps
-    // volcano
-    g.fillStyle = '#4a2e4a'; g.beginPath(); g.moveTo(220, 130); g.lineTo(262, 70); g.lineTo(272, 70); g.lineTo(318, 130); g.fill();
-    g.fillStyle = '#ff6a2a'; g.fillRect(262, 69, 10, 2); g.fillStyle = '#ffb040'; g.fillRect(264, 68, 6, 1);
-    mtn('#3e2a4e', 136, 20, 4, 5);
-    // castle silhouette (Dragonhold)
-    g.fillStyle = '#20162e';
-    const towers = [[70, 92, 10], [86, 80, 12], [104, 70, 14], [124, 84, 10], [140, 76, 12], [158, 90, 10], [96, 96, 8], [116, 96, 8]];
-    g.fillRect(60, 100, 110, 50);
-    for (const [x, y, w] of towers) { g.fillRect(x, y, w, 150 - y); for (let i = 0; i < w; i += 3) g.fillRect(x + i, y - 3, 2, 3); }
-    g.fillRect(109, 54, 4, 18); // spire
-    // red banners & windows
-    for (const [x, y, w] of towers) { g.fillStyle = '#b02828'; g.fillRect(x + w / 2 - 1, y + 6, 3, 7); g.fillStyle = '#ffcf70'; g.fillRect(x + w / 2 - 1, y + 18, 2, 3); }
-    g.fillStyle = '#c02a2a'; g.fillRect(113, 54, 6, 4);
-    // forest
-    for (let x = -6; x < VW + 10; x += 7) { const h = 18 + GFX.hash(x, 9) * 16; g.fillStyle = '#140e1e'; g.beginPath(); g.moveTo(x, VH); g.lineTo(x + 5, VH - h - 12); g.lineTo(x + 10, VH); g.fill(); }
-    // forest floor: a misty purple ground with grass tufts (not a flat dark strip, which read as a black bar)
-    g.fillStyle = '#2a1e3c'; g.fillRect(0, VH - 9, VW, 9);
-    for (let x = 0; x < VW; x += 2) { const h = 1 + Math.floor(GFX.hash(x, 21) * 4); g.fillStyle = GFX.hash(x, 22) < 0.5 ? '#1c1428' : '#221932'; g.fillRect(x, VH - 9 - h + 1, 1, h); }
-    for (let i = 0; i < 40; i++) { g.fillStyle = 'rgba(160,120,190,0.25)'; g.fillRect(Math.floor(GFX.hash(i, 23) * VW), VH - 7 + Math.floor(GFX.hash(i, 24) * 6), 2, 1); }
-    const mist = g.createLinearGradient(0, VH - 34, 0, VH); mist.addColorStop(0, 'rgba(150,100,170,0)'); mist.addColorStop(1, 'rgba(150,100,170,0.28)');
-    g.fillStyle = mist; g.fillRect(0, VH - 34, VW, 34);
+    // a few soft clouds catching the sunset
+    for (const [cx, cy, w] of [[40, 62, 46], [120, 50, 38], [212, 70, 52], [300, 44, 30]]) {
+      for (let i = 0; i < w; i += 3) { const h = 2 + Math.round(Math.sin(i / w * Math.PI) * 4); px(cx - w / 2 + i, cy - h, 3, h, 'rgba(240,170,150,0.28)'); px(cx - w / 2 + i, cy, 3, 1, 'rgba(255,214,170,0.35)'); }
+    }
+    // far snowy mountains
+    const peaks = [];
+    for (let x = -10; x <= VW + 10; x += 22 + Math.floor(H(x, 31) * 14)) peaks.push([x, 74 + H(x, 32) * 26]);
+    g.fillStyle = '#5c5a82'; g.beginPath(); g.moveTo(-10, 130);
+    for (let i = 0; i < peaks.length; i++) { const [x, y] = peaks[i]; g.lineTo(x, y); if (peaks[i + 1]) g.lineTo((x + peaks[i + 1][0]) / 2, Math.max(y, peaks[i + 1][1]) + 14); }
+    g.lineTo(VW + 10, 130); g.fill();
+    for (const [x, y] of peaks) { // snow caps, lit on the left, shadowed on the right
+      g.fillStyle = '#e6e2f2'; g.beginPath(); g.moveTo(x, y); g.lineTo(x - 7, y + 8); g.lineTo(x - 2, y + 6); g.lineTo(x, y + 9); g.lineTo(x + 3, y + 6); g.lineTo(x + 7, y + 8); g.fill();
+      g.fillStyle = '#a9a5c8'; g.beginPath(); g.moveTo(x, y); g.lineTo(x + 7, y + 8); g.lineTo(x + 3, y + 6); g.lineTo(x, y + 9); g.fill();
+    }
+    // the volcano of Vosmos (right)
+    g.fillStyle = '#4a3446'; g.beginPath(); g.moveTo(216, 132); g.lineTo(264, 60); g.lineTo(276, 60); g.lineTo(326, 132); g.fill();
+    g.fillStyle = '#62445a'; g.beginPath(); g.moveTo(216, 132); g.lineTo(264, 60); g.lineTo(268, 60); g.lineTo(246, 132); g.fill();
+    g.fillStyle = '#d8d0e4'; g.beginPath(); g.moveTo(264, 60); g.lineTo(258, 70); g.lineTo(263, 68); g.lineTo(267, 72); g.lineTo(271, 67); g.lineTo(279, 71); g.lineTo(276, 60); g.fill();
+    px(264, 58, 12, 2, '#ff6a2a'); px(266, 57, 8, 1, '#ffb040');
+    for (let i = 0; i < 3; i++) px(268 + i * 2, 61 + i * 4, 1, 3, 'rgba(255,120,50,0.8)');
+    // hazy mid hills
+    g.fillStyle = '#3a3e5e'; g.beginPath(); g.moveTo(0, 132);
+    for (let x = 0; x <= VW; x += 8) g.lineTo(x, 118 + Math.sin(x * 0.02 + 1) * 6 + H(x, 33) * 3);
+    g.lineTo(VW, 140); g.lineTo(0, 140); g.fill();
+    // the castle hill
+    g.fillStyle = '#2c4434'; g.beginPath(); g.moveTo(70, 140); g.quadraticCurveTo(110, 112, 150, 111); g.quadraticCurveTo(196, 112, 236, 140); g.fill();
+    // ---- Dragonhold
+    const STONE = ['#9a98aa', '#7c7a8e', '#5e5c70', '#424052'];
+    const tower = (x, top, w, base) => {
+      px(x, top, w, base - top, STONE[1]); px(x, top, 1, base - top, STONE[0]); px(x + w - 2, top, 2, base - top, STONE[2]);
+      for (let i = 0; i < w; i += 3) px(x + i, top - 2, 2, 2, STONE[1]);
+      px(x, top - 2, 1, 2, STONE[0]);
+      for (let y = top + 2; y < base; y += 3) for (let i = 1; i < w - 2; i += 2) if (H(x * 7 + i, y) < 0.18) px(x + i, y, 1, 1, STONE[2]);
+    };
+    const banner = (x, y) => { px(x, y, 3, 1, '#d8a840'); px(x, y + 1, 3, 6, '#b02a2a'); px(x + 1, y + 3, 1, 2, '#1a1010'); px(x, y + 7, 1, 1, '#b02a2a'); px(x + 2, y + 7, 1, 1, '#b02a2a'); };
+    const windowLit = (x, y) => px(x, y, 1, 2, '#ffd27a');
+    const flag = (x, y) => { px(x, y, 1, 6, '#2a2430'); px(x + 1, y, 4, 2, '#c42a2a'); px(x + 5, y + 1, 1, 1, '#c42a2a'); };
+    // curtain wall and its towers
+    px(104, 106, 98, 18, STONE[1]); px(104, 106, 98, 1, STONE[0]);
+    for (let i = 0; i < 98; i += 3) px(104 + i, 104, 2, 2, STONE[1]);
+    for (let y = 108; y < 124; y += 3) for (let i = 0; i < 98; i += 2) if (H(i, y) < 0.15) px(104 + i, y, 1, 1, STONE[2]);
+    for (const x of [100, 126, 174, 200]) tower(x, 96, 8, 124);
+    // gate with torches
+    px(147, 113, 10, 11, '#2a2230'); px(148, 112, 8, 1, '#2a2230'); px(149, 111, 6, 1, '#2a2230');
+    px(145, 113, 1, 2, '#ffb040'); px(158, 113, 1, 2, '#ffb040');
+    // the keep and its tall towers
+    px(134, 80, 36, 26, STONE[1]); px(134, 80, 1, 26, STONE[0]); px(167, 80, 3, 26, STONE[2]);
+    for (let i = 0; i < 36; i += 3) px(134 + i, 78, 2, 2, STONE[1]);
+    for (let y = 82; y < 106; y += 3) for (let i = 1; i < 34; i += 2) if (H(i + 50, y) < 0.15) px(134 + i, y, 1, 1, STONE[2]);
+    tower(118, 82, 8, 106); tower(178, 84, 8, 106);
+    tower(136, 66, 8, 80); tower(160, 68, 8, 80); tower(147, 54, 10, 80);
+    // red banners with the black dragon, lit windows, flags
+    for (const [x, y] of [[102, 99], [128, 99], [176, 99], [202, 99], [120, 86], [180, 88], [151, 60]]) banner(x, y);
+    for (const [x, y] of [[140, 86], [146, 92], [158, 86], [164, 92], [152, 70], [139, 71], [163, 73], [111, 110], [190, 110]]) windowLit(x, y);
+    flag(151, 47); flag(139, 59); flag(163, 61);
+    // a few houses below the castle walls (as in Lisa's picture)
+    for (const [x, y] of [[208, 124], [218, 128], [90, 128]]) { px(x, y, 9, 5, '#7a6a5a'); px(x - 1, y - 3, 11, 3, '#5a3a32'); px(x + 3, y + 2, 1, 2, '#ffd27a'); }
+    // pine forest: a far row on the hills, then the near forest
+    // a pixel pine: stacked tiers, each wider than the one above, with a lighter edge on the sunset side
+    const pine = (x, base, h, col, lit) => {
+      x = Math.round(x); base = Math.round(base); h = Math.round(h);
+      const top = base - h, tiers = 3, th = h / tiers;
+      for (let y = top; y < base - 1; y++) {
+        const k = (y - top) % th / th, t = Math.floor((y - top) / th), w = Math.round(1 + t * 1.6 + k * (2.4 + t * 0.8));
+        px(x - w, y, w * 2 + 1, 1, col); if (lit) px(x + w, y, 1, 1, lit);
+      }
+      px(x, base - 2, 1, 3, '#1a1414');
+    };
+    for (let x = -4; x < VW + 6; x += 7) { const b = 136 + H(x, 41) * 6; if (x > 96 && x < 210) continue; pine(x, b, 12 + H(x, 42) * 8, '#22382e', '#2e4a3a'); }
+    px(0, 138, VW, 14, '#1e3428');
+    for (let x = 60; x < 250; x += 8) pine(x + H(x, 43) * 3, 146 + H(x, 44) * 4, 14 + H(x, 45) * 8, '#1c3026', '#2c4a38');
+    g.fillStyle = '#152219'; g.fillRect(0, 150, VW, 30);
+    for (let x = 84; x < VW + 8; x += 10) pine(x + H(x, 46) * 4, 170 + H(x, 47) * 8, 24 + H(x, 48) * 14, '#12201a', '#1e3426');
+    // Luminara's hill on the left
+    g.fillStyle = '#2a3c28'; g.beginPath(); g.moveTo(-4, 180); g.lineTo(-4, 150); g.quadraticCurveTo(40, 140, 96, 162); g.lineTo(112, 180); g.fill();
+    for (let x = 0; x < 104; x += 2) { const y = 148 + Math.pow(Math.abs(x - 38) / 40, 2) * 12; if (H(x, 49) < 0.6) px(x, y - 1 - Math.floor(H(x, 50) * 2), 1, 2, '#3e5634'); }
+    for (let i = 0; i < 26; i++) px(H(i, 51) * 100, 154 + H(i, 52) * 24, 1, 1, ['#c8783a', '#d8a840', '#a84a2a'][i % 3]);
+    // evening mist over the forest
+    const mist = g.createLinearGradient(0, 128, 0, 158); mist.addColorStop(0, 'rgba(200,150,190,0)'); mist.addColorStop(0.6, 'rgba(200,150,190,0.16)'); mist.addColorStop(1, 'rgba(200,150,190,0)');
+    g.fillStyle = mist; g.fillRect(0, 128, VW, 30);
     return c;
   }
+  function addTitleWisp(x, y, big) { titleWisps.push({ x, y, vx: (Math.random() - 0.5) * 6, vy: -(4 + Math.random() * 6), ph: Math.random() * 6, t: 0, life: big ? 7 : 5 + Math.random() * 4 }); }
   function renderTitle(dt) {
     titleT += dt;
     if (!titleBg) titleBg = buildTitleBg();
     ctx.drawImage(titleBg, 0, 0);
-    for (const [x, y, b] of stars) { const a = 0.4 + Math.sin(titleT * 2 + b * 10) * 0.4; ctx.fillStyle = `rgba(255,250,230,${a})`; ctx.fillRect(x, y, 1, 1); }
-    // smoke from volcano
-    for (let i = 0; i < 8; i++) { const k = (titleT * 0.15 + i / 8) % 1; ctx.fillStyle = `rgba(90,70,90,${0.5 * (1 - k)})`; ctx.beginPath(); ctx.arc(267 + k * 30, 66 - k * 40, 3 + k * 9, 0, 7); ctx.fill(); }
+    for (const [x, y, b] of stars) { const a = (0.3 + Math.sin(titleT * 2 + b * 10) * 0.3) * (1 - y / 48); ctx.fillStyle = `rgba(255,250,230,${a})`; ctx.fillRect(x, y, 1, 1); }
+    // smoke from the volcano
+    for (let i = 0; i < 8; i++) { const k = (titleT * 0.12 + i / 8) % 1; ctx.fillStyle = `rgba(110,90,110,${0.45 * (1 - k)})`; ctx.beginPath(); ctx.arc(270 + k * 26, 55 - k * 40, 3 + k * 9, 0, 7); ctx.fill(); }
+    // torches by the gate flicker
+    ctx.fillStyle = `rgba(255,${150 + Math.floor(Math.sin(titleT * 13) * 40)},60,0.9)`; ctx.fillRect(145, 112, 1, 1); ctx.fillRect(158, 112, 1, 1);
+    // dragons flying overhead
     for (const d of titleDragons) {
-      d.x += d.s * dt; if (d.x > VW + 80) { d.x = -80 - Math.random() * 120; d.y = 30 + Math.random() * 50; }
+      d.x += d.s * dt; if (d.x > VW + 80) { d.x = -80 - Math.random() * 160; d.y = 14 + Math.random() * 30; }
       const c = GFX.CHAR[d.c]; const fr = c.right[Math.floor(titleT * 7 + d.y) % 3];
       ctx.drawImage(fr, Math.round(d.x), Math.round(d.y + Math.sin(titleT * 2 + d.y) * 4));
     }
-    // fireflies
-    for (let i = 0; i < 20; i++) { const x = (GFX.hash(i, 5) * VW + Math.sin(titleT * 0.5 + i) * 10), y = VH - 10 - GFX.hash(i, 6) * 40 + Math.cos(titleT * 0.7 + i) * 5; ctx.fillStyle = `rgba(220,255,140,${0.5 + Math.sin(titleT * 3 + i) * 0.5})`; ctx.fillRect(x, y, 1, 1); }
+    // falling autumn leaves
+    for (let i = 0; i < 12; i++) {
+      const sp = 8 + GFX.hash(i, 61) * 8, y = ((titleT * sp + GFX.hash(i, 62) * 200) % 200) - 10, x = (GFX.hash(i, 63) * VW + Math.sin(titleT * 0.8 + i) * 12 - titleT * 4) % VW;
+      ctx.fillStyle = ['#e0902a', '#e8c040', '#c05030'][i % 3]; ctx.fillRect(Math.round(x < 0 ? x + VW : x), Math.round(y), (titleT * 3 + i) % 2 < 1 ? 2 : 1, 1);
+    }
+    // Luminara on her hill, lantern glowing
+    const L = GFX.CHAR.luminara, lx = 44, ly = 146;
+    if (L && L.frames) {
+      const fr = L.frames.right[0];
+      ctx.fillStyle = 'rgba(0,0,0,0.3)'; ctx.beginPath(); ctx.ellipse(lx, ly, 8, 2, 0, 0, 7); ctx.fill();
+      ctx.drawImage(fr, Math.round(lx - L.ax), Math.round(ly - L.ay));
+      const gx = lx + 8, gy = ly - 9, r = 26 + Math.sin(titleT * 9) * 1.5 + Math.sin(titleT * 23) * 0.8;
+      const grd = ctx.createRadialGradient(gx, gy, 1, gx, gy, r); grd.addColorStop(0, 'rgba(255,230,150,0.75)'); grd.addColorStop(0.25, 'rgba(255,200,100,0.35)'); grd.addColorStop(1, 'rgba(255,170,60,0)');
+      ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.fillStyle = grd; ctx.fillRect(gx - r, gy - r, r * 2, r * 2); ctx.restore();
+    }
+    // lumina wisps drifting up out of the forest
+    if (titleWisps.length < 7 && Math.random() < dt * 0.9) addTitleWisp(70 + Math.random() * 230, 150 + Math.random() * 20);
+    ctx.save(); ctx.globalCompositeOperation = 'lighter';
+    for (const w of titleWisps) {
+      w.t += dt; w.ph += dt * 2; w.x += (w.vx + Math.sin(w.ph) * 6) * dt; w.y += (w.vy + Math.cos(w.ph * 1.3) * 3) * dt;
+      const a = Math.min(1, w.t / 0.8, (w.life - w.t) / 1.2) * (0.75 + Math.sin(titleT * 6 + w.ph) * 0.25);
+      if (a <= 0) continue;
+      const grd = ctx.createRadialGradient(w.x, w.y, 0, w.x, w.y, 6); grd.addColorStop(0, `rgba(190,255,170,${0.7 * a})`); grd.addColorStop(1, 'rgba(120,255,140,0)');
+      ctx.fillStyle = grd; ctx.fillRect(w.x - 6, w.y - 6, 12, 12);
+      ctx.fillStyle = `rgba(235,255,225,${a})`; ctx.fillRect(Math.round(w.x), Math.round(w.y), 1, 1);
+    }
+    ctx.restore();
+    titleWisps = titleWisps.filter(w => w.t < w.life);
   }
 
   // =================================================================== CREDITS
@@ -4562,7 +4679,7 @@ const G = (() => {
     mode = 'credits'; creditsT = 0; creditsText = lines; hud();
     $('where').style.display = 'none'; $('objective').style.display = 'none';
     AUDIO.music('wonder');
-    titleEl.style.display = 'flex'; titleEl.innerHTML = '<div class="menu" style="margin-top:auto"><button id="cBack">Return to title</button></div>';
+    titleEl.style.display = 'flex'; titleEl.classList.remove('home'); titleEl.innerHTML = '<div class="menu" style="margin-top:auto"><button id="cBack">Return to title</button></div>';
     $('cBack').onclick = () => toTitle();
   }
   function renderCredits(dt) {

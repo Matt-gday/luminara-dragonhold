@@ -143,10 +143,14 @@ html,body{height:100%;background:#0b0810;overflow:hidden;color:var(--ink);
 
 /* ---------- title ---------- */
 #title{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;padding-bottom:7%;gap:10px}
+#title.home{align-items:flex-end;padding:0 4% 5% 0}
 #title .menu{display:flex;flex-direction:column;gap:8px;align-items:stretch;width:min(60%,300px)}
+#title.home .menu{width:min(34%,300px)}
+#title button small{display:block;font-size:calc(var(--fs)*.65);opacity:.75;margin-top:2px}
 #title button{font:inherit;font-size:calc(var(--fs)*1.1);padding:8px 16px;background:rgba(244,230,196,.95);border:4px solid var(--edge);border-radius:10px;cursor:pointer;color:var(--ink);box-shadow:0 4px 0 rgba(0,0,0,.5)}
 #title button:hover{background:var(--gold)}
 #title .hint{color:#d8c8a8;font-size:calc(var(--fs)*.75);text-align:center;text-shadow:0 2px 0 #000;max-width:90%}
+#title.home .hint{max-width:min(34%,300px)}
 /* ---------- pop-up dialogs & save slots ---------- */
 .modal-bg{position:absolute;inset:0;background:rgba(10,6,18,.6);display:flex;align-items:center;justify-content:center;z-index:20;pointer-events:auto}
 .modal{width:min(90%,520px);max-height:90%;overflow:auto;background:var(--parch);border:5px double var(--edge);border-radius:10px;padding:14px 18px;font-size:var(--fs);box-shadow:0 8px 0 rgba(0,0,0,.45)}
@@ -227,6 +231,15 @@ body.cine #touch{opacity:.35}
 /* ---------- touch controls ---------- */
 #touch{position:absolute;inset:0;pointer-events:none;display:none}
 body.touch #touch{display:block}
+body.touch:not(.inplay) #touch{display:none}
+@media (max-height:500px){
+  #title .ttl{top:3%!important}
+  #title .ttl div:first-child{font-size:calc(var(--fs)*2.1)!important}
+  #title .ttl div:nth-child(2){font-size:calc(var(--fs)*1)!important}
+  #title.home{padding:0 3% 3% 0}
+  #title.home .menu{gap:5px;width:min(30%,300px)}
+  #title.home button{font-size:calc(var(--fs)*.95);padding:4px 10px;border-width:3px}
+}
 #dpad{position:absolute;left:14px;bottom:14px;width:132px;height:132px;pointer-events:auto}
 #dpad div{position:absolute;width:44px;height:44px;background:rgba(244,230,196,.55);border:3px solid rgba(122,85,48,.8);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:20px;color:#2a1c14}
 #dpad .u{left:44px;top:0}#dpad .d{left:44px;top:88px}#dpad .l{left:0;top:44px}#dpad .r{left:88px;top:44px}
