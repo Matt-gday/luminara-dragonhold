@@ -295,7 +295,7 @@ const G = (() => {
   function doInteract(it) {
     clearToasts();
     if (busy) return;
-    if (it.type === 'npc') { const n = it.n; meet(n); faceTo(n, player); settleLater(n); run(() => STORY.interact({ kind: 'npc', id: n.id, ent: n, act: n.def.act, def: n.def }, held)); }
+    if (it.type === 'npc') { const n = it.n; meet(n); faceTo(n, player); settleLater(n); faceTo(player, n); giveSpace(n); run(() => STORY.interact({ kind: 'npc', id: n.id, ent: n, act: n.def.act, def: n.def }, held)); }
     else {
       const o = it.o;
       run(() => STORY.interact({ kind: 'obj', id: o.id, o, act: o.act, look: o.look, pickup: o.pickup, enter: o.enter, door: o.door }, held));
@@ -304,6 +304,30 @@ const G = (() => {
   // An NPC who turned to talk keeps facing Luminara until she walks away, then turns back to the way they
   // normally face, so nobody is left with their back to the camera. Wanderers settle a moment after stopping.
   function settleLater(n, how = 'walkaway') { if (n && n.def) { n.settle = how; n.settleT = 0; } }
+  // How far a sprite reaches out in front of its anchor when facing left or right (nose, hair, arms), measured once.
+  const REACH = new Map();
+  function reach(c, dir) {
+    if (!c || !c.frames || !c.frames[dir]) return 9;
+    const k = c.frames[dir][0]; if (REACH.has(k)) return REACH.get(k);
+    let r = 0;
+    for (const fr of c.frames[dir]) {
+      const d = fr.getContext('2d').getImageData(0, 0, fr.width, fr.height).data;
+      for (let y = 0; y < fr.height - 6; y++) for (let x = 0; x < fr.width; x++) if (d[(y * fr.width + x) * 4 + 3] > 0) r = Math.max(r, dir === 'right' ? x - c.ax : c.ax - x);
+    }
+    REACH.set(k, r); return r;
+  }
+  // Two people talking side-on keep at least one clear pixel between their faces: Luminara takes a small
+  // step back (or, if she can't, the other person does).
+  function giveSpace(n) {
+    if (n.kind !== 'human' || Math.abs(n.y - player.y) > 10) return;
+    const side = Math.sign(player.x - n.x) || (player.dir === 'left' ? 1 : -1);
+    const need = reach(playerSprite(), side < 0 ? 'right' : 'left') + reach(charFor(n.def), side < 0 ? 'left' : 'right') + 2;
+    const gap = Math.abs(player.x - n.x); if (gap >= need) return;
+    const px = n.x + side * need;
+    if (!boxBlocked(px, player.y, false, player)) { player.nudge = px; return; }
+    const nx = player.x - side * need;
+    if (!n.def.static && !boxBlocked(nx, n.y, false, n)) n.nudge = nx;
+  }
   function faceTo(a, b) {
     const dx = b.x - a.x, dy = b.y - a.y;
     if (a.kind === 'dragon' || a.kind === 'horse') { a.dir = dx < 0 ? 'left' : 'right'; return; }
@@ -334,6 +358,7 @@ const G = (() => {
     if (paused) return;
     S.time += dt;
     if (dialog) updateDialog(dt);
+    for (const e of [player, ...npcs]) if (e.nudge != null) { const d = e.nudge - e.x; if (Math.abs(d) < 0.6) { e.x = e.nudge; e.nudge = null; } else e.x += Math.sign(d) * Math.min(Math.abs(d), 45 * dt); }
     if (notices.length && !busy && !dialog && !tipActive && !transitioning && mode === 'play') run(async () => { });
     if (!busy && !dialog && !transitioning && !panelOpen() && !flapGame) {
       if (pressed.act) { const t = facingTarget(); if (t) doInteract(t); }
