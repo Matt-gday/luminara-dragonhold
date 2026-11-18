@@ -40,7 +40,7 @@
   const LEAF_WHERE = [['hill1', 'near the top right of the leafy lane'], ['hill2', 'near the bottom left of the leafy lane'], ['town1', 'in the far south-west corner of town'], ['town2', 'at the far east edge of town, near the top'], ['manor', 'in the manor garden, north-east']];
   const QUESTS = {
     morning: { title: 'A New Dawn', desc: 'Get ready for the day ahead.', xp: 15, steps: [
-      { t: 'Find your satchel', done: s => s.flags.hasSatchel, hint: ['It\'s somewhere in your cottage. Look near the door.', 'Your satchel is on the floor just inside the front door. Click it to pick it up.'] },
+      { t: 'Find your satchel', done: s => s.flags.hasSatchel, hint: ['It\'s somewhere in your cottage. Look near the door.', 'Your satchel is on the floor, a little to the right of the front door. Click it to pick it up.'] },
       { t: 'Make a cup of sweet green tea', done: s => s.flags.teaMade, hint: s => s.inv.includes('teaBlend') ? ['The kettle is hot, over on the stove.', `Open your satchel, choose the Sweet Tea Blend, ${tapOr('tap', 'click')} <b>Use…</b>, then ${tapOr('tap', 'click')} the stove.`]
         : s.inv.includes('teaTin') && s.inv.includes('sugar') ? ['Two things in your satchel belong together.', `Open your satchel, choose the tea, ${tapOr('tap', 'click')} <b>Combine</b>, then choose the sugar.`]
         : ['Tea and sugar are kept along the kitchen wall.', 'The tea is in the cupboard on the right. The sugar is on the shelf, left of the stove.'] },
@@ -52,13 +52,13 @@
     ] },
     totown: { title: 'Into Kraxenville', desc: 'A day of guild work begins in town.', xp: 20, steps: [
       { t: 'Walk the leafy lane to Kraxenville', done: s => s.flags.arrivedTown, hint: ['Follow the lane downhill.', 'Walk down the path from your cottage, all the way to the bottom of the hill.'] },
-      { t: 'Buy a hot pie at the bakery (down the alley, south of the market)', done: s => s.flags.pieBought, hint: ['Follow your nose, south of the market square.', 'Go down the alley south of the market. Talk to Mistress Pell at her counter.'] },
+      { t: 'Buy a hot pie at the bakery (down the alley, south of the market)', done: s => s.flags.pieBought, hint: ['Follow your nose, south of the market square.', 'Go down the alley south of the market. Mistress Pell is standing outside her shop. Talk to her.'] },
       { t: 'Eat it outside the pie shop', done: s => s.flags.pieEaten, hint: ['A pie tastes best sitting down.', 'Click the bench right outside the pie shop.'] },
       { t: 'Listen to Fredrick the bard by the fountain', done: s => s.flags.metFredrick, hint: ['Listen for the music.', 'Fredrick plays his lute just below the fountain in the market square. Talk to him.'] },
     ] },
     lantern: { title: 'Light for the Road', desc: 'Your lantern needs fresh tallow and a new wick before the Dark Forest.', xp: 20, steps: [
       { t: 'Get tallow (try the Iron Cauldron kitchen)', done: s => s.inv.includes('tallow') || s.flags.lanternReady || s.inv.includes('lanternTallow'), hint: ['Tallow is made in kitchens.', 'Ask Brenna, the cook inside the Iron Cauldron, south-west of the market.'] },
-      { t: 'Get a linen wick (try the cloth stall in the market)', done: s => s.inv.includes('wick') || s.flags.lanternReady || s.inv.includes('lanternWick'), hint: ['Linen is cloth. Who sells cloth?', 'Talk to Tilda at the cloth stall, just below the fountain.'] },
+      { t: 'Get a linen wick (try the cloth stall in the market)', done: s => s.inv.includes('wick') || s.flags.lanternReady || s.inv.includes('lanternWick'), hint: ['Linen is cloth. Who sells cloth?', 'Talk to Tilda at the cloth stall with the green and white awning, below and to the left of the fountain.'] },
       { t: 'Fill your lantern (combine them with it)', done: s => s.flags.lanternReady, hint: ['Both go into the lantern, one at a time.', `Open your satchel, choose the lantern, ${tapOr('tap', 'click')} <b>Combine</b>, then choose the tallow. Do the same again with the wick.`] },
     ] },
     journey: { title: 'The Journey', desc: "Escort the guild's goods from Kraxenville, first to Brushwood.", giver: 'Merchants\' Guild', xp: 40, steps: [
