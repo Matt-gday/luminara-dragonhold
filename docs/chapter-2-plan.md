@@ -211,3 +211,16 @@ Side: The Lumina · The Owls · A Good Read · Madame Beatrice · Plum Jam · Th
    - ch6: "such a prised possession" → "prized"; "As her hands were quite full, so she asked" → "As her hands were
      quite full, she asked".
    - ch7 (next chapter): "collected the horses and hitch them" → "hitched".
+
+---
+
+## Also for the next session: the title screen
+
+- Keep the castle (it comes from images Lisa sent; they're in her emails to Dad). Look them up first and match the
+  title castle to her drawings.
+- Add Luminara in the foreground on a hill, lantern raised, looking towards the castle and the Dark Forest, with the
+  volcano of Vosmos behind.
+- Living touches: lumina wisps drifting up, falling leaves, the lantern flickering; tapping the sky releases a wisp.
+- Move the menu to one side so it doesn't cover the castle. "Continue" shows player, place and level.
+- Fix the repeated subtitle ("the Light-Bearer" / "Chapter One · The Light-Bearer").
+
