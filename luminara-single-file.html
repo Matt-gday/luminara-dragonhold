@@ -2040,9 +2040,9 @@ const STORY = (() => {
       { t: 'Fill your lantern (combine them with it)', done: s => s.flags.lanternReady, hint: ['Both go into the lantern, one at a time.', `Open your satchel, choose the lantern, ${tapOr('tap', 'click')} <b>Combine</b>, then choose the tallow. Do the same again with the wick.`] },
     ] },
     journey: { title: 'The Journey', desc: "Escort the guild's goods from Kraxenville, first to Brushwood.", giver: 'Merchants\' Guild', xp: 40, steps: [
-      { t: 'Find the caravan outside the Merchants\' Guild', done: s => s.flags.metCrew, hint: ['The Merchants\' Guild is near the top of town.', 'The wagons are in the yard just to the right of the Guild\'s green door.'] },
+      { t: 'Find the caravan outside the Merchants\' Guild', done: s => s.flags.metCrew, hint: ['The Merchants\' Guild is near the top of town.', 'The wagons are in the yard just to the right of the Guild, the building with the green shield and crossed axes.'] },
       { t: 'Help fit the cargo onto the wagons', done: s => s.flags.cargoDone, hint: ['Click a wagon, and start with the biggest piece.', 'Big crate in a corner, the two long casks turned upright beside it, and the four little barrels in a row along the bottom.'] },
-      { t: 'Collect the strongbox and its key from Guild Master Henry', done: s => s.flags.gotStrongbox, hint: ['The Guild Master is inside.', 'Go in through the Guild\'s green door and talk to Guild Master Henry.'] },
+      { t: 'Collect the strongbox and its key from Guild Master Henry', done: s => s.flags.gotStrongbox, hint: ['The Guild Master is inside.', 'Go in through the brown door beside the green shield with the crossed axes, and talk to Guild Master Henry.'] },
       { t: 'Get your lantern ready', done: s => s.flags.lanternReady, hint: ['See the quest <b>Light for the Road</b>, and ask for a hint there.'] },
       { t: 'Tell Gerald you are ready to set off', done: s => s.flags.departed, hint: ['Gerald is waiting by the wagons.', 'Talk to Gerald in the caravan yard. If you\'re not ready yet, he\'ll tell you what\'s left.'] },
     ] },
