@@ -14,6 +14,7 @@ It plays at https://matt-gday.github.io/luminara-dragonhold/ (GitHub Pages, from
 - *The Three Dragons* (Sianna, Yennefer, Rosanna, Aurelina) is a **separate children's game**. Keep it out of Luminara's game.
 - Lisa's world: Kingdom of Krax (Kraxenville NE, Brushwood, Wockville, Lesterfield; a big forest between Wockville and
   Lesterfield), the Dark Forest with the Ruined Keep, the Gateway, and Vosmos (mountains N and NW, volcano in the north centre).
+- The castle on the title screen comes from images Lisa sent. Keep it (a keep sits inside a castle's walls).
 - Her friend is Gwendolyn ("Gwen", golden hair, blue eyes), met at the Lesterfield Inn in book chapter 5 (`friendName` in js/game.js).
 
 ## Edge cases and order of play (check every chapter before shipping)
