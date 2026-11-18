@@ -92,6 +92,7 @@ const AUDIO = (() => {
     hum(t) { tone(55, t, 2.2, 'sawtooth', 0.05, sfxBus, { vib: 3 }); tone(82, t, 2.2, 'sine', 0.08); },
     sip(t) { noise(t, 0.3, 0.08, 1400, 'bandpass', sfxBus, 600); },
     lute(t) { [0, 4, 7, 12].forEach((s, i) => tone(294 * Math.pow(2, s / 12), t + i * 0.09, 0.6, 'triangle', 0.1)); },
+    snap(t) { [0, 4, 7].forEach((s, i) => tone(294 * Math.pow(2, s / 12), t + i * 0.09, 0.25, 'triangle', 0.1)); tone(1400, t + 0.3, 0.4, 'sawtooth', 0.07, sfxBus, { slide: 260 }); noise(t + 0.3, 0.05, 0.25, 3200, 'highpass'); },
     munch(t) { for (let i = 0; i < 3; i++) noise(t + i * 0.13, 0.08, 0.15, 800, 'lowpass'); },
     swish(t) { noise(t, 0.25, 0.12, 2000, 'bandpass', sfxBus, 500); },
   };
