@@ -5,7 +5,11 @@ It plays at https://matt-gday.github.io/luminara-dragonhold/ (GitHub Pages, from
 
 ## Story rules
 - The source is Lisa's book *Luminara the Light-Bearer* (13 chapters; Dad emailed it as "Full book game file").
-  Follow it scene by scene and use her wording for narration. Small invented side stories are fine if they fit her world.
+  Follow it scene by scene and use her wording for narration.
+- Lisa doesn't review anything: she just plays the game. Additions (side stories, puzzles, small characters) are welcome
+  surprises, as long as nothing contradicts her story. Fix typos and grammar in her text quietly; never send her drafts.
+- Each chapter is designed first in `docs/chapter-N-plan.md` (see docs/chapter-2-plan.md). Keep chapters about as long
+  as Chapter One (20–40 minutes).
 - Chapter plan: game ch1 = book 1–2 (done), ch2 = book 3–6, ch3 = book 7–8, ch4 = book 9–11, ch5 = book 12–13.
 - *The Three Dragons* (Sianna, Yennefer, Rosanna, Aurelina) is a **separate children's game**. Keep it out of Luminara's game.
 - Lisa's world: Kingdom of Krax (Kraxenville NE, Brushwood, Wockville, Lesterfield; a big forest between Wockville and

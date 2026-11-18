@@ -3,8 +3,7 @@
 From Lisa's book, chapters 3 (The Dark Forest), 4 (Lesterfield), 5 (The Inn) and 6 (The Book).
 Target length: the same as Chapter One (about 20–40 minutes, depending on side stories).
 
-Marked **[invented]** = not in the book; needs Dad's (or Lisa's) OK. Everything else follows the book.
-Questions to settle before coding are at the end.
+Marked **[invented]** = not in the book (all approved; see Decisions at the end). Everything else follows the book.
 
 ---
 
@@ -14,8 +13,9 @@ Questions to settle before coding are at the end.
   New players still start at Chapter One.
 - Carried over from Chapter One: the strongbox and its key, the lantern (ready but not lit), flint and steel,
   the compass, level, hearts, coins, journal, and anything optional (sunstone, thimble, honey cake).
-- Opening narration (the book's first lines): *"Tall black spruce trees enclose the travellers as they journey
-  through the Dark Forest. There was a faint smell of damp moss in the crisp cold air."*
+- Opening narration (the book's first lines, typo-fixed): *"Tall black spruce trees enclosed the travellers as they
+  journeyed through the Dark Forest. There was a faint smell of damp moss in the crisp cold air. A mist emerged, and a
+  chill breeze swept across their path."*
 - The caravan follows Luminara again: her horse and wagon, then Aldric and Ronald.
 
 ## Places (8, similar to Chapter One's 7)
@@ -188,17 +188,26 @@ Side: The Lumina · The Owls · A Good Read · Madame Beatrice · Plum Jam · Th
 
 ---
 
-## Questions for Dad (and Lisa)
+## Decisions (agreed with Dad)
 
-1. **Silver coins.** The book uses silver in Lesterfield (stables 3, inn 1, fortune 1); Chapter One uses copper.
-   Suggestion: add silver (10 copper = 1 silver), and **Lorden pays the guild's delivery wage at the tavern**
-   (e.g. 6 silver) **[invented]**, so the required costs (stables 3 + inn 1 + the book) are always covered.
-2. **The book's price** at the Enchanted Library isn't in the book. Suggest 1 silver.
-3. **The bookkeeper's name** isn't in the book. Keep "the bookkeeper", or should Lisa name them?
-4. **The kitchen maid**, weaponsmith, musicians and stall keepers are unnamed in the book. Fine to leave unnamed?
-5. **The wheel wedge, the cellar push puzzle, the mist trail and the owl flying daydream** are invented to make
-   puzzles. OK?
-6. **Plum jam** being useful in Chapter Three is invented. Or keep it as a simple keepsake?
-7. **Lisa's book has a few typos** we'd fix in the game text: "I missed emerged in a chill breeze" (ch3, probably
-   "A mist emerged and a chill breeze…"), "Libarary" (ch6 sign), "lead her" → "led her", "prised" → "prized".
-   Tell Lisa, or just fix quietly in the game?
+1. **Silver coins:** add silver (10 copper = 1 silver). Lorden pays the guild's delivery wage at the tavern
+   (6 silver), so the required costs (stables 3, inn 1, the book 1) are always covered.
+2. **The book at the Enchanted Library** costs 1 silver.
+3. **Unnamed people stay unnamed:** "the bookkeeper", the kitchen maid, the weaponsmith, the musicians and the stall
+   keepers, as in the book.
+4. **The invented puzzles are approved:** the wheel wedge, the cellar push puzzle, the mist trail and the owl flying
+   daydream. So are plum jam being useful in Chapter Three, and the Song of Aetheryon collectible. Additions like
+   these are surprises for Lisa, as long as nothing contradicts her story.
+5. **Typos in the book are fixed quietly in the game.** Lisa isn't reviewing anything; she'll just play it.
+   In this chapter:
+   - ch3: "I missed emerged in a chill breeze swept across their path" → "A mist emerged, and a chill breeze swept
+     across their path."
+   - ch3: "Tall black spruce trees enclose the travellers as they journey" → "enclosed … journeyed" (the rest of
+     the book is in the past tense).
+   - ch4: "An assortment of alcoholic beverages were stored wooden barrels" → "was stored in wooden barrels".
+   - ch4: "It didn't seem to be worth of any value" → "It didn't seem to be of any value".
+   - ch5: "Gwendolyn lead her to the guest room" → "led".
+   - ch6: "walked passed and missed" → "walked past and missed"; "The Enchanted Libarary" → "The Enchanted Library".
+   - ch6: "such a prised possession" → "prized"; "As her hands were quite full, so she asked" → "As her hands were
+     quite full, she asked".
+   - ch7 (next chapter): "collected the horses and hitch them" → "hitched".
