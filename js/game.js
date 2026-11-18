@@ -1605,12 +1605,12 @@ const G = (() => {
     const ls = lastSlot(), last0 = ls ? readSlot(ls) : null, last = compatible(last0) ? last0 : null;
     titleEl.style.display = 'flex'; titleEl.classList.add('home');
     titleEl.innerHTML = `
-      <div class="ttl" style="position:absolute;top:9%;left:0;right:0;text-align:center;pointer-events:none">
-        <div style="font-size:calc(var(--fs)*2.6);color:#ffe08a;text-shadow:0 4px 0 #6a3a10,0 0 18px rgba(255,200,90,.6);letter-spacing:2px;font-weight:600">Luminara</div>
-        <div style="font-size:calc(var(--fs)*1.2);color:#f4e6c4;text-shadow:0 2px 0 #000">the Light-Bearer</div>
-        <div style="font-size:calc(var(--fs)*.8);color:#f0d8c8;margin-top:6px;text-shadow:0 2px 0 #000">${chapterLine(last)}</div>
+      <div class="ttl"><div class="rays"></div>
+        <div class="tw">Luminara</div>
+        <div class="tsub"><i></i>The Light-Bearer<i></i></div>
       </div>
       <div class="menu">
+        <div class="chap">${chapterLine(last)}</div>
         ${!last && last0 ? `<div class="hint" style="font-size:calc(var(--fs)*.8)">The story has been rebuilt from Lisa's book — older saves need a fresh start.</div>` : ''}
         ${last ? `<button id="tCont">Continue<small>${esc(last.playerName || 'Player ' + ls)} · ${esc(last.where || '')} · Level ${last.lvl || 1}</small></button>` : '<button id="tNew">Begin the Story</button>'}
         <button id="tSlots">Players &amp; Saves</button>
@@ -1706,7 +1706,8 @@ const G = (() => {
     g.fillStyle = '#3a3e5e'; g.beginPath(); g.moveTo(0, 132);
     for (let x = 0; x <= VW; x += 8) g.lineTo(x, 118 + Math.sin(x * 0.02 + 1) * 6 + H(x, 33) * 3);
     g.lineTo(VW, 140); g.lineTo(0, 140); g.fill();
-    // the castle hill
+    // the castle hill and Dragonhold, shifted so the tallest tower sits right under the title (centre of the screen)
+    g.save(); g.translate(8, 0);
     g.fillStyle = '#2c4434'; g.beginPath(); g.moveTo(70, 140); g.quadraticCurveTo(110, 112, 150, 111); g.quadraticCurveTo(196, 112, 236, 140); g.fill();
     // ---- Dragonhold
     const STONE = ['#9a98aa', '#7c7a8e', '#5e5c70', '#424052'];
@@ -1739,6 +1740,7 @@ const G = (() => {
     flag(151, 47); flag(139, 59); flag(163, 61);
     // a few houses below the castle walls (as in Lisa's picture)
     for (const [x, y] of [[208, 124], [218, 128], [90, 128]]) { px(x, y, 9, 5, '#7a6a5a'); px(x - 1, y - 3, 11, 3, '#5a3a32'); px(x + 3, y + 2, 1, 2, '#ffd27a'); }
+    g.restore();
     // pine forest: a far row on the hills, then the near forest
     // a pixel pine: stacked tiers, each wider than the one above, with a lighter edge on the sunset side
     const pine = (x, base, h, col, lit) => {
@@ -1750,7 +1752,7 @@ const G = (() => {
       }
       px(x, base - 2, 1, 3, '#1a1414');
     };
-    for (let x = -4; x < VW + 6; x += 7) { const b = 136 + H(x, 41) * 6; if (x > 96 && x < 210) continue; pine(x, b, 12 + H(x, 42) * 8, '#22382e', '#2e4a3a'); }
+    for (let x = -4; x < VW + 6; x += 7) { const b = 136 + H(x, 41) * 6; if (x > 104 && x < 218) continue; pine(x, b, 12 + H(x, 42) * 8, '#22382e', '#2e4a3a'); }
     px(0, 138, VW, 14, '#1e3428');
     for (let x = 60; x < 250; x += 8) pine(x + H(x, 43) * 3, 146 + H(x, 44) * 4, 14 + H(x, 45) * 8, '#1c3026', '#2c4a38');
     g.fillStyle = '#152219'; g.fillRect(0, 150, VW, 30);
@@ -1773,7 +1775,7 @@ const G = (() => {
     // smoke from the volcano
     for (let i = 0; i < 8; i++) { const k = (titleT * 0.12 + i / 8) % 1; ctx.fillStyle = `rgba(110,90,110,${0.45 * (1 - k)})`; ctx.beginPath(); ctx.arc(270 + k * 26, 55 - k * 40, 3 + k * 9, 0, 7); ctx.fill(); }
     // torches by the gate flicker
-    ctx.fillStyle = `rgba(255,${150 + Math.floor(Math.sin(titleT * 13) * 40)},60,0.9)`; ctx.fillRect(145, 112, 1, 1); ctx.fillRect(158, 112, 1, 1);
+    ctx.fillStyle = `rgba(255,${150 + Math.floor(Math.sin(titleT * 13) * 40)},60,0.9)`; ctx.fillRect(153, 112, 1, 1); ctx.fillRect(166, 112, 1, 1);
     // dragons flying overhead
     for (const d of titleDragons) {
       d.x += d.s * dt; if (d.x > VW + 80) { d.x = -80 - Math.random() * 160; d.y = 14 + Math.random() * 30; }
