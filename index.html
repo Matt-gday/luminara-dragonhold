@@ -149,6 +149,16 @@ html,body{height:100%;background:#0b0810;overflow:hidden;color:var(--ink);
 #title button small{display:block;font-size:calc(var(--fs)*.65);opacity:.75;margin-top:2px}
 #title button{font:inherit;font-size:calc(var(--fs)*1.1);padding:8px 16px;background:rgba(244,230,196,.95);border:4px solid var(--edge);border-radius:10px;cursor:pointer;color:var(--ink);box-shadow:0 4px 0 rgba(0,0,0,.5)}
 #title button:hover{background:var(--gold)}
+.modal.flint{width:min(90%,420px);text-align:center}
+.fl-bar{position:relative;height:18px;margin:10px 4px;background:#3a2a22;border:3px solid var(--edge);border-radius:9px;overflow:hidden}
+.fl-zone{position:absolute;top:0;bottom:0;background:linear-gradient(90deg,#ffb040,#fff0a0,#ffb040)}
+.fl-mark{position:absolute;top:-2px;width:6px;height:22px;margin-left:-3px;background:#fff;box-shadow:0 0 8px #ffd070}
+.fl-ember{height:52px;display:flex;align-items:center;justify-content:center}
+.fl-glow{width:44px;height:44px;border-radius:50%;background:radial-gradient(circle,#fff6c0 0%,#ffb040 35%,rgba(255,120,40,0) 70%);transform:scale(0);transition:transform .3s}
+.modal.flint.lit .fl-bar{opacity:.35}
+.modal.flint .fl-msg{min-height:2.6em}
+.modal.flint.shake{animation:flshake .25s}
+@keyframes flshake{25%{transform:translateX(-4px)}75%{transform:translateX(4px)}}
 #title .ttl{position:absolute;top:6%;left:0;right:0;display:flex;flex-direction:column;align-items:center;pointer-events:none}
 #title .ttl .rays{position:absolute;left:50%;top:38%;width:calc(var(--fs)*18);height:calc(var(--fs)*18);margin:calc(var(--fs)*-9) 0 0 calc(var(--fs)*-9);background:repeating-conic-gradient(rgba(255,226,150,.28) 0 5deg,transparent 5deg 15deg);-webkit-mask:radial-gradient(circle,#000 8%,transparent 62%);mask:radial-gradient(circle,#000 8%,transparent 62%);animation:rays 60s linear infinite}
 @keyframes rays{to{transform:rotate(360deg)}}
@@ -315,6 +325,7 @@ body.panelopen #touch{display:none}
 <script src="js/maps.js"></script>
 <script src="js/story.js"></script>
 <script src="js/ch1.js"></script>
+<script src="js/ch2.js"></script>
 <script src="js/game.js"></script>
 </body>
 </html>

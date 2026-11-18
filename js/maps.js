@@ -338,6 +338,68 @@ const MAPS = (() => {
     return m;
   };
 
+  // =============================================================== CHAPTER TWO: THE DARK FOREST
+  build.forest_path = () => {
+    const m = B('forest_path', 28, 48, 'forest', 201);
+    m.name = 'The Dark Forest'; m.music = 'forest'; m.darkPines = true;
+    for (let y = 0; y < 48; y++) for (let x = 0; x < 28; x++) if (GFX.hash(x, y, 21) < 0.12) m.set(x, y, 'mud');
+    m.path([[14, 0], [14, 9], [12, 13], [11, 20], [13, 26], [16, 31], [16, 38], [14, 47]], 'fpath', 2);
+    m.fill(15, 40, 4, 3, 'mud'); m.fill(8, 22, 3, 3, 'mud');
+    // decorations: moss, white mushrooms, fallen logs
+    for (const [x, y] of [[9, 4], [20, 14], [6, 18], [19, 24], [8, 30], [21, 36], [10, 42], [18, 44]]) m.spr(S.mushroomsWhite, x, y, { solid: false, decal: true });
+    m.spr(S.log, 4, 13, { fw: 2, id: 'logF1', name: 'Fallen Log', look: 'A fallen spruce, soft with moss.' });
+    m.spr(S.log, 20, 28, { fw: 2, id: 'logF2', name: 'Fallen Log', look: 'White mushrooms grow along the rotting bark.' });
+    m.spr(S.stump, 22, 19, { id: 'stumpF', name: 'Old Stump', look: 'An old stump, damp and dark.' });
+    // a flat rock (it can prop up a wagon) and a couple of round ones that can't
+    m.spr(S.flatRock, 20, 5, { solid: false, id: 'flatRock', name: 'Flat Rock', act: 'flatRock', if: s => !s.flags.gotFlatRock });
+    m.spr(S.rock, 7, 9, { id: 'roundRock1', name: 'Round Rock', look: 'A round, mossy rock. It would roll right out from under anything.' });
+    m.spr(S.rock, 22, 8, { id: 'roundRock2', name: 'Round Rock', look: 'Smooth and round. Not much use for propping anything up.' });
+    // Ronald's wagon, stopped across the path with a loose wheel; the barrels beside it once unloaded
+    const stopped = s => s.flags.wheelStopped && !s.flags.wheelFixed;
+    m.spr(S.wagon, 12, 11, { fw: 3, id: 'ronWagon', name: "Ronald's Wagon", act: 'ronWagon', if: stopped });
+    m.spr(S.flatRock, 13, 12, { solid: false, decal: true, id: 'rockUnder', if: s => stopped(s) && s.flags.rockPlaced });
+    for (const [x, y] of [[16, 10], [17, 10], [16, 11]]) m.spr(S.barrel, x, y, { if: s => stopped(s) && s.flags.barrelsOff && !s.flags.barrelsBack });
+    m.obj({ x: 0, y: 12, fw: 12, fh: 1, invisible: true, if: stopped });
+    m.obj({ x: 15, y: 12, fw: 13, fh: 1, invisible: true, if: stopped });
+    m.npc({ id: 'ronaldF', char: 'ronald', x: 11, y: 10, dir: 'right', name: 'Ronald', act: 'ronaldF', color: '#7a5a3a', voice: 0.7, if: stopped });
+    m.npc({ id: 'aldricF', char: 'aldric', x: 18, y: 9, dir: 'left', name: 'Aldric', act: 'aldricF', color: '#3a6a9a', voice: 1.05, if: stopped });
+    m.keep(9, 0, 10, 14); m.keepRoad('fpath');
+    m.scatter((x, y) => m.pine(x, y), 150, [0, 0, 28, 48], new Set(['forest', 'mud']), 211, 2);
+    m.zone(0, 7, 28, 2, 'wheelStop', s => !s.flags.wheelStopped);
+    m.zone(0, 30, 28, 2, 'luminaWisp', s => s.flags.lanternLit && !s.flags.wispSeen);
+    m.exit(13, 47, 4, 1, 'forest_bog', 'north', { gate: 'toBog' });
+    m.spawn('north', 14, 2, 'down'); m.spawn('south', 14, 45, 'up');
+    return m;
+  };
+
+  build.forest_bog = () => {
+    const m = B('forest_bog', 30, 44, 'forest', 233);
+    m.name = 'The Misty Bog'; m.music = 'forest'; m.darkPines = true;
+    for (let y = 0; y < 44; y++) for (let x = 0; x < 30; x++) if (GFX.hash(x, y, 23) < 0.3) m.set(x, y, 'mud');
+    m.fill(6, 17, 18, 8, 'mud');
+    m.path([[14, 0], [14, 8], [10, 13], [12, 16]], 'fpath', 2);
+    m.path([[17, 25], [19, 30], [20, 35], [16, 40], [15, 43]], 'fpath', 2);
+    for (const [x, y] of [[8, 6], [21, 12], [4, 30], [24, 33], [9, 38]]) m.spr(S.mushroomsWhite, x, y, { solid: false, decal: true });
+    // the owls, perched on a dead tree on the left
+    m.dead(5, 11);
+    m.npc({ id: 'owl1', char: 'owl', x: 4, y: 10, dir: 'down', name: 'Owl', act: 'owls', static: true, perch: -24, voice: 1.4 });
+    m.npc({ id: 'owl2', char: 'owl', x: 6, y: 10, dir: 'down', name: 'Owl', act: 'owls', static: true, perch: -20, voice: 1.6 });
+    // the old waymarker at the edge of the mist; the mist itself; the glowing trail it hides
+    m.spr(S.waystone[0], 12, 17, { id: 'marker', name: 'Old Waymarker', act: 'marker' });
+    const misty = s => !s.flags.trailFound;
+    m.fog = [{ x: 0, y: 19, w: 30, h: 7, if: misty }];
+    m.obj({ x: 0, y: 21, fw: 30, fh: 1, invisible: true, if: misty });
+    for (const [x, y] of [[13, 19], [14, 21], [15, 22], [16, 24]]) m.spr(S.trailStone, x, y, { solid: false, decal: true, noShadow: true, light: { r: 16, c: '170,255,190' }, if: s => s.flags.trailFound });
+    m.keep(9, 0, 10, 10); m.keep(10, 16, 10, 10); m.keepRoad('fpath');
+    m.scatter((x, y) => m.pine(x, y), 120, [0, 0, 30, 44], new Set(['forest', 'mud']), 241, 2);
+    m.zone(0, 19, 30, 2, 'mistEdge', s => !s.flags.trailFound);
+    m.zone(0, 27, 30, 2, 'awoo', s => s.flags.trailFound && !s.flags.deerSeen);
+    m.zone(0, 35, 30, 2, 'sunShower', s => s.flags.deerSeen && !s.flags.sunShower);
+    m.exit(14, 43, 4, 1, null, null, { gate: 'toLesterfield' });
+    m.spawn('north', 14, 2, 'down');
+    return m;
+  };
+
   const cache = {};
   function get(id) { return cache[id] || (cache[id] = build[id]()); }
   function reset() { for (const k in cache) delete cache[k]; }

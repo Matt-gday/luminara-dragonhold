@@ -447,6 +447,18 @@ const GFX = (() => {
     });
     return { left: fr.map(p => p.c), right: fr.map(p => p.flipped()), w: 36, h: 30 };
   }
+  function deerUpright() {
+    return [0, 1].map(f => {
+      const p = new Pix(18, 34), c = '#3a3048', d = '#2a2234';
+      p.ln(5, 2, 7, 7, c); p.ln(3, 4, 6, 5, c); p.ln(13, 2, 11, 7, c); p.ln(15, 4, 12, 5, c);   // antlers
+      p.e(9, 9, 2.6, 3.2, c); p.r(8, 11, 3, 3, c); p.p(6, 8, c); p.p(12, 8, c);                // head and ears
+      p.p(8, 9, '#e8ffb0'); p.p(10, 9, '#e8ffb0');                                           // faint eyes
+      p.e(9, 18, 3.4, 6, c); p.r(7, 15, 5, 7, c);                                            // long body
+      p.ln(6, 16, 4 + f, 21, c); p.ln(12, 16, 14 - f, 21, c);                                 // thin forelegs held like arms
+      p.ln(8, 23, 7 - f * 2, 32, d); p.ln(10, 23, 11 + f * 2, 32, d); p.p(6 - f * 2, 32, d); p.p(12 + f * 2, 32, d);
+      return p.c;
+    });
+  }
   function fox() {
     return [0, 1].map(f => {
       const p = new Pix(20, 13);
@@ -783,6 +795,7 @@ const GFX = (() => {
   });
   SPR.portalFrame.getContext('2d').clearRect(10, 14, 44, 58);
   SPR.stoneCircle = mk(14, 26, p => { p.r(2, 2, 10, 23, '#6e6a62'); p.r(2, 2, 3, 23, '#8a867e'); p.poly([[2, 3], [7, 0], [12, 3]], '#6e6a62'); p.r(4, 10, 6, 1, '#4e4a44'); p.r(3, 20, 4, 3, '#4f7a3a'); });
+  SPR.mushroomsWhite = mk(14, 10, p => { p.r(3, 5, 2, 4, '#e8e0d0'); p.e(4, 4, 3.5, 2.5, '#f2eee4'); p.p(3, 3, '#ffffff'); p.p(5, 4, '#cfc6b4'); p.r(9, 6, 2, 3, '#e8e0d0'); p.e(10, 5, 3, 2, '#e6e0d2'); p.p(11, 5, '#c8bfae'); });
   SPR.mushrooms = mk(14, 10, p => { p.r(3, 5, 2, 4, '#f0e8d8'); p.e(4, 4, 3.5, 2.5, '#d04030'); p.p(3, 3, '#fff'); p.r(9, 6, 2, 3, '#f0e8d8'); p.e(10, 5, 3, 2, '#e07040'); });
   SPR.cart = mk(36, 26, p => { p.r(2, 6, 28, 12, '#8a5a30'); p.r(2, 6, 28, 3, '#a87440'); p.e(10, 19, 6, 6, '#5a3a1e'); p.e(10, 19, 4, 4, '#8a5a30'); p.r(30, 12, 6, 2, '#6a4426'); for (let i = 0; i < 4; i++) p.r(6 + i * 6, 2, 5, 5, ['#d8b450', '#c88a3a', '#e8743a', '#a87440'][i]); });
   SPR.anvil = mk(18, 14, p => { p.r(3, 2, 12, 4, '#4a4a54'); p.r(0, 2, 4, 2, '#4a4a54'); p.r(6, 6, 6, 4, '#3a3a44'); p.r(4, 10, 10, 3, '#3a3a44'); p.r(4, 2, 10, 1, '#8a8a94'); });
@@ -792,6 +805,12 @@ const GFX = (() => {
   SPR.pieTray = mk(24, 12, p => { p.e(12, 7, 11, 4, '#8a8a90'); for (let i = 0; i < 3; i++) { p.e(5 + i * 7, 6, 3.4, 2.4, '#c8823a'); p.r(4 + i * 7, 5, 2, 1, '#f0b060'); } });
   SPR.mug = mk(8, 8, p => { p.r(1, 2, 5, 5, '#8a6a44'); p.r(1, 1, 5, 2, '#f4ecd8'); p.r(6, 3, 1, 3, '#8a6a44'); });
   SPR.stewBowl = mk(10, 6, p => { p.e(5, 3, 4.5, 2.5, '#7a4a26'); p.e(5, 2, 3.5, 1.2, '#b8642a'); p.p(4, 2, '#e8a040'); p.p(6, 2, '#6a8a3a'); });
+  // ---- Chapter Two: the Dark Forest
+  SPR.mist = mk(40, 22, p => { p.e(20, 13, 19, 8, 'rgba(214,222,236,0.55)'); p.e(13, 10, 10, 6, 'rgba(232,238,248,0.5)'); p.e(28, 11, 9, 6, 'rgba(226,232,244,0.5)'); p.e(20, 8, 7, 4, 'rgba(240,244,252,0.45)'); }, false);
+  SPR.trailStone = mk(12, 8, p => { p.e(6, 5, 5, 2.6, '#5e6a62'); p.e(6, 4, 4, 1.8, '#7e8c82'); p.p(4, 3, '#b8f0c8'); p.p(7, 4, '#9ae0b0'); });
+  SPR.flatRock = mk(16, 9, p => { p.e(8, 6, 7.5, 2.8, '#6a665f'); p.r(2, 3, 12, 3, '#8a867f'); p.r(3, 3, 10, 1, '#a6a29b'); p.p(5, 4, '#5f9e3f'); });
+  SPR.wheelOff = mk(14, 14, p => { p.e(7, 7, 6, 6, '#5a3a1e'); p.e(7, 7, 4.5, 4.5, '#8a5a30'); p.e(7, 7, 2, 2, '#4a4a50'); for (let a = 0; a < 6; a++) p.ln(7, 7, 7 + Math.round(Math.cos(a) * 5), 7 + Math.round(Math.sin(a) * 5), '#5a3a1e'); });
+  SPR.tinder = mk(12, 7, p => { p.e(6, 5, 5, 2, '#3a2a1e'); p.r(2, 3, 8, 2, '#8a6a3a'); p.p(4, 2, '#a8844a'); p.p(8, 2, '#a8844a'); });
 
   // signs (small icons hung on buildings)
   const ICON_SIGN = {
@@ -956,6 +975,8 @@ const GFX = (() => {
   icon('pail', p => { p.poly([[3, 5], [13, 5], [12, 14], [4, 14]], '#8a8a94'); p.r(3, 5, 10, 2, '#4a80c8'); p.r(4, 5, 8, 1, '#8ab8f0'); p.r(4, 9, 8, 1, '#6a6a74'); p.ln(3, 5, 8, 0, '#5a5a64'); p.ln(13, 5, 8, 0, '#5a5a64'); });
   icon('coin', p => { p.e(8, 8, 6, 6, '#c08040'); p.e(8, 8, 4, 4, '#e0a050'); p.r(7, 5, 2, 6, '#a06020'); });
   icon('star', p => { p.poly([[8, 1], [10, 6], [15, 6], [11, 9], [13, 15], [8, 11], [3, 15], [5, 9], [1, 6], [6, 6]], '#f0c030'); p.poly([[8, 3], [9, 7], [7, 7]], '#fff2a0'); });
+  icon('flatRock', p => { p.e(8, 10, 7, 3.5, '#6a665f'); p.r(2, 7, 12, 3, '#8a867f'); p.r(3, 7, 10, 1, '#a6a29b'); p.p(5, 8, '#5f9e3f'); });
+  icon('lanternLit', p => { p.r(6, 1, 4, 2, '#8a6a2a'); p.r(4, 3, 8, 11, '#b8862a'); p.r(5, 4, 6, 9, '#ffe9a0'); p.r(6, 6, 4, 5, '#fff8e0'); p.r(7, 8, 2, 3, '#ffb040'); p.r(4, 13, 8, 2, '#8a6a2a'); });
   icon('stew', p => { p.e(8, 10, 7, 4.5, '#7a4a26'); p.e(8, 8, 5.5, 2.2, '#b8642a'); p.p(6, 8, '#e8a040'); p.p(10, 8, '#6a8a3a'); p.r(6, 2, 1, 3, '#ffffff88'); p.r(10, 3, 1, 3, '#ffffff88'); });
 
   // =================================================================== BUILD ALL
@@ -994,7 +1015,7 @@ const GFX = (() => {
     CHAR.wyrmGreen = dragon(['#3a7a4a', '#22502e', '#6aaa6a', '#d8e0a0'], 1.5, { eye: '#ffd040' });
     CHAR.wyrmBronze = dragon(['#b8803a', '#80541e', '#e0b060', '#f4e0b0'], 1.2, { eye: '#ffd040' });
     CHAR.goblinite = goblinite();
-    CHAR.owl = owl(); CHAR.bird = bird(); CHAR.possum = possum(); CHAR.horse = horse(); CHAR.horseCream = horse(['#d8b888', '#b89868', '#ecd0a8'], '#f8f0e0'); CHAR.horseGrey = horse(['#9a9692', '#76726e', '#b8b4b0'], '#ecebe6'); CHAR.horseDark = horse(['#4e3628', '#36241a', '#6e4e3a'], '#2a1a14'); CHAR.fox = fox(); CHAR.monster = monster();
+    CHAR.owl = owl(); CHAR.bird = bird(); CHAR.possum = possum(); CHAR.horse = horse(); CHAR.horseCream = horse(['#d8b888', '#b89868', '#ecd0a8'], '#f8f0e0'); CHAR.horseGrey = horse(['#9a9692', '#76726e', '#b8b4b0'], '#ecebe6'); CHAR.horseDark = horse(['#4e3628', '#36241a', '#6e4e3a'], '#2a1a14'); CHAR.fox = fox(); CHAR.deerUpright = deerUpright(); CHAR.monster = monster();
     CHAR.butterflies = ['#f0a040', '#80b0f0', '#f070a0', '#f0e060'].map(butterfly);
     CHAR.redBird = bird(['#c84a3a', '#9a3426', '#f0c040']);
   }

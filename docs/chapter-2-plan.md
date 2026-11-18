@@ -1,5 +1,8 @@
 # Chapter Two: The Dark Forest — design plan
 
+**Progress:** Stage 1 (the Dark Forest) built and tested. Next: Stage 2 (Lesterfield), Stage 3 (the Inn), Stage 4 (Market Morning).
+Preview it with `?preview` on the game's address.
+
 From Lisa's book, chapters 3 (The Dark Forest), 4 (Lesterfield), 5 (The Inn) and 6 (The Book).
 Target length: the same as Chapter One (about 20–40 minutes, depending on side stories).
 

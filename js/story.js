@@ -65,7 +65,14 @@ const STORY = (() => {
   async function onEnter(id) { for (const fn of ENTER[id] || []) await fn(); }
   async function intro() { return chapter().intro(); }
   function onLoad() { const c = chapter(); if (c.onLoad) return c.onLoad(); }
-  function onFlash() { }
+  function onFlash(r) { const c = chapter(); if (c.onFlash) return c.onFlash(r); }
+  function particlesFor(id) { const c = chapter(); return c.particlesFor ? c.particlesFor(id) : null; }
+  // A chapter marked preview is hidden until a browser opts in with ?preview (so unfinished chapters stay out of Lisa's game).
+  const previewOn = () => { try { return localStorage.getItem('luminara_preview') === '1'; } catch (e) { return false; } };
+  const ready = c => c && (!c.preview || previewOn());
+  function nextChapter(n) { const c = CHAPTERS.find(c => c.n === n + 1); return ready(c) ? c : null; }
+  // A save that finished its chapter moves on to the next one, once that chapter is ready.
+  function advance(s) { const n = s.chapter || 1; if (s.flags['ch' + n + 'Done'] && nextChapter(n)) s.chapter = n + 1; }
   function musicFor(id) { const c = chapter(); return c.musicFor ? c.musicFor(id) : null; }
   function tintFor(id) { const c = chapter(); return c.tintFor ? c.tintFor(id) : null; }
   function darkFor(id) { const c = chapter(); return c.darkFor ? c.darkFor(id) : null; }
@@ -130,6 +137,6 @@ const STORY = (() => {
     register, H, ITEMS, QUESTS, SPEAKERS, CHAPTERS, LINKS, ACT, USE,
     get TOTAL_LEAVES() { return LEAVES.length; },
     get chapterInfo() { return chapter(); },
-    intro, interact, combine, useSelf, zone, gate, onEnter, onLoad, onFlash, objective, compass, journal, summaryHTML, musicFor, tintFor, darkFor,
+    intro, interact, combine, useSelf, zone, gate, onEnter, onLoad, onFlash, particlesFor, nextChapter, advance, objective, compass, journal, summaryHTML, musicFor, tintFor, darkFor,
   };
 })();

@@ -149,6 +149,16 @@ html,body{height:100%;background:#0b0810;overflow:hidden;color:var(--ink);
 #title button small{display:block;font-size:calc(var(--fs)*.65);opacity:.75;margin-top:2px}
 #title button{font:inherit;font-size:calc(var(--fs)*1.1);padding:8px 16px;background:rgba(244,230,196,.95);border:4px solid var(--edge);border-radius:10px;cursor:pointer;color:var(--ink);box-shadow:0 4px 0 rgba(0,0,0,.5)}
 #title button:hover{background:var(--gold)}
+.modal.flint{width:min(90%,420px);text-align:center}
+.fl-bar{position:relative;height:18px;margin:10px 4px;background:#3a2a22;border:3px solid var(--edge);border-radius:9px;overflow:hidden}
+.fl-zone{position:absolute;top:0;bottom:0;background:linear-gradient(90deg,#ffb040,#fff0a0,#ffb040)}
+.fl-mark{position:absolute;top:-2px;width:6px;height:22px;margin-left:-3px;background:#fff;box-shadow:0 0 8px #ffd070}
+.fl-ember{height:52px;display:flex;align-items:center;justify-content:center}
+.fl-glow{width:44px;height:44px;border-radius:50%;background:radial-gradient(circle,#fff6c0 0%,#ffb040 35%,rgba(255,120,40,0) 70%);transform:scale(0);transition:transform .3s}
+.modal.flint.lit .fl-bar{opacity:.35}
+.modal.flint .fl-msg{min-height:2.6em}
+.modal.flint.shake{animation:flshake .25s}
+@keyframes flshake{25%{transform:translateX(-4px)}75%{transform:translateX(4px)}}
 #title .ttl{position:absolute;top:6%;left:0;right:0;display:flex;flex-direction:column;align-items:center;pointer-events:none}
 #title .ttl .rays{position:absolute;left:50%;top:38%;width:calc(var(--fs)*18);height:calc(var(--fs)*18);margin:calc(var(--fs)*-9) 0 0 calc(var(--fs)*-9);background:repeating-conic-gradient(rgba(255,226,150,.28) 0 5deg,transparent 5deg 15deg);-webkit-mask:radial-gradient(circle,#000 8%,transparent 62%);mask:radial-gradient(circle,#000 8%,transparent 62%);animation:rays 60s linear infinite}
 @keyframes rays{to{transform:rotate(360deg)}}
@@ -404,6 +414,9 @@ const AUDIO = (() => {
     magic(t) { for (let i = 0; i < 10; i++) tone(600 + i * 110, t + i * 0.04, 0.3, 'sine', 0.05); },
     hum(t) { tone(55, t, 2.2, 'sawtooth', 0.05, sfxBus, { vib: 3 }); tone(82, t, 2.2, 'sine', 0.08); },
     sip(t) { noise(t, 0.3, 0.08, 1400, 'bandpass', sfxBus, 600); },
+    howl(t) { tone(330, t, 0.7, 'sine', 0.11, sfxBus, { slide: 540 }); tone(540, t + 0.7, 1.6, 'sine', 0.09, sfxBus, { slide: 290 }); tone(165, t, 2.2, 'triangle', 0.03); },
+    snort(t) { noise(t, 0.18, 0.28, 700, 'lowpass'); noise(t + 0.22, 0.3, 0.22, 500, 'lowpass'); },
+    hammer(t) { noise(t, 0.05, 0.3, 2400, 'bandpass'); tone(220, t, 0.08, 'square', 0.08); },
     lute(t) { [0, 4, 7, 12].forEach((s, i) => tone(294 * Math.pow(2, s / 12), t + i * 0.09, 0.6, 'triangle', 0.1)); },
     snap(t) { [0, 4, 7].forEach((s, i) => tone(294 * Math.pow(2, s / 12), t + i * 0.09, 0.25, 'triangle', 0.1)); tone(1400, t + 0.3, 0.4, 'sawtooth', 0.07, sfxBus, { slide: 260 }); noise(t + 0.3, 0.05, 0.25, 3200, 'highpass'); },
     munch(t) { for (let i = 0; i < 3; i++) noise(t + i * 0.13, 0.08, 0.15, 800, 'lowpass'); },
@@ -949,6 +962,18 @@ const GFX = (() => {
     });
     return { left: fr.map(p => p.c), right: fr.map(p => p.flipped()), w: 36, h: 30 };
   }
+  function deerUpright() {
+    return [0, 1].map(f => {
+      const p = new Pix(18, 34), c = '#3a3048', d = '#2a2234';
+      p.ln(5, 2, 7, 7, c); p.ln(3, 4, 6, 5, c); p.ln(13, 2, 11, 7, c); p.ln(15, 4, 12, 5, c);   // antlers
+      p.e(9, 9, 2.6, 3.2, c); p.r(8, 11, 3, 3, c); p.p(6, 8, c); p.p(12, 8, c);                // head and ears
+      p.p(8, 9, '#e8ffb0'); p.p(10, 9, '#e8ffb0');                                           // faint eyes
+      p.e(9, 18, 3.4, 6, c); p.r(7, 15, 5, 7, c);                                            // long body
+      p.ln(6, 16, 4 + f, 21, c); p.ln(12, 16, 14 - f, 21, c);                                 // thin forelegs held like arms
+      p.ln(8, 23, 7 - f * 2, 32, d); p.ln(10, 23, 11 + f * 2, 32, d); p.p(6 - f * 2, 32, d); p.p(12 + f * 2, 32, d);
+      return p.c;
+    });
+  }
   function fox() {
     return [0, 1].map(f => {
       const p = new Pix(20, 13);
@@ -1285,6 +1310,7 @@ const GFX = (() => {
   });
   SPR.portalFrame.getContext('2d').clearRect(10, 14, 44, 58);
   SPR.stoneCircle = mk(14, 26, p => { p.r(2, 2, 10, 23, '#6e6a62'); p.r(2, 2, 3, 23, '#8a867e'); p.poly([[2, 3], [7, 0], [12, 3]], '#6e6a62'); p.r(4, 10, 6, 1, '#4e4a44'); p.r(3, 20, 4, 3, '#4f7a3a'); });
+  SPR.mushroomsWhite = mk(14, 10, p => { p.r(3, 5, 2, 4, '#e8e0d0'); p.e(4, 4, 3.5, 2.5, '#f2eee4'); p.p(3, 3, '#ffffff'); p.p(5, 4, '#cfc6b4'); p.r(9, 6, 2, 3, '#e8e0d0'); p.e(10, 5, 3, 2, '#e6e0d2'); p.p(11, 5, '#c8bfae'); });
   SPR.mushrooms = mk(14, 10, p => { p.r(3, 5, 2, 4, '#f0e8d8'); p.e(4, 4, 3.5, 2.5, '#d04030'); p.p(3, 3, '#fff'); p.r(9, 6, 2, 3, '#f0e8d8'); p.e(10, 5, 3, 2, '#e07040'); });
   SPR.cart = mk(36, 26, p => { p.r(2, 6, 28, 12, '#8a5a30'); p.r(2, 6, 28, 3, '#a87440'); p.e(10, 19, 6, 6, '#5a3a1e'); p.e(10, 19, 4, 4, '#8a5a30'); p.r(30, 12, 6, 2, '#6a4426'); for (let i = 0; i < 4; i++) p.r(6 + i * 6, 2, 5, 5, ['#d8b450', '#c88a3a', '#e8743a', '#a87440'][i]); });
   SPR.anvil = mk(18, 14, p => { p.r(3, 2, 12, 4, '#4a4a54'); p.r(0, 2, 4, 2, '#4a4a54'); p.r(6, 6, 6, 4, '#3a3a44'); p.r(4, 10, 10, 3, '#3a3a44'); p.r(4, 2, 10, 1, '#8a8a94'); });
@@ -1294,6 +1320,12 @@ const GFX = (() => {
   SPR.pieTray = mk(24, 12, p => { p.e(12, 7, 11, 4, '#8a8a90'); for (let i = 0; i < 3; i++) { p.e(5 + i * 7, 6, 3.4, 2.4, '#c8823a'); p.r(4 + i * 7, 5, 2, 1, '#f0b060'); } });
   SPR.mug = mk(8, 8, p => { p.r(1, 2, 5, 5, '#8a6a44'); p.r(1, 1, 5, 2, '#f4ecd8'); p.r(6, 3, 1, 3, '#8a6a44'); });
   SPR.stewBowl = mk(10, 6, p => { p.e(5, 3, 4.5, 2.5, '#7a4a26'); p.e(5, 2, 3.5, 1.2, '#b8642a'); p.p(4, 2, '#e8a040'); p.p(6, 2, '#6a8a3a'); });
+  // ---- Chapter Two: the Dark Forest
+  SPR.mist = mk(40, 22, p => { p.e(20, 13, 19, 8, 'rgba(214,222,236,0.55)'); p.e(13, 10, 10, 6, 'rgba(232,238,248,0.5)'); p.e(28, 11, 9, 6, 'rgba(226,232,244,0.5)'); p.e(20, 8, 7, 4, 'rgba(240,244,252,0.45)'); }, false);
+  SPR.trailStone = mk(12, 8, p => { p.e(6, 5, 5, 2.6, '#5e6a62'); p.e(6, 4, 4, 1.8, '#7e8c82'); p.p(4, 3, '#b8f0c8'); p.p(7, 4, '#9ae0b0'); });
+  SPR.flatRock = mk(16, 9, p => { p.e(8, 6, 7.5, 2.8, '#6a665f'); p.r(2, 3, 12, 3, '#8a867f'); p.r(3, 3, 10, 1, '#a6a29b'); p.p(5, 4, '#5f9e3f'); });
+  SPR.wheelOff = mk(14, 14, p => { p.e(7, 7, 6, 6, '#5a3a1e'); p.e(7, 7, 4.5, 4.5, '#8a5a30'); p.e(7, 7, 2, 2, '#4a4a50'); for (let a = 0; a < 6; a++) p.ln(7, 7, 7 + Math.round(Math.cos(a) * 5), 7 + Math.round(Math.sin(a) * 5), '#5a3a1e'); });
+  SPR.tinder = mk(12, 7, p => { p.e(6, 5, 5, 2, '#3a2a1e'); p.r(2, 3, 8, 2, '#8a6a3a'); p.p(4, 2, '#a8844a'); p.p(8, 2, '#a8844a'); });
 
   // signs (small icons hung on buildings)
   const ICON_SIGN = {
@@ -1458,6 +1490,8 @@ const GFX = (() => {
   icon('pail', p => { p.poly([[3, 5], [13, 5], [12, 14], [4, 14]], '#8a8a94'); p.r(3, 5, 10, 2, '#4a80c8'); p.r(4, 5, 8, 1, '#8ab8f0'); p.r(4, 9, 8, 1, '#6a6a74'); p.ln(3, 5, 8, 0, '#5a5a64'); p.ln(13, 5, 8, 0, '#5a5a64'); });
   icon('coin', p => { p.e(8, 8, 6, 6, '#c08040'); p.e(8, 8, 4, 4, '#e0a050'); p.r(7, 5, 2, 6, '#a06020'); });
   icon('star', p => { p.poly([[8, 1], [10, 6], [15, 6], [11, 9], [13, 15], [8, 11], [3, 15], [5, 9], [1, 6], [6, 6]], '#f0c030'); p.poly([[8, 3], [9, 7], [7, 7]], '#fff2a0'); });
+  icon('flatRock', p => { p.e(8, 10, 7, 3.5, '#6a665f'); p.r(2, 7, 12, 3, '#8a867f'); p.r(3, 7, 10, 1, '#a6a29b'); p.p(5, 8, '#5f9e3f'); });
+  icon('lanternLit', p => { p.r(6, 1, 4, 2, '#8a6a2a'); p.r(4, 3, 8, 11, '#b8862a'); p.r(5, 4, 6, 9, '#ffe9a0'); p.r(6, 6, 4, 5, '#fff8e0'); p.r(7, 8, 2, 3, '#ffb040'); p.r(4, 13, 8, 2, '#8a6a2a'); });
   icon('stew', p => { p.e(8, 10, 7, 4.5, '#7a4a26'); p.e(8, 8, 5.5, 2.2, '#b8642a'); p.p(6, 8, '#e8a040'); p.p(10, 8, '#6a8a3a'); p.r(6, 2, 1, 3, '#ffffff88'); p.r(10, 3, 1, 3, '#ffffff88'); });
 
   // =================================================================== BUILD ALL
@@ -1496,7 +1530,7 @@ const GFX = (() => {
     CHAR.wyrmGreen = dragon(['#3a7a4a', '#22502e', '#6aaa6a', '#d8e0a0'], 1.5, { eye: '#ffd040' });
     CHAR.wyrmBronze = dragon(['#b8803a', '#80541e', '#e0b060', '#f4e0b0'], 1.2, { eye: '#ffd040' });
     CHAR.goblinite = goblinite();
-    CHAR.owl = owl(); CHAR.bird = bird(); CHAR.possum = possum(); CHAR.horse = horse(); CHAR.horseCream = horse(['#d8b888', '#b89868', '#ecd0a8'], '#f8f0e0'); CHAR.horseGrey = horse(['#9a9692', '#76726e', '#b8b4b0'], '#ecebe6'); CHAR.horseDark = horse(['#4e3628', '#36241a', '#6e4e3a'], '#2a1a14'); CHAR.fox = fox(); CHAR.monster = monster();
+    CHAR.owl = owl(); CHAR.bird = bird(); CHAR.possum = possum(); CHAR.horse = horse(); CHAR.horseCream = horse(['#d8b888', '#b89868', '#ecd0a8'], '#f8f0e0'); CHAR.horseGrey = horse(['#9a9692', '#76726e', '#b8b4b0'], '#ecebe6'); CHAR.horseDark = horse(['#4e3628', '#36241a', '#6e4e3a'], '#2a1a14'); CHAR.fox = fox(); CHAR.deerUpright = deerUpright(); CHAR.monster = monster();
     CHAR.butterflies = ['#f0a040', '#80b0f0', '#f070a0', '#f0e060'].map(butterfly);
     CHAR.redBird = bird(['#c84a3a', '#9a3426', '#f0c040']);
   }
@@ -1853,6 +1887,68 @@ const MAPS = (() => {
     return m;
   };
 
+  // =============================================================== CHAPTER TWO: THE DARK FOREST
+  build.forest_path = () => {
+    const m = B('forest_path', 28, 48, 'forest', 201);
+    m.name = 'The Dark Forest'; m.music = 'forest'; m.darkPines = true;
+    for (let y = 0; y < 48; y++) for (let x = 0; x < 28; x++) if (GFX.hash(x, y, 21) < 0.12) m.set(x, y, 'mud');
+    m.path([[14, 0], [14, 9], [12, 13], [11, 20], [13, 26], [16, 31], [16, 38], [14, 47]], 'fpath', 2);
+    m.fill(15, 40, 4, 3, 'mud'); m.fill(8, 22, 3, 3, 'mud');
+    // decorations: moss, white mushrooms, fallen logs
+    for (const [x, y] of [[9, 4], [20, 14], [6, 18], [19, 24], [8, 30], [21, 36], [10, 42], [18, 44]]) m.spr(S.mushroomsWhite, x, y, { solid: false, decal: true });
+    m.spr(S.log, 4, 13, { fw: 2, id: 'logF1', name: 'Fallen Log', look: 'A fallen spruce, soft with moss.' });
+    m.spr(S.log, 20, 28, { fw: 2, id: 'logF2', name: 'Fallen Log', look: 'White mushrooms grow along the rotting bark.' });
+    m.spr(S.stump, 22, 19, { id: 'stumpF', name: 'Old Stump', look: 'An old stump, damp and dark.' });
+    // a flat rock (it can prop up a wagon) and a couple of round ones that can't
+    m.spr(S.flatRock, 20, 5, { solid: false, id: 'flatRock', name: 'Flat Rock', act: 'flatRock', if: s => !s.flags.gotFlatRock });
+    m.spr(S.rock, 7, 9, { id: 'roundRock1', name: 'Round Rock', look: 'A round, mossy rock. It would roll right out from under anything.' });
+    m.spr(S.rock, 22, 8, { id: 'roundRock2', name: 'Round Rock', look: 'Smooth and round. Not much use for propping anything up.' });
+    // Ronald's wagon, stopped across the path with a loose wheel; the barrels beside it once unloaded
+    const stopped = s => s.flags.wheelStopped && !s.flags.wheelFixed;
+    m.spr(S.wagon, 12, 11, { fw: 3, id: 'ronWagon', name: "Ronald's Wagon", act: 'ronWagon', if: stopped });
+    m.spr(S.flatRock, 13, 12, { solid: false, decal: true, id: 'rockUnder', if: s => stopped(s) && s.flags.rockPlaced });
+    for (const [x, y] of [[16, 10], [17, 10], [16, 11]]) m.spr(S.barrel, x, y, { if: s => stopped(s) && s.flags.barrelsOff && !s.flags.barrelsBack });
+    m.obj({ x: 0, y: 12, fw: 12, fh: 1, invisible: true, if: stopped });
+    m.obj({ x: 15, y: 12, fw: 13, fh: 1, invisible: true, if: stopped });
+    m.npc({ id: 'ronaldF', char: 'ronald', x: 11, y: 10, dir: 'right', name: 'Ronald', act: 'ronaldF', color: '#7a5a3a', voice: 0.7, if: stopped });
+    m.npc({ id: 'aldricF', char: 'aldric', x: 18, y: 9, dir: 'left', name: 'Aldric', act: 'aldricF', color: '#3a6a9a', voice: 1.05, if: stopped });
+    m.keep(9, 0, 10, 14); m.keepRoad('fpath');
+    m.scatter((x, y) => m.pine(x, y), 150, [0, 0, 28, 48], new Set(['forest', 'mud']), 211, 2);
+    m.zone(0, 7, 28, 2, 'wheelStop', s => !s.flags.wheelStopped);
+    m.zone(0, 30, 28, 2, 'luminaWisp', s => s.flags.lanternLit && !s.flags.wispSeen);
+    m.exit(13, 47, 4, 1, 'forest_bog', 'north', { gate: 'toBog' });
+    m.spawn('north', 14, 2, 'down'); m.spawn('south', 14, 45, 'up');
+    return m;
+  };
+
+  build.forest_bog = () => {
+    const m = B('forest_bog', 30, 44, 'forest', 233);
+    m.name = 'The Misty Bog'; m.music = 'forest'; m.darkPines = true;
+    for (let y = 0; y < 44; y++) for (let x = 0; x < 30; x++) if (GFX.hash(x, y, 23) < 0.3) m.set(x, y, 'mud');
+    m.fill(6, 17, 18, 8, 'mud');
+    m.path([[14, 0], [14, 8], [10, 13], [12, 16]], 'fpath', 2);
+    m.path([[17, 25], [19, 30], [20, 35], [16, 40], [15, 43]], 'fpath', 2);
+    for (const [x, y] of [[8, 6], [21, 12], [4, 30], [24, 33], [9, 38]]) m.spr(S.mushroomsWhite, x, y, { solid: false, decal: true });
+    // the owls, perched on a dead tree on the left
+    m.dead(5, 11);
+    m.npc({ id: 'owl1', char: 'owl', x: 4, y: 10, dir: 'down', name: 'Owl', act: 'owls', static: true, perch: -24, voice: 1.4 });
+    m.npc({ id: 'owl2', char: 'owl', x: 6, y: 10, dir: 'down', name: 'Owl', act: 'owls', static: true, perch: -20, voice: 1.6 });
+    // the old waymarker at the edge of the mist; the mist itself; the glowing trail it hides
+    m.spr(S.waystone[0], 12, 17, { id: 'marker', name: 'Old Waymarker', act: 'marker' });
+    const misty = s => !s.flags.trailFound;
+    m.fog = [{ x: 0, y: 19, w: 30, h: 7, if: misty }];
+    m.obj({ x: 0, y: 21, fw: 30, fh: 1, invisible: true, if: misty });
+    for (const [x, y] of [[13, 19], [14, 21], [15, 22], [16, 24]]) m.spr(S.trailStone, x, y, { solid: false, decal: true, noShadow: true, light: { r: 16, c: '170,255,190' }, if: s => s.flags.trailFound });
+    m.keep(9, 0, 10, 10); m.keep(10, 16, 10, 10); m.keepRoad('fpath');
+    m.scatter((x, y) => m.pine(x, y), 120, [0, 0, 30, 44], new Set(['forest', 'mud']), 241, 2);
+    m.zone(0, 19, 30, 2, 'mistEdge', s => !s.flags.trailFound);
+    m.zone(0, 27, 30, 2, 'awoo', s => s.flags.trailFound && !s.flags.deerSeen);
+    m.zone(0, 35, 30, 2, 'sunShower', s => s.flags.deerSeen && !s.flags.sunShower);
+    m.exit(14, 43, 4, 1, null, null, { gate: 'toLesterfield' });
+    m.spawn('north', 14, 2, 'down');
+    return m;
+  };
+
   const cache = {};
   function get(id) { return cache[id] || (cache[id] = build[id]()); }
   function reset() { for (const k in cache) delete cache[k]; }
@@ -1928,7 +2024,14 @@ const STORY = (() => {
   async function onEnter(id) { for (const fn of ENTER[id] || []) await fn(); }
   async function intro() { return chapter().intro(); }
   function onLoad() { const c = chapter(); if (c.onLoad) return c.onLoad(); }
-  function onFlash() { }
+  function onFlash(r) { const c = chapter(); if (c.onFlash) return c.onFlash(r); }
+  function particlesFor(id) { const c = chapter(); return c.particlesFor ? c.particlesFor(id) : null; }
+  // A chapter marked preview is hidden until a browser opts in with ?preview (so unfinished chapters stay out of Lisa's game).
+  const previewOn = () => { try { return localStorage.getItem('luminara_preview') === '1'; } catch (e) { return false; } };
+  const ready = c => c && (!c.preview || previewOn());
+  function nextChapter(n) { const c = CHAPTERS.find(c => c.n === n + 1); return ready(c) ? c : null; }
+  // A save that finished its chapter moves on to the next one, once that chapter is ready.
+  function advance(s) { const n = s.chapter || 1; if (s.flags['ch' + n + 'Done'] && nextChapter(n)) s.chapter = n + 1; }
   function musicFor(id) { const c = chapter(); return c.musicFor ? c.musicFor(id) : null; }
   function tintFor(id) { const c = chapter(); return c.tintFor ? c.tintFor(id) : null; }
   function darkFor(id) { const c = chapter(); return c.darkFor ? c.darkFor(id) : null; }
@@ -1993,7 +2096,7 @@ const STORY = (() => {
     register, H, ITEMS, QUESTS, SPEAKERS, CHAPTERS, LINKS, ACT, USE,
     get TOTAL_LEAVES() { return LEAVES.length; },
     get chapterInfo() { return chapter(); },
-    intro, interact, combine, useSelf, zone, gate, onEnter, onLoad, onFlash, objective, compass, journal, summaryHTML, musicFor, tintFor, darkFor,
+    intro, interact, combine, useSelf, zone, gate, onEnter, onLoad, onFlash, particlesFor, nextChapter, advance, objective, compass, journal, summaryHTML, musicFor, tintFor, darkFor,
   };
 })();
 
@@ -2739,7 +2842,9 @@ const STORY = (() => {
     await nar('End of Chapter One', { big: true });
     G.save();
     await G.chapterSummary(STORY.summaryHTML(G.S, 1));
-    await nar('Next: Chapter Two — The Dark Forest\n(coming soon)', { big: true });
+    const next = STORY.nextChapter(1);
+    if (next) { G.S.chapter = 2; G.save(); await nar('Next: Chapter Two — The Dark Forest', { big: true }); }
+    else await nar('Next: Chapter Two — The Dark Forest\n(coming soon)', { big: true });
     G.showCredits([
       '#Luminara the Light-Bearer', 'Chapter One', '', '',
       '#Story & World', 'Lisa', '', '',
@@ -2870,6 +2975,328 @@ const STORY = (() => {
 })();
 
 </script>
+<script>/* js/ch2.js */
+// =====================================================================
+//  CHAPTER TWO — "The Dark Forest"
+//  From Lisa's book, chapters 3 (The Dark Forest), 4 (Lesterfield), 5 (The Inn) and 6 (The Book).
+//  Built in stages; marked `preview` until finished, so it only appears with ?preview.
+//  Stage 1: the Dark Forest (book chapter 3). See docs/chapter-2-plan.md.
+// =====================================================================
+(() => {
+  const { F, has, say, think, nar, L, journalAdd, pick, startQuest, finishQuest } = STORY.H;
+  const touch = () => document.body.classList.contains('touch');
+  const tapOr = (t, k) => touch() ? t : k;
+
+  const ITEMS = {
+    flatRock: { name: 'Flat Rock', icon: 'flatRock', desc: 'A flat, heavy stone. Sturdy enough to hold something up.' },
+    lanternLit: { name: 'Golden Lantern (lit)', icon: 'lanternLit', desc: 'Your lantern, burning steady behind its glass. Raise it high to light up the darkness further.' },
+  };
+
+  const QUESTS = {
+    darkforest: { title: 'The Dark Forest', desc: 'Lead the caravan safely through the Dark Forest to Lesterfield.', xp: 40, steps: [
+      { t: 'Help Ronald with his loose wheel', done: s => s.flags.wheelFixed, hint: ['See the quest <b>A Loose Wheel</b>, and ask for a hint there.'] },
+      { t: 'Light your lantern', done: s => s.flags.lanternLit, hint: ['It is getting dark, and you have everything you need in your satchel.', `Open your satchel, choose your flint and steel, ${tapOr('tap', 'click')} <b>Combine</b>, then choose your lantern.`] },
+      { t: 'Find the way through the mist', done: s => s.flags.trailFound, hint: ['The path vanishes into thick mist. What could cut through it?', `Stand by the old waymarker stone at the edge of the mist and ${tapOr('tap <b>Raise Light</b>', 'press <b>Q</b>')} to hold your lantern high.`] },
+      { t: 'Reach Lesterfield', done: s => s.flags.reachedLesterfield, hint: ['Keep following the path south.', 'Follow the glowing trail through the bog, all the way to the bottom of the map.'] },
+    ] },
+    wheel: { title: 'A Loose Wheel', parent: 'darkforest', desc: "Ronald's old wagon has a loose wheel. He needs the barrels off the back to mend it.", giver: 'Ronald', xp: 25, steps: [
+      { t: "Take the barrels off Ronald's wagon", done: s => s.flags.barrelsOff, hint: ["The barrels are on the back of Ronald's wagon.", "Click Ronald's wagon."] },
+      { t: 'Find something to prop up the wagon', done: s => s.flags.gotFlatRock || s.flags.rockPlaced, hint: ['Ronald needs something flat and sturdy. Round things roll.', 'There is a flat rock by the path, a little way back up the forest, on the right.'] },
+      { t: 'Prop up the wagon', done: s => s.flags.rockPlaced, hint: ['Put it under the wagon.', `Open your satchel, choose the flat rock, ${tapOr('tap', 'click')} <b>Use…</b>, then ${tapOr('tap', 'click')} Ronald's wagon.`] },
+      { t: 'Load the barrels back on', done: s => s.flags.barrelsBack, hint: ['The wheel is mended.', "Click Ronald's wagon again."] },
+    ] },
+    lumina: { title: 'The Lumina', side: true, desc: 'A lumina, a little living light, is floating near the path. Nobody has ever caught one.', xp: 20, steps: [
+      { t: 'Try to catch the lumina', done: s => s.flags.wispFaded && s.flags.wispTries >= 3, hint: ['It is floating just off the path.', 'Walk up to the glowing light and try to take hold of it, more than once.'] },
+    ] },
+    owls: { title: 'The Owls', side: true, desc: 'A rare kind of owl, perched with its mate, staring back at you.', xp: 15, steps: [
+      { t: 'Watch the owls', done: s => s.flags.owlsWatched, hint: ['Something is watching from the trees.', 'Two owls are perched on a dead tree on the left side of the misty forest.'] },
+    ] },
+  };
+
+  const ACT = {}, USE = {}, SELF = {};
+
+  // ---- the caravan: Luminara's horse and wagon, then Aldric and Ronald
+  function party() {
+    const f = F();
+    return [
+      { id: f.shod ? 'clover' : 'biscuit', char: f.shod ? 'horse' : 'horseCream', kind: 'horse', name: f.shod ? 'Clover' : 'Biscuit', gap: 20 },
+      { id: 'wagonF', sprite: 'wagon', kind: 'sprite', gap: 26 },
+      { id: 'aldric', char: 'aldric', kind: 'human', name: 'Aldric', color: '#4a7a9a', gap: 22 },
+      { id: 'ronald', char: 'ronald', kind: 'human', name: 'Ronald', color: '#7a5a3a', gap: 16 },
+    ];
+  }
+
+  // ================================================================ STARTING THE CHAPTER
+  async function begin() {
+    const f = F(); f.ch2Started = true;
+    G.loadMap('forest_path', 'north'); G.setParty(party()); G.music('forest');
+  }
+  async function forestIntro() {
+    const f = F();
+    await nar('Luminara the Light-Bearer\n— Chapter Two —\nThe Dark Forest', { big: true });
+    await nar('Tall black spruce trees enclosed the travellers as they journeyed through the Dark Forest. There was a faint smell of damp moss in the crisp cold air. A mist emerged, and a chill breeze swept across their path.');
+    await nar('The three wagons trundled over the uneven ground as the rocky path gradually gave way to dark, damp soil. The conditions were ideal for moss and white mushrooms to grow, but made the path slippery for the horses.');
+    f.ch2Intro = true;
+    startQuest('darkforest');
+  }
+
+  // ================================================================ RONALD'S WHEEL
+  async function wheelStop() {
+    const f = F(); if (f.wheelStopped) return;
+    f.wheelStopped = true; G.setParty([]); G.refresh();
+    await say('ronald', 'Stop!');
+    await nar('Luminara reined her horse to a halt and turned around.');
+    await L('What is the matter?');
+    await say('ronald', 'My right wheel is loose.');
+    await nar('His wagon was old and had broken down many times before.');
+    await say('ronald', 'Come and help me with the wheel. I need the barrels off the back of my wagon.');
+    startQuest('wheel');
+  }
+  ACT.ronWagon = async () => {
+    const f = F();
+    if (!f.barrelsOff) {
+      await G.fade(true, 350); G.sfx('door'); f.barrelsOff = true; G.refresh(); await G.wait(300); await G.fade(false, 350);
+      await nar('Ronald, Aldric and Luminara all helped move the barrels off the wagon, so Ronald could repair it.');
+      await say('aldric', "At least it's not as though the wheel has come off, Ron.");
+      await say('ronald', 'Hmph. I need something flat and sturdy under the axle, to hold her up while I work.');
+      return;
+    }
+    if (!f.rockPlaced) return has('flatRock') ? think("The flat rock would hold the wagon up. I should use it here.") : say('ronald', 'Something flat and sturdy, under the axle. A round stone would roll right out.');
+    if (!f.barrelsBack) return loadBarrels();
+  };
+  USE.ronWagon = async (item) => { if (item !== 'flatRock') return false; await propWagon(); return true; };
+  USE.ronaldF = USE.ronWagon;
+  async function propWagon() {
+    const f = F();
+    if (!f.barrelsOff) { await say('ronald', "Barrels off first, or we'll never lift her."); return; }
+    if (f.rockPlaced) return;
+    G.take('flatRock'); f.rockPlaced = true; G.refresh(); G.sfx('land');
+    await nar('Luminara wedged the flat rock under the axle, and the wagon held steady.');
+    await nar('Aldric and Luminara offered help to repair the wheel.');
+    for (let i = 0; i < 3; i++) { G.sfx('hammer'); await G.wait(260); }
+    await say('ronald', "There. Good as new. Well, good as old. Now let's get those barrels back on.");
+  }
+  async function loadBarrels() {
+    const f = F();
+    await G.fade(true, 350); G.sfx('door'); f.barrelsBack = true; f.wheelFixed = true; G.refresh(); await G.wait(300); await G.fade(false, 350);
+    await nar('Once they finished repairing the wheel, they lifted the barrels onto the wagon once again and returned to their own wagons.');
+    await L("Why don't we stay in Lesterfield tonight?");
+    await nar('Aldric and Ronald nodded.');
+    finishQuest('wheel');
+    G.setParty(party()); G.refresh();
+    // the clouds come in
+    f.clouds = true;
+    await nar('As dark clouds began to form overhead, they blocked the sunlight from reaching the forest floor, making it appear to be later in the day than it actually was.');
+    await think("It's getting dark. It would be a good idea to light my lantern.");
+  }
+  ACT.ronaldF = async () => {
+    const f = F();
+    if (!f.barrelsOff) return say('ronald', 'The barrels need to come off the back first. Give us a hand?');
+    if (!f.rockPlaced) return say('ronald', 'Something flat and sturdy, under the axle. A round stone would roll right out.');
+    return say('ronald', "Wheel's mended. Just the barrels to go back on.");
+  };
+  ACT.aldricF = async () => {
+    const f = F();
+    if (!f.rockPlaced) return say('aldric', pick(["Ron's wagon is older than the both of us put together.", "At least it's not as though the wheel has come off."]));
+    return say('aldric', "Nearly there. Lesterfield before dark, I'd say.");
+  };
+  ACT.flatRock = async () => {
+    F().gotFlatRock = true; G.give('flatRock'); G.refresh();
+    await think('A flat, heavy stone. Sturdy, too.');
+  };
+
+  // ================================================================ LIGHTING THE LANTERN
+  async function lightLantern() {
+    const f = F();
+    if (f.lanternLit) return think('My lantern is already burning bright.');
+    if (!f.clouds) return think("It's still light enough to see. I'll save the tallow for when it gets dark.");
+    await nar('She picked up her flint and steel and began to start a small fire.');
+    await G.flintGame();
+    f.lanternLit = true; G.take('lanternReady'); G.give('lanternLit', true); G.hud();
+    G.notice('Your lantern is <b>lit</b>', 'lanternLit', { kind: 'item', desc: ITEMS.lanternLit.desc });
+    await nar('Using the burning tinder, she lit her lantern. She closed the glass door and snuffed out the fire from the tinder with moist dirt from the ground.');
+    await nar('Along with her lantern, she also carried her compass and a map, which she used frequently on her trips. Once she was confident that she was travelling in the right south-west direction towards Lesterfield, she placed both the map and the compass back into her satchel.');
+    G.addXP(10);
+    await G.tip('light');
+  }
+  const COMBOS = { 'flint+lanternReady': lightLantern };
+  SELF.lanternReady = lightLantern;
+  SELF.lanternLit = () => nar('The flame burns steady behind the glass. ' + (touch() ? 'Tap Raise Light' : 'Press Q') + ' to hold it high.');
+
+  // ================================================================ THE LUMINA
+  const WISP_SPOTS = [[20, 33], [8, 35], [19, 38]];
+  function spawnWisp(x, y) {
+    if (G.npc('lumina')) return G.npc('lumina');
+    const n = G.addNPC({ id: 'lumina', char: 'wisp', x, y, dir: 'down', name: 'Lumina', act: 'lumina', voice: 2 });
+    n.glow = 34; n.glowC = '160,255,170'; n.speed = 36; return n;
+  }
+  async function wispAppears() {
+    const f = F(); if (f.wispSeen) return; f.wispSeen = true;
+    spawnWisp(3, 31); G.walk('lumina', 18, 32, 30);
+    await nar('On her way, Luminara recognised what appeared to be a small, living, glowing green light moving across her path. It was no larger than a grapefruit. Its motion changed from bobbing up and down to swiftly surging forward.');
+    await nar('She had seen these creatures before. She always called them light wisps, or by their formal name, Lumina, which was the origin of her name.');
+    await nar('The lumina were seen on very rare occasions by Luminara. Many times she had tried to catch one and discover what they truly were. They seemed to be enchanted. *Perhaps it is a wandering spirit,* Luminara wondered. But she could never know for sure, as nobody had ever been able to take hold of one to study it.');
+    journalAdd('lumina');
+    startQuest('lumina');
+  }
+  ACT.lumina = async () => {
+    const f = F(); f.wispTries = (f.wispTries || 0) + 1;
+    const [x, y] = WISP_SPOTS[(f.wispTries - 1) % WISP_SPOTS.length];
+    G.sfx('magic'); G.walk('lumina', x, y, 95);
+    if (f.wispTries === 1) return think('Almost…!');
+    if (f.wispTries === 2) return think('It slipped right through my fingers!');
+    await think("It's no use. Nobody has ever been able to take hold of one.");
+    await wispFades();
+    finishQuest('lumina');
+  };
+  async function wispFades() {
+    const f = F(), n = G.npc('lumina'); if (f.wispFaded) return; f.wispFaded = true;
+    if (n) { n.fade = 1; for (let i = 0; i < 20; i++) { n.fade -= 0.05; await G.wait(60); } G.removeNPC('lumina'); }
+    await nar("The wisp began to fade away, leaving her and the crew travelling through the misty forest with only her lantern's light.");
+  }
+
+  // ================================================================ THE MISTY BOG
+  async function bogArrive() {
+    const f = F();
+    if (f.wispSeen && !f.wispFaded) { f.wispFaded = true; await nar("The wisp began to fade away, leaving her and the crew travelling through the misty forest with only her lantern's light."); }
+    if (f.bogIntro) return;
+    f.bogIntro = true;
+    await nar('It was about an hour into the journey when they took a turn from the path. A gentle pitter-patter of rain could be heard against the roofs of the wagons.');
+    await nar('As the rain began at a slow pace, the ground became boggier, forcing Luminara and the crew to slow down. The companions continued along the muddy ground together.');
+    await nar('The whispering sounds of the woods grew louder and louder, until they could hear the songbirds and woodland animals chattering in the light rain.');
+  }
+  ACT.owls = async () => {
+    const f = F();
+    if (f.owlsWatched) return nar(pick(['The owls blink slowly, side by side.', 'One owl ruffles its feathers against the rain. Its mate does not move at all.']));
+    G.sfx('hoot');
+    await nar('Luminara looked up in the trees and spotted a rare kind of owl. It was perched upon a tree branch with its mate, and staring back at Luminara.');
+    await think('*What are the owls thinking? It would be such a great experience to be able to fly like a bird.*');
+    const c = await G.choice('luminara', '*She watches them for a while…*', ['Imagine flying like a bird', 'Leave them in peace']);
+    if (c === 0) {
+      await G.fade(true, 600); G.music('wonder');
+      await nar('For a moment, Luminara imagined spreading her arms like wings, rising over the black spruce, through the rain and into the clouds…');
+      await G.fade(false, 400);
+      await G.flapMini(4, { label: `Beat your wings: ${touch() ? 'tap' : 'press <b>Space</b>'} when the ring turns <b style="color:#ffd860">gold</b>.`, icon: '🪶', msgs: ['Higher!', 'Over the treetops!', 'Into the clouds!', 'Flying!'] });
+      await G.fade(true, 500); G.music('forest'); await G.fade(false, 500);
+      await think('Someday, perhaps.');
+    }
+    f.owlsWatched = true; journalAdd('owls'); finishQuest('owls');
+  };
+  ACT.marker = async () => {
+    const f = F();
+    if (f.trailFound) return nar('The old waymarker, green with moss. Beyond it, small stones glow faintly along the trail.');
+    await nar('An old waymarker stone, green with moss. Beyond it, the mist is as thick as wool.');
+    if (!f.markerSeen) { f.markerSeen = true; await think("I can't see the path at all. Even my lantern only reaches a little way into it."); }
+  };
+  // Raising the lantern near the waymarker burns the mist back and shows the trail (further away with the sunstone).
+  async function onFlash(r) {
+    const f = F();
+    if (G.M.id !== 'forest_bog' || f.trailFound) return;
+    const mk = { x: 12 * 16 + 8, y: 18 * 16 };
+    if (Math.hypot(G.player.x - mk.x, G.player.y - mk.y) > r + 24) return;
+    f.trailFound = true; G.sfx('magic');
+    for (let i = 0; i < 30; i++) G.particles({ kind: 'smoke', x: 16 + Math.random() * 448, y: 320 + Math.random() * 60, vx: (Math.random() - 0.5) * 20, vy: -6, r: 3 + Math.random() * 4, t: 1.5 + Math.random() });
+    G.refresh();
+    await nar("Luminara held her lantern high. The light spread out across the mist, and the mist drew back from it, curling away between the trees. Small stones glowed faintly along a hidden trail.");
+    G.addXP(15);
+    await nar('Luminara also wondered about the rumours of the gateway in the Dark Forest. Perhaps during their journey they might spot it, but the odds were quite slim, since they were only travelling through the shortest route in the Dark Forest.');
+  }
+
+  // ================================================================ "AWOOOO…" AND THE UPRIGHT DEER
+  async function awoo() {
+    const f = F(); if (f.deerSeen) return; f.deerSeen = true;
+    G.sfx('snort');
+    await nar("They were headed to Lesterfield, which was now only half an hour away. Luminara's horse snorted and huffed. It had obviously heard the strange noises coming from the north-west. The sound resembled a mournful cry.");
+    G.sfx('howl');
+    await nar('"Awooooo…"', { big: true });
+    await nar('The cry echoed through the trees. The sound was muffled, as it was off in the distance. Luminara was uncertain about the type of creature making the unusual sound.');
+    const d = G.addNPC({ id: 'deer', char: 'deerUpright', x: 2, y: 25, dir: 'left', name: '?', voice: 0.4 }); d.speed = 10;
+    await G.camTo(d.x + 40, d.y - 20);
+    await nar('There was a faint silhouette of a deer in the distance. It appeared to be standing on its hind legs, walking upright.');
+    G.walk('deer', 0, 22, 10);
+    await G.wait(1200);
+    await nar('Luminara knew the sound could not have come from a deer, but what this creature could have been, she did not know.');
+    for (let i = 0; i < 16; i++) { d.fade = 0.9 - i * 0.06; await G.wait(70); }
+    G.removeNPC('deer');
+    await G.camTo(null);
+    await nar('She continued on her way through the forest, while keeping a sharp eye out for danger.');
+    journalAdd('deer');
+  }
+  async function sunShower() {
+    const f = F(); if (f.sunShower) return; f.sunShower = true;
+    await nar('Time passed slowly for the travellers as they continued through the damp forest. Luminara glanced back to see the other two travellers still with her. It was only a short trip to Lesterfield, and there was no sign of any strange creatures in the bushes, which was a relief.');
+    await nar('There was a shimmer of light beaming down from between the trees. Luminara looked up and saw the sun breaking through the clouds. Although it was still spitting with rain, a sun shower was better than pouring rain.');
+    await nar('She was very pleased they were nearing Lesterfield, as she could see the opening through the trees ahead.');
+  }
+
+  // ================================================================ GATES, ARRIVALS, GOALS
+  const GATES = {
+    toBog: () => F().lanternLit ? true : "It's getting too dark to see the path. I should light my lantern first.",
+    toLesterfield: () => {
+      if (!F().sunShower) return 'The trail goes on through the trees.';
+      F().reachedLesterfield = true;
+      return 'Lesterfield lies just beyond the trees. (The rest of Chapter Two is still being written!)';
+    },
+  };
+  const onEnter = {
+    forest_path: async () => {
+      const f = F();
+      if ((f.wheelFixed || !f.wheelStopped) && !(G.S.party && G.S.party.length)) G.setParty(party());
+      if (!f.ch2Intro) await forestIntro();
+      if (f.wispSeen && !f.wispFaded) { const [x, y] = WISP_SPOTS[((f.wispTries || 0) + WISP_SPOTS.length - 1) % WISP_SPOTS.length]; spawnWisp(x, y); }
+    },
+    forest_bog: async () => { if (!(G.S.party && G.S.party.length)) G.setParty(party()); await bogArrive(); },
+  };
+  async function mistEdge() { if (!F().trailFound) await think("The mist is too thick. I can't see where the path goes from here."); }
+  const ZONES = { wheelStop, luminaWisp: wispAppears, awoo, sunShower, mistEdge };
+
+  function goal() {
+    const f = F();
+    if (!f.wheelStopped) return ['Lead the caravan into the Dark Forest', 'forest_path', 14, 9];
+    if (!f.wheelFixed) {
+      if (!f.barrelsOff) return ["Help Ronald: take the barrels off his wagon", 'forest_path', 13, 11];
+      if (!f.rockPlaced) return has('flatRock') ? ["Prop up Ronald's wagon", 'forest_path', 13, 11] : ["Find something to prop up Ronald's wagon", null];
+      return ["Load the barrels back onto Ronald's wagon", 'forest_path', 13, 11];
+    }
+    if (!f.lanternLit) return ['Light your lantern', null];
+    if (!f.bogIntro) return ['Follow the path south through the Dark Forest', 'forest_path', 14, 47];
+    if (!f.trailFound) return ['Find the way through the mist', 'forest_bog', 12, 18];
+    if (!f.reachedLesterfield) return ['Follow the trail to Lesterfield', 'forest_bog', 15, 43];
+    return ['Chapter Two continues soon…', null];
+  }
+
+  Object.assign(STORY.LINKS, { forest_path: { forest_bog: [14, 47] }, forest_bog: { forest_path: [14, 0] } });
+
+  STORY.register({
+    n: 2, title: 'The Dark Forest', subtitle: 'Chapter Two · The Dark Forest', preview: true,
+    items: ITEMS, quests: QUESTS, act: ACT, use: USE, combos: COMBOS, gates: GATES, onEnter, self: SELF, zones: ZONES,
+    intro: async () => { }, goal, onFlash,
+    onLoad: async () => { if (!F().ch2Started) await begin(); },
+    musicFor: id => (id === 'forest_path' || id === 'forest_bog') ? 'forest' : null,
+    tintFor: id => id === 'forest_bog' && F().sunShower ? 'gold' : null,
+    darkFor: id => id === 'forest_path' ? (F().clouds ? 0.6 : 0.3) : id === 'forest_bog' ? (F().sunShower ? 0.25 : 0.6) : null,
+    particlesFor: id => id === 'forest_bog' ? (F().sunShower ? 'drizzle' : 'rain') : null,
+    journal: {
+      lumina: ['The Lumina', 'A small, living, glowing green light, no larger than a grapefruit. I call them light wisps, or by their formal name, Lumina: the origin of my name. Nobody has ever been able to take hold of one.'],
+      owls: ['The Owls', 'A rare kind of owl, perched with its mate in the Dark Forest, staring back at me. What are they thinking? It would be such a great experience to fly like a bird.'],
+      deer: ['The Upright Deer', 'A mournful cry, "Awooooo…", from the north-west, and the faint silhouette of a deer standing on its hind legs, walking upright. It could not have made that sound. What was it?'],
+    },
+    creatures: s => [
+      ...(s.flags.wispSeen ? ['<b>Lumina</b> — a little living light. Nobody has ever caught one.'] : []),
+      ...(s.flags.owlsWatched ? ['<b>Owls</b> — a rare kind, always in pairs.'] : []),
+      ...(s.flags.deerSeen ? ['<b>???</b> — a deer that walks upright. Not from around here.'] : []),
+    ],
+    mainBeats: [
+      ['The Dark Forest', "Ronald's loose wheel, the lantern lit with flint and steel, a glimpse of the lumina, and a trail found through the mist."],
+    ],
+    sideStories: [
+      { title: 'The Lumina', done: s => s.flags.wispTries >= 3, yes: 'Luminara tried to catch the lumina, as she always had. It slipped away, as it always did.', no: 'The lumina drifted away before Luminara could try to catch it.', miss: 'a journal memory and 20 experience' },
+      { title: 'The Owls', done: s => s.flags.owlsWatched, yes: 'She watched the rare owls, and for a moment imagined flying like a bird.', no: 'The rare owls watched the caravan pass by, unnoticed.', miss: 'a journal memory and 15 experience' },
+    ],
+  });
+})();
+
+</script>
 <script>/* js/game.js */
 // =====================================================================
 //  GAME ENGINE — world, movement, dialogue bubbles, inventory, saving.
@@ -2934,7 +3361,7 @@ const G = (() => {
     const fw = d.fw || 1;
     return { id: d.id, def: d, x: (d.x + fw / 2) * T, y: (d.y + 1) * T - 3, dir: d.dir || 'down', frame: 0, t: Math.random() * 10,
       home: { x: d.x, y: d.y }, path: [], speed: 32, name: d.name, color: d.color, voice: d.voice || 1, fw, wanderT: 2 + Math.random() * 4,
-      kind: d.horse ? 'horse' : d.dragon ? 'dragon' : d.char === 'owl' ? 'owl' : (d.char === 'possum' || d.char === 'fox') ? 'critter' : 'human', z: 0 };
+      kind: d.horse ? 'horse' : d.dragon ? 'dragon' : d.char === 'owl' ? 'owl' : d.char === 'wisp' ? 'wisp' : d.char === 'deerUpright' ? 'tall' : (d.char === 'possum' || d.char === 'fox') ? 'critter' : 'human', z: 0 };
   }
   function loadMap(id, spawn) {
     M = MAPS.get(id);
@@ -3224,7 +3651,8 @@ const G = (() => {
     else if (mode === 'title') renderTitle(dt);
     else if (mode === 'credits') renderCredits(dt);
     for (const k in pressed) pressed[k] = false;
-    requestAnimationFrame(loop);
+    try { const q = location.search; if (/[?&]preview\b/.test(q)) localStorage.setItem('luminara_preview', '1'); if (/[?&]nopreview\b/.test(q)) localStorage.removeItem('luminara_preview'); } catch (e) { }
+  requestAnimationFrame(loop);
   }
 
   function update(dt) {
@@ -3371,7 +3799,7 @@ const G = (() => {
     AUDIO.sfx('flash'); fx.push({ kind: 'flash', x: player.x, y: player.y - 14, t: 0.6, r: 0 });
     const R = 70 + S.lvl * 4 + (S.flags.sunstone ? 30 : 0);
     for (const g of goblins) if (!g.gone && Math.hypot(g.x - player.x, g.y - player.y) < R) scareGoblin(g);
-    if (STORY.onFlash) run(() => STORY.onFlash());
+    if (STORY.onFlash) run(() => STORY.onFlash(R));
   }
   function scareGoblin(g) {
     g.state = 'flee'; g.fleeT = 0.7; const a = Math.atan2(g.y - player.y, g.x - player.x); g.vx = Math.cos(a) * 110; g.vy = Math.sin(a) * 110;
@@ -3461,7 +3889,8 @@ const G = (() => {
   }
 
   function updateParticles(dt) {
-    const kind = M.particles;
+    const kind = (STORY.particlesFor && STORY.particlesFor(M.id)) || M.particles;
+    if (kind === 'rain' || kind === 'drizzle') { let k = dt * (kind === 'rain' ? 150 : 45); while (k > 0) { if (Math.random() < k) particles.push({ kind: 'rain', x: cam.x + Math.random() * (VW + 40) - 10, y: cam.y - 6 - Math.random() * 20, vx: -14, vy: 170 + Math.random() * 50, t: 1.6 }); k -= 1; } }
     if (kind === 'leaves' && particles.filter(p => p.kind === 'leaf').length < 18 && Math.random() < dt * 6) particles.push({ kind: 'leaf', x: cam.x + Math.random() * (VW + 60) - 30, y: cam.y - 6, vx: -6 - Math.random() * 10, vy: 12 + Math.random() * 10, ph: Math.random() * 6, c: ['#e0902a', '#e8c040', '#c05030', '#a86a2a'][Math.floor(Math.random() * 4)], t: 12 });
     if ((kind === 'fireflies') && particles.filter(p => p.kind === 'fly').length < 26 && Math.random() < dt * 10) particles.push({ kind: 'fly', x: cam.x + Math.random() * VW, y: cam.y + Math.random() * VH, ph: Math.random() * 6, t: 6 + Math.random() * 6 });
     if (kind === 'sparks' && Math.random() < dt * 20) { const o = M.objects.find(o => o.portal); if (o) particles.push({ kind: 'spark', x: o.x * T + 14 + Math.random() * 36, y: (o.y + 1) * T - 8 - Math.random() * 40, vx: (Math.random() - 0.5) * 10, vy: -10 - Math.random() * 20, t: 1.5 }); }
@@ -3603,6 +4032,18 @@ const G = (() => {
       ctx.drawImage(fr, Math.round(n.x - c.w / 2), Math.round(n.y - c.h + bob - (n.z || 0) + (inHole ? 10 : 0)));
       return;
     }
+    if (n.kind === 'wisp') { // a lumina: a small living green light, bobbing
+      const x = Math.round(n.x), y = Math.round(n.y - 14 + Math.sin(n.t * 3) * 3), a = n.fade == null ? 1 : Math.max(0, n.fade);
+      ctx.save(); ctx.globalAlpha = a; ctx.globalCompositeOperation = 'lighter';
+      const g = ctx.createRadialGradient(x, y, 0, x, y, 10); g.addColorStop(0, 'rgba(210,255,190,0.95)'); g.addColorStop(0.35, 'rgba(110,255,140,0.5)'); g.addColorStop(1, 'rgba(80,255,120,0)');
+      ctx.fillStyle = g; ctx.fillRect(x - 10, y - 10, 20, 20); ctx.globalCompositeOperation = 'source-over'; ctx.fillStyle = '#f4fff0'; ctx.fillRect(x - 1, y - 1, 2, 2); ctx.restore(); return;
+    }
+    if (n.kind === 'tall') { // a tall silhouette (the deer that walks upright)
+      const fr = c[n.path.length ? Math.floor(n.t * 4) % 2 : 0];
+      ctx.save(); ctx.globalAlpha = n.fade == null ? 0.9 : Math.max(0, n.fade);
+      if (n.dir === 'right') { ctx.translate(Math.round(n.x), 0); ctx.scale(-1, 1); ctx.drawImage(fr, -9, Math.round(n.y - 32)); } else ctx.drawImage(fr, Math.round(n.x - 9), Math.round(n.y - 32));
+      ctx.restore(); return;
+    }
     if (n.kind === 'critter') { const fr = c[Math.floor(n.t * (n.path.length ? 8 : 1.5)) % 2]; shadow(n.x, n.y, 6, 0.25); if (n.dir === 'right') { ctx.save(); ctx.translate(Math.round(n.x), 0); ctx.scale(-1, 1); ctx.drawImage(fr, -9, Math.round(n.y - 11)); ctx.restore(); } else ctx.drawImage(fr, Math.round(n.x - 9), Math.round(n.y - 11)); return; }
     if (n.kind === 'owl') { const fr = c[(Math.floor(n.t) % 5 === 0) ? 1 : 0]; ctx.drawImage(fr, Math.round(n.x - 8), Math.round(n.y - 18 + (n.def.perch || 0))); return; }
     shadow(n.x, n.y, 6, 0.28);
@@ -3657,6 +4098,7 @@ const G = (() => {
     for (const p of particles) {
       if (p.kind === 'leaf') { ctx.fillStyle = p.c; ctx.fillRect(Math.round(p.x), Math.round(p.y), 2, Math.sin(p.ph) > 0 ? 2 : 1); }
       else if (p.kind === 'fly') { const a = (Math.sin(p.ph * 3) * 0.5 + 0.5) * Math.min(1, p.t); ctx.fillStyle = `rgba(220,255,120,${a})`; ctx.fillRect(Math.round(p.x), Math.round(p.y), 1, 1); }
+      else if (p.kind === 'rain') { ctx.fillStyle = 'rgba(170,190,235,0.45)'; ctx.fillRect(Math.round(p.x), Math.round(p.y), 1, 3); }
       else if (p.kind === 'drop') { ctx.fillStyle = p.g ? 'rgba(190,225,255,0.85)' : '#a8d0f8'; ctx.fillRect(Math.round(p.x), Math.round(p.y), 1, 2); }
       else if (p.kind === 'smoke') { ctx.fillStyle = `rgba(220,220,225,${Math.min(0.5, p.t / 3)})`; ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, 7); ctx.fill(); }
       else if (p.kind === 'puff') { ctx.fillStyle = `rgba(120,160,80,${p.t})`; ctx.fillRect(Math.round(p.x), Math.round(p.y), 3, 3); }
@@ -3710,7 +4152,7 @@ const G = (() => {
       L.push({ x, y, r: li.r + Math.sin(time * 3 + o.x) * 2, c: li.c });
     }
     for (const p of particles) if (p.kind === 'fly') L.push({ x: p.x, y: p.y, r: 6, c: '220,255,120', weak: true });
-    for (const n of npcs) if (n.def.char === 'aurelina' || n.glow) L.push({ x: n.x, y: n.y - 20, r: n.glow || 80, c: '255,255,240' });
+    for (const n of npcs) if (n.def.char === 'aurelina' || n.glow) L.push({ x: n.x, y: n.y - (n.kind === 'wisp' ? 14 : 20), r: (n.glow || 80) * (n.fade == null ? 1 : Math.max(0, n.fade)), c: n.glowC || '255,255,240' });
     for (const f of fx) if (f.kind === 'flash') L.push({ x: f.x, y: f.y, r: 40 + (1 - f.t / 0.6) * 80, c: '255,250,210' });
     for (const f of fx) if (f.kind === 'beam') L.push({ x: f.x, y: f.y + f.h / 2, r: 90, c: '255,255,240' });
     return L;
@@ -3745,6 +4187,22 @@ const G = (() => {
     if (tint === 'gold') { ctx.fillStyle = 'rgba(255,200,120,0.1)'; ctx.fillRect(0, 0, VW, VH); }
   }
   function drawFog(sx, sy) {
+    if (Array.isArray(M.fog)) { // thick banks of mist over part of a map (drawn above the darkness, so they glow pale)
+      for (const f of M.fog) {
+        if (f.if && !f.if(S)) continue;
+        const x0 = f.x * T - sx, y0 = f.y * T - sy, w = f.w * T, h = f.h * T;
+        if (x0 > VW || y0 > VH || x0 + w < 0 || y0 + h < 0) continue;
+        for (let gy = 0; gy <= h; gy += 14) for (let gx = -20; gx <= w + 20; gx += 18) {
+          const k = GFX.hash(gx, gy, 77), edge = Math.min(1, gy / 20, (h - gy) / 20 + 0.4);
+          const x = x0 + gx + Math.sin(time * 0.4 + k * 9) * 8 + ((time * (3 + k * 4)) % 18), y = y0 + gy + Math.cos(time * 0.3 + k * 7) * 3;
+          if (x < -40 || x > VW + 40 || y < -30 || y > VH + 30) continue;
+          const r = 22 + k * 14, a = 0.16 * Math.max(0.2, edge);
+          const g = ctx.createRadialGradient(x, y, 0, x, y, r); g.addColorStop(0, `rgba(210,218,232,${a})`); g.addColorStop(1, 'rgba(210,218,232,0)');
+          ctx.fillStyle = g; ctx.fillRect(x - r, y - r, r * 2, r * 2);
+        }
+      }
+      return;
+    }
     for (let i = 0; i < 7; i++) {
       const x = ((i * 97 + time * (6 + i)) % (VW + 160)) - 80, y = (i * 53 + Math.sin(time * 0.3 + i) * 10) % VH;
       const g = ctx.createRadialGradient(x, y, 0, x, y, 70);
@@ -3916,7 +4374,7 @@ const G = (() => {
     combine: () => ({ target: '#bar [data-k=inv]', title: 'Combining items', text: 'Some items work better together! Open your <b>Satchel</b> → tap one item → press <b>Combine…</b> → then tap the other item.' }),
     compass: () => ({ target: 'compass', title: "Father's compass", text: 'This compass is special — it does <b>not</b> point north. Its <b style="color:#c03030">red needle</b> always points the way to your <b>next goal</b>. Follow it through doors and paths, and when you are in the right place it points straight at it.' }),
     jump: () => ({ target: isTouch() ? '#tbtns [data-b=jump]' : null, title: 'Jumping', text: isTouch() ? 'Tap <b>Jump</b> to leap — over logs, across streams, or up at things that are just out of reach.' : 'Press <b>Space</b> to jump — over logs, across streams, or up at things that are just out of reach.' }),
-    light: () => ({ target: '#hLightRow', title: 'Lantern light', text: `This bar shows your lantern's power. In the dark forest, raise your lantern with ${keyName('Q', 'Raise Light')} to scare away goblinites. It refills by itself.` }),
+    light: () => ({ target: '#hLightRow', title: 'Lantern light', text: `This bar shows your lantern's light. ${isTouch() ? 'Tap <b>Raise Light</b>' : 'Press <b>Q</b>'} to hold your lantern high and light up the darkness further. It uses a little light, and refills by itself.` }),
     hearts: () => ({ target: '#hHearts', title: 'Courage', text: `These hearts are Luminara's courage. Goblinites take one away if they catch her — keep them back with ${keyName('Q', 'Raise Light')}. Hearts come back slowly, and if they run out she just picks herself up again.` }),
     xp: () => ({ target: '#hLvlRow', title: 'Experience', text: 'Helping people earns <b>experience</b>. Fill the blue bar to reach a new <b>level</b> — Luminara gets braver (more hearts) and her lantern shines brighter.' }),
     coins: () => ({ target: '#hCoinRow', title: 'Copper coins', text: 'Your copper coins. Spend them at shops and stalls around Kraxenville.' }),
@@ -4267,6 +4725,43 @@ const G = (() => {
 
   // =================================================================== CARGO PUZZLE (Chapter One: "I can make it fit!")
   // A 4 x 3 wagon bed. Every piece must fit: one big crate, two long casks and four small barrels.
+  // Lighting the lantern with flint and steel (Chapter Two). As in Lisa's book, the first strike never catches:
+  // "CLICK, CLACK! There was no fire, so she tried again." Then strike in the bright zone, and blow gently on the ember.
+  function flintGame() {
+    if (DBG.auto) return Promise.resolve();
+    return new Promise(res => {
+      const bg = document.createElement('div'); bg.className = 'modal-bg';
+      const box = document.createElement('div'); box.className = 'modal flint'; bg.appendChild(box);
+      box.innerHTML = `<h3>Light the lantern</h3><p class="dim fl-help">Strike the flint against the steel when the spark is in the bright zone.</p>
+        <div class="fl-bar"><div class="fl-zone"></div><div class="fl-mark"></div></div>
+        <div class="fl-ember"><div class="fl-glow"></div></div><p class="fl-msg"></p>
+        <div class="modal-btns"><button class="primary fl-btn">Strike!</button></div>`;
+      ui.appendChild(bg);
+      const mark = box.querySelector('.fl-mark'), zone = box.querySelector('.fl-zone'), msg = box.querySelector('.fl-msg'), btn = box.querySelector('.fl-btn'), glow = box.querySelector('.fl-glow'), help = box.querySelector('.fl-help');
+      let stage = 'strike', strikes = 0, pos = 0, dir = 1, blows = 0, raf = 0, last = performance.now(), cool = 0;
+      const z0 = 0.58, z1 = 0.76; zone.style.left = z0 * 100 + '%'; zone.style.width = (z1 - z0) * 100 + '%';
+      const tick = now => { const dt = Math.min(0.05, (now - last) / 1000); last = now; if (stage === 'strike') { pos += dir * dt * 0.9; if (pos > 1) { pos = 1; dir = -1; } if (pos < 0) { pos = 0; dir = 1; } mark.style.left = pos * 100 + '%'; } cool = Math.max(0, cool - dt); raf = requestAnimationFrame(tick); };
+      raf = requestAnimationFrame(tick);
+      const finish = () => { cancelAnimationFrame(raf); document.removeEventListener('keydown', onKey, true); bg.remove(); res(); };
+      const act = () => {
+        if (cool > 0) return;
+        if (stage === 'strike') {
+          strikes++; cool = 0.35;
+          if (strikes === 1 || pos < z0 || pos > z1) { AUDIO.sfx('crack'); msg.innerHTML = strikes === 1 ? '<b>CLICK, CLACK!</b> There was no fire, so she tried again.' : '<b>Click.</b> Not quite. Try again when the spark is in the bright zone.'; box.classList.remove('shake'); void box.offsetWidth; box.classList.add('shake'); return; }
+          AUDIO.sfx('crack'); AUDIO.sfx('pop');
+          stage = 'blow'; msg.innerHTML = '<b>SCRAPE, CLICK!</b> A tiny ember appeared in the tinder.'; help.textContent = 'Blow on it gently until the flames grow.';
+          btn.textContent = 'Blow gently'; box.classList.add('lit'); glow.style.transform = 'scale(.35)';
+        } else if (stage === 'blow') {
+          blows++; cool = 0.25; AUDIO.sfx('swish');
+          glow.style.transform = `scale(${0.35 + blows * 0.22})`;
+          if (blows >= 3) { stage = 'light'; msg.innerHTML = 'The flames grew.'; help.textContent = 'Now light the lantern from the burning tinder.'; btn.textContent = 'Light the lantern ▶'; }
+        } else { AUDIO.sfx('magic'); finish(); }
+      };
+      const onKey = e => { if (e.code === 'Space' || e.code === 'Enter' || e.code === 'KeyE') { e.preventDefault(); e.stopPropagation(); act(); } else if (e.code !== 'Escape') e.stopPropagation(); };
+      document.addEventListener('keydown', onKey, true);
+      btn.onclick = act;
+    });
+  }
   function cargoPuzzle() {
     if (DBG.auto) return Promise.resolve();
     return new Promise(res => {
@@ -4468,6 +4963,7 @@ const G = (() => {
     <li><b>Jump:</b> Space — to reach things up high, and over logs and streams.</li>
     <li><b>Satchel (I):</b> look at items, <i>Use</i> them on things, or <i>Combine</i> two together.</li>
     <li><b>Quests (J):</b> every task, and the little tasks inside each big one. <b>Map (P)</b> shows the Kingdom of Krax.</li>
+    <li><b>Raise your lantern (Q)</b> once it's lit, to light up the darkness further.</li>
     <li><b>Stuck?</b> Open Quests and press <b>Hint</b> next to a quest for a small nudge.</li>
     <li>Help people to earn experience — level up to grow braver and brighter.</li>
     <li>The game <b>saves by itself</b> every few seconds and when you close it. Each player has their own save slot.</li></ul>`;
@@ -4504,7 +5000,9 @@ const G = (() => {
   }
   // "Chapter One", or "Chapter Two · The Dark Forest" (the first chapter shares the game's name, so it isn't repeated)
   function chapterLine(save) {
-    const n = (save && save.chapter) || 1, c = STORY.CHAPTERS.find(c => c.n === n) || STORY.CHAPTERS[0];
+    let n = (save && save.chapter) || 1;
+    if (save && save.flags && save.flags['ch' + n + 'Done'] && STORY.nextChapter(n)) n++;
+    const c = STORY.CHAPTERS.find(c => c.n === n) || STORY.CHAPTERS[0];
     const [num, name] = c.subtitle.split(' · ');
     const done = save && save.flags && save.flags['ch' + n + 'Done'];
     return (name === 'The Light-Bearer' ? num : c.subtitle) + (done ? ' · complete' : '');
@@ -4717,6 +5215,7 @@ const G = (() => {
     if (saved) {
       S = Object.assign(newState(), saved);
       S.met = S.met || {};
+      if (STORY.advance) STORY.advance(S);
       loadMap(S.map, { x: S.x, y: S.y, dir: S.dir });
       if (S.party && S.party.length) setParty(S.party);
       hud();
@@ -4768,7 +5267,7 @@ const G = (() => {
   const API = {
     get S() { return S; }, get M() { return M; }, get player() { return player; }, get held() { return held; }, T,
     say, think, narrate, choice, wait, fade, go, toast, give, take, has, addXP, addCoins, questStart, questDone, setHeld, emote,
-    npc, walk: walkNPC, fly: flyNPC, addNPC, removeNPC, refresh, camTo, faceTo, setParty, showCredits, cargoPuzzle: () => cargoPuzzle(),
+    npc, walk: walkNPC, fly: flyNPC, addNPC, removeNPC, refresh, camTo, faceTo, setParty, showCredits, cargoPuzzle: () => cargoPuzzle(), flintGame: () => flintGame(),
     notice, sfx: (n, a) => AUDIO.sfx(n, a), music: n => AUDIO.music(n), hud, shake: (t = 0.4) => { shakeT = t; },
     fx: f => fx.push(f), particles: p => particles.push(p), get followers() { return followers; }, loadMap, save,
     dbg: DBG, flapMini: (n, o) => flapMini(n, o), openPanel, tip, tipLater, chapterSummary,

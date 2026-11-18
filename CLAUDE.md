@@ -11,6 +11,9 @@ It plays at https://matt-gday.github.io/luminara-dragonhold/ (GitHub Pages, from
 - Each chapter is designed first in `docs/chapter-N-plan.md` (see docs/chapter-2-plan.md). Keep chapters about as long
   as Chapter One (20–40 minutes).
 - Chapter plan: game ch1 = book 1–2 (done), ch2 = book 3–6, ch3 = book 7–8, ch4 = book 9–11, ch5 = book 12–13.
+- A chapter still being built is registered with `preview: true`: it stays hidden from normal players (Lisa) and only
+  appears in a browser that has opened the game once with `?preview` (`?nopreview` turns it off again).
+  Remove `preview: true` when the chapter is finished. Chapter Two: stage 1 (the Dark Forest) is done.
 - *The Three Dragons* (Sianna, Yennefer, Rosanna, Aurelina) is a **separate children's game**. Keep it out of Luminara's game.
 - Lisa's world: Kingdom of Krax (Kraxenville NE, Brushwood, Wockville, Lesterfield; a big forest between Wockville and
   Lesterfield), the Dark Forest with the Ruined Keep, the Gateway, and Vosmos (mountains N and NW, volcano in the north centre).

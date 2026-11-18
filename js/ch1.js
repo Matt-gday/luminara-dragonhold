@@ -738,7 +738,9 @@
     await nar('End of Chapter One', { big: true });
     G.save();
     await G.chapterSummary(STORY.summaryHTML(G.S, 1));
-    await nar('Next: Chapter Two — The Dark Forest\n(coming soon)', { big: true });
+    const next = STORY.nextChapter(1);
+    if (next) { G.S.chapter = 2; G.save(); await nar('Next: Chapter Two — The Dark Forest', { big: true }); }
+    else await nar('Next: Chapter Two — The Dark Forest\n(coming soon)', { big: true });
     G.showCredits([
       '#Luminara the Light-Bearer', 'Chapter One', '', '',
       '#Story & World', 'Lisa', '', '',

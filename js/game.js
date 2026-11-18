@@ -61,7 +61,7 @@ const G = (() => {
     const fw = d.fw || 1;
     return { id: d.id, def: d, x: (d.x + fw / 2) * T, y: (d.y + 1) * T - 3, dir: d.dir || 'down', frame: 0, t: Math.random() * 10,
       home: { x: d.x, y: d.y }, path: [], speed: 32, name: d.name, color: d.color, voice: d.voice || 1, fw, wanderT: 2 + Math.random() * 4,
-      kind: d.horse ? 'horse' : d.dragon ? 'dragon' : d.char === 'owl' ? 'owl' : (d.char === 'possum' || d.char === 'fox') ? 'critter' : 'human', z: 0 };
+      kind: d.horse ? 'horse' : d.dragon ? 'dragon' : d.char === 'owl' ? 'owl' : d.char === 'wisp' ? 'wisp' : d.char === 'deerUpright' ? 'tall' : (d.char === 'possum' || d.char === 'fox') ? 'critter' : 'human', z: 0 };
   }
   function loadMap(id, spawn) {
     M = MAPS.get(id);
@@ -351,7 +351,8 @@ const G = (() => {
     else if (mode === 'title') renderTitle(dt);
     else if (mode === 'credits') renderCredits(dt);
     for (const k in pressed) pressed[k] = false;
-    requestAnimationFrame(loop);
+    try { const q = location.search; if (/[?&]preview\b/.test(q)) localStorage.setItem('luminara_preview', '1'); if (/[?&]nopreview\b/.test(q)) localStorage.removeItem('luminara_preview'); } catch (e) { }
+  requestAnimationFrame(loop);
   }
 
   function update(dt) {
@@ -498,7 +499,7 @@ const G = (() => {
     AUDIO.sfx('flash'); fx.push({ kind: 'flash', x: player.x, y: player.y - 14, t: 0.6, r: 0 });
     const R = 70 + S.lvl * 4 + (S.flags.sunstone ? 30 : 0);
     for (const g of goblins) if (!g.gone && Math.hypot(g.x - player.x, g.y - player.y) < R) scareGoblin(g);
-    if (STORY.onFlash) run(() => STORY.onFlash());
+    if (STORY.onFlash) run(() => STORY.onFlash(R));
   }
   function scareGoblin(g) {
     g.state = 'flee'; g.fleeT = 0.7; const a = Math.atan2(g.y - player.y, g.x - player.x); g.vx = Math.cos(a) * 110; g.vy = Math.sin(a) * 110;
@@ -588,7 +589,8 @@ const G = (() => {
   }
 
   function updateParticles(dt) {
-    const kind = M.particles;
+    const kind = (STORY.particlesFor && STORY.particlesFor(M.id)) || M.particles;
+    if (kind === 'rain' || kind === 'drizzle') { let k = dt * (kind === 'rain' ? 150 : 45); while (k > 0) { if (Math.random() < k) particles.push({ kind: 'rain', x: cam.x + Math.random() * (VW + 40) - 10, y: cam.y - 6 - Math.random() * 20, vx: -14, vy: 170 + Math.random() * 50, t: 1.6 }); k -= 1; } }
     if (kind === 'leaves' && particles.filter(p => p.kind === 'leaf').length < 18 && Math.random() < dt * 6) particles.push({ kind: 'leaf', x: cam.x + Math.random() * (VW + 60) - 30, y: cam.y - 6, vx: -6 - Math.random() * 10, vy: 12 + Math.random() * 10, ph: Math.random() * 6, c: ['#e0902a', '#e8c040', '#c05030', '#a86a2a'][Math.floor(Math.random() * 4)], t: 12 });
     if ((kind === 'fireflies') && particles.filter(p => p.kind === 'fly').length < 26 && Math.random() < dt * 10) particles.push({ kind: 'fly', x: cam.x + Math.random() * VW, y: cam.y + Math.random() * VH, ph: Math.random() * 6, t: 6 + Math.random() * 6 });
     if (kind === 'sparks' && Math.random() < dt * 20) { const o = M.objects.find(o => o.portal); if (o) particles.push({ kind: 'spark', x: o.x * T + 14 + Math.random() * 36, y: (o.y + 1) * T - 8 - Math.random() * 40, vx: (Math.random() - 0.5) * 10, vy: -10 - Math.random() * 20, t: 1.5 }); }
@@ -730,6 +732,18 @@ const G = (() => {
       ctx.drawImage(fr, Math.round(n.x - c.w / 2), Math.round(n.y - c.h + bob - (n.z || 0) + (inHole ? 10 : 0)));
       return;
     }
+    if (n.kind === 'wisp') { // a lumina: a small living green light, bobbing
+      const x = Math.round(n.x), y = Math.round(n.y - 14 + Math.sin(n.t * 3) * 3), a = n.fade == null ? 1 : Math.max(0, n.fade);
+      ctx.save(); ctx.globalAlpha = a; ctx.globalCompositeOperation = 'lighter';
+      const g = ctx.createRadialGradient(x, y, 0, x, y, 10); g.addColorStop(0, 'rgba(210,255,190,0.95)'); g.addColorStop(0.35, 'rgba(110,255,140,0.5)'); g.addColorStop(1, 'rgba(80,255,120,0)');
+      ctx.fillStyle = g; ctx.fillRect(x - 10, y - 10, 20, 20); ctx.globalCompositeOperation = 'source-over'; ctx.fillStyle = '#f4fff0'; ctx.fillRect(x - 1, y - 1, 2, 2); ctx.restore(); return;
+    }
+    if (n.kind === 'tall') { // a tall silhouette (the deer that walks upright)
+      const fr = c[n.path.length ? Math.floor(n.t * 4) % 2 : 0];
+      ctx.save(); ctx.globalAlpha = n.fade == null ? 0.9 : Math.max(0, n.fade);
+      if (n.dir === 'right') { ctx.translate(Math.round(n.x), 0); ctx.scale(-1, 1); ctx.drawImage(fr, -9, Math.round(n.y - 32)); } else ctx.drawImage(fr, Math.round(n.x - 9), Math.round(n.y - 32));
+      ctx.restore(); return;
+    }
     if (n.kind === 'critter') { const fr = c[Math.floor(n.t * (n.path.length ? 8 : 1.5)) % 2]; shadow(n.x, n.y, 6, 0.25); if (n.dir === 'right') { ctx.save(); ctx.translate(Math.round(n.x), 0); ctx.scale(-1, 1); ctx.drawImage(fr, -9, Math.round(n.y - 11)); ctx.restore(); } else ctx.drawImage(fr, Math.round(n.x - 9), Math.round(n.y - 11)); return; }
     if (n.kind === 'owl') { const fr = c[(Math.floor(n.t) % 5 === 0) ? 1 : 0]; ctx.drawImage(fr, Math.round(n.x - 8), Math.round(n.y - 18 + (n.def.perch || 0))); return; }
     shadow(n.x, n.y, 6, 0.28);
@@ -784,6 +798,7 @@ const G = (() => {
     for (const p of particles) {
       if (p.kind === 'leaf') { ctx.fillStyle = p.c; ctx.fillRect(Math.round(p.x), Math.round(p.y), 2, Math.sin(p.ph) > 0 ? 2 : 1); }
       else if (p.kind === 'fly') { const a = (Math.sin(p.ph * 3) * 0.5 + 0.5) * Math.min(1, p.t); ctx.fillStyle = `rgba(220,255,120,${a})`; ctx.fillRect(Math.round(p.x), Math.round(p.y), 1, 1); }
+      else if (p.kind === 'rain') { ctx.fillStyle = 'rgba(170,190,235,0.45)'; ctx.fillRect(Math.round(p.x), Math.round(p.y), 1, 3); }
       else if (p.kind === 'drop') { ctx.fillStyle = p.g ? 'rgba(190,225,255,0.85)' : '#a8d0f8'; ctx.fillRect(Math.round(p.x), Math.round(p.y), 1, 2); }
       else if (p.kind === 'smoke') { ctx.fillStyle = `rgba(220,220,225,${Math.min(0.5, p.t / 3)})`; ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, 7); ctx.fill(); }
       else if (p.kind === 'puff') { ctx.fillStyle = `rgba(120,160,80,${p.t})`; ctx.fillRect(Math.round(p.x), Math.round(p.y), 3, 3); }
@@ -837,7 +852,7 @@ const G = (() => {
       L.push({ x, y, r: li.r + Math.sin(time * 3 + o.x) * 2, c: li.c });
     }
     for (const p of particles) if (p.kind === 'fly') L.push({ x: p.x, y: p.y, r: 6, c: '220,255,120', weak: true });
-    for (const n of npcs) if (n.def.char === 'aurelina' || n.glow) L.push({ x: n.x, y: n.y - 20, r: n.glow || 80, c: '255,255,240' });
+    for (const n of npcs) if (n.def.char === 'aurelina' || n.glow) L.push({ x: n.x, y: n.y - (n.kind === 'wisp' ? 14 : 20), r: (n.glow || 80) * (n.fade == null ? 1 : Math.max(0, n.fade)), c: n.glowC || '255,255,240' });
     for (const f of fx) if (f.kind === 'flash') L.push({ x: f.x, y: f.y, r: 40 + (1 - f.t / 0.6) * 80, c: '255,250,210' });
     for (const f of fx) if (f.kind === 'beam') L.push({ x: f.x, y: f.y + f.h / 2, r: 90, c: '255,255,240' });
     return L;
@@ -872,6 +887,22 @@ const G = (() => {
     if (tint === 'gold') { ctx.fillStyle = 'rgba(255,200,120,0.1)'; ctx.fillRect(0, 0, VW, VH); }
   }
   function drawFog(sx, sy) {
+    if (Array.isArray(M.fog)) { // thick banks of mist over part of a map (drawn above the darkness, so they glow pale)
+      for (const f of M.fog) {
+        if (f.if && !f.if(S)) continue;
+        const x0 = f.x * T - sx, y0 = f.y * T - sy, w = f.w * T, h = f.h * T;
+        if (x0 > VW || y0 > VH || x0 + w < 0 || y0 + h < 0) continue;
+        for (let gy = 0; gy <= h; gy += 14) for (let gx = -20; gx <= w + 20; gx += 18) {
+          const k = GFX.hash(gx, gy, 77), edge = Math.min(1, gy / 20, (h - gy) / 20 + 0.4);
+          const x = x0 + gx + Math.sin(time * 0.4 + k * 9) * 8 + ((time * (3 + k * 4)) % 18), y = y0 + gy + Math.cos(time * 0.3 + k * 7) * 3;
+          if (x < -40 || x > VW + 40 || y < -30 || y > VH + 30) continue;
+          const r = 22 + k * 14, a = 0.16 * Math.max(0.2, edge);
+          const g = ctx.createRadialGradient(x, y, 0, x, y, r); g.addColorStop(0, `rgba(210,218,232,${a})`); g.addColorStop(1, 'rgba(210,218,232,0)');
+          ctx.fillStyle = g; ctx.fillRect(x - r, y - r, r * 2, r * 2);
+        }
+      }
+      return;
+    }
     for (let i = 0; i < 7; i++) {
       const x = ((i * 97 + time * (6 + i)) % (VW + 160)) - 80, y = (i * 53 + Math.sin(time * 0.3 + i) * 10) % VH;
       const g = ctx.createRadialGradient(x, y, 0, x, y, 70);
@@ -1043,7 +1074,7 @@ const G = (() => {
     combine: () => ({ target: '#bar [data-k=inv]', title: 'Combining items', text: 'Some items work better together! Open your <b>Satchel</b> → tap one item → press <b>Combine…</b> → then tap the other item.' }),
     compass: () => ({ target: 'compass', title: "Father's compass", text: 'This compass is special — it does <b>not</b> point north. Its <b style="color:#c03030">red needle</b> always points the way to your <b>next goal</b>. Follow it through doors and paths, and when you are in the right place it points straight at it.' }),
     jump: () => ({ target: isTouch() ? '#tbtns [data-b=jump]' : null, title: 'Jumping', text: isTouch() ? 'Tap <b>Jump</b> to leap — over logs, across streams, or up at things that are just out of reach.' : 'Press <b>Space</b> to jump — over logs, across streams, or up at things that are just out of reach.' }),
-    light: () => ({ target: '#hLightRow', title: 'Lantern light', text: `This bar shows your lantern's power. In the dark forest, raise your lantern with ${keyName('Q', 'Raise Light')} to scare away goblinites. It refills by itself.` }),
+    light: () => ({ target: '#hLightRow', title: 'Lantern light', text: `This bar shows your lantern's light. ${isTouch() ? 'Tap <b>Raise Light</b>' : 'Press <b>Q</b>'} to hold your lantern high and light up the darkness further. It uses a little light, and refills by itself.` }),
     hearts: () => ({ target: '#hHearts', title: 'Courage', text: `These hearts are Luminara's courage. Goblinites take one away if they catch her — keep them back with ${keyName('Q', 'Raise Light')}. Hearts come back slowly, and if they run out she just picks herself up again.` }),
     xp: () => ({ target: '#hLvlRow', title: 'Experience', text: 'Helping people earns <b>experience</b>. Fill the blue bar to reach a new <b>level</b> — Luminara gets braver (more hearts) and her lantern shines brighter.' }),
     coins: () => ({ target: '#hCoinRow', title: 'Copper coins', text: 'Your copper coins. Spend them at shops and stalls around Kraxenville.' }),
@@ -1394,6 +1425,43 @@ const G = (() => {
 
   // =================================================================== CARGO PUZZLE (Chapter One: "I can make it fit!")
   // A 4 x 3 wagon bed. Every piece must fit: one big crate, two long casks and four small barrels.
+  // Lighting the lantern with flint and steel (Chapter Two). As in Lisa's book, the first strike never catches:
+  // "CLICK, CLACK! There was no fire, so she tried again." Then strike in the bright zone, and blow gently on the ember.
+  function flintGame() {
+    if (DBG.auto) return Promise.resolve();
+    return new Promise(res => {
+      const bg = document.createElement('div'); bg.className = 'modal-bg';
+      const box = document.createElement('div'); box.className = 'modal flint'; bg.appendChild(box);
+      box.innerHTML = `<h3>Light the lantern</h3><p class="dim fl-help">Strike the flint against the steel when the spark is in the bright zone.</p>
+        <div class="fl-bar"><div class="fl-zone"></div><div class="fl-mark"></div></div>
+        <div class="fl-ember"><div class="fl-glow"></div></div><p class="fl-msg"></p>
+        <div class="modal-btns"><button class="primary fl-btn">Strike!</button></div>`;
+      ui.appendChild(bg);
+      const mark = box.querySelector('.fl-mark'), zone = box.querySelector('.fl-zone'), msg = box.querySelector('.fl-msg'), btn = box.querySelector('.fl-btn'), glow = box.querySelector('.fl-glow'), help = box.querySelector('.fl-help');
+      let stage = 'strike', strikes = 0, pos = 0, dir = 1, blows = 0, raf = 0, last = performance.now(), cool = 0;
+      const z0 = 0.58, z1 = 0.76; zone.style.left = z0 * 100 + '%'; zone.style.width = (z1 - z0) * 100 + '%';
+      const tick = now => { const dt = Math.min(0.05, (now - last) / 1000); last = now; if (stage === 'strike') { pos += dir * dt * 0.9; if (pos > 1) { pos = 1; dir = -1; } if (pos < 0) { pos = 0; dir = 1; } mark.style.left = pos * 100 + '%'; } cool = Math.max(0, cool - dt); raf = requestAnimationFrame(tick); };
+      raf = requestAnimationFrame(tick);
+      const finish = () => { cancelAnimationFrame(raf); document.removeEventListener('keydown', onKey, true); bg.remove(); res(); };
+      const act = () => {
+        if (cool > 0) return;
+        if (stage === 'strike') {
+          strikes++; cool = 0.35;
+          if (strikes === 1 || pos < z0 || pos > z1) { AUDIO.sfx('crack'); msg.innerHTML = strikes === 1 ? '<b>CLICK, CLACK!</b> There was no fire, so she tried again.' : '<b>Click.</b> Not quite. Try again when the spark is in the bright zone.'; box.classList.remove('shake'); void box.offsetWidth; box.classList.add('shake'); return; }
+          AUDIO.sfx('crack'); AUDIO.sfx('pop');
+          stage = 'blow'; msg.innerHTML = '<b>SCRAPE, CLICK!</b> A tiny ember appeared in the tinder.'; help.textContent = 'Blow on it gently until the flames grow.';
+          btn.textContent = 'Blow gently'; box.classList.add('lit'); glow.style.transform = 'scale(.35)';
+        } else if (stage === 'blow') {
+          blows++; cool = 0.25; AUDIO.sfx('swish');
+          glow.style.transform = `scale(${0.35 + blows * 0.22})`;
+          if (blows >= 3) { stage = 'light'; msg.innerHTML = 'The flames grew.'; help.textContent = 'Now light the lantern from the burning tinder.'; btn.textContent = 'Light the lantern ▶'; }
+        } else { AUDIO.sfx('magic'); finish(); }
+      };
+      const onKey = e => { if (e.code === 'Space' || e.code === 'Enter' || e.code === 'KeyE') { e.preventDefault(); e.stopPropagation(); act(); } else if (e.code !== 'Escape') e.stopPropagation(); };
+      document.addEventListener('keydown', onKey, true);
+      btn.onclick = act;
+    });
+  }
   function cargoPuzzle() {
     if (DBG.auto) return Promise.resolve();
     return new Promise(res => {
@@ -1595,6 +1663,7 @@ const G = (() => {
     <li><b>Jump:</b> Space — to reach things up high, and over logs and streams.</li>
     <li><b>Satchel (I):</b> look at items, <i>Use</i> them on things, or <i>Combine</i> two together.</li>
     <li><b>Quests (J):</b> every task, and the little tasks inside each big one. <b>Map (P)</b> shows the Kingdom of Krax.</li>
+    <li><b>Raise your lantern (Q)</b> once it's lit, to light up the darkness further.</li>
     <li><b>Stuck?</b> Open Quests and press <b>Hint</b> next to a quest for a small nudge.</li>
     <li>Help people to earn experience — level up to grow braver and brighter.</li>
     <li>The game <b>saves by itself</b> every few seconds and when you close it. Each player has their own save slot.</li></ul>`;
@@ -1631,7 +1700,9 @@ const G = (() => {
   }
   // "Chapter One", or "Chapter Two · The Dark Forest" (the first chapter shares the game's name, so it isn't repeated)
   function chapterLine(save) {
-    const n = (save && save.chapter) || 1, c = STORY.CHAPTERS.find(c => c.n === n) || STORY.CHAPTERS[0];
+    let n = (save && save.chapter) || 1;
+    if (save && save.flags && save.flags['ch' + n + 'Done'] && STORY.nextChapter(n)) n++;
+    const c = STORY.CHAPTERS.find(c => c.n === n) || STORY.CHAPTERS[0];
     const [num, name] = c.subtitle.split(' · ');
     const done = save && save.flags && save.flags['ch' + n + 'Done'];
     return (name === 'The Light-Bearer' ? num : c.subtitle) + (done ? ' · complete' : '');
@@ -1844,6 +1915,7 @@ const G = (() => {
     if (saved) {
       S = Object.assign(newState(), saved);
       S.met = S.met || {};
+      if (STORY.advance) STORY.advance(S);
       loadMap(S.map, { x: S.x, y: S.y, dir: S.dir });
       if (S.party && S.party.length) setParty(S.party);
       hud();
@@ -1895,7 +1967,7 @@ const G = (() => {
   const API = {
     get S() { return S; }, get M() { return M; }, get player() { return player; }, get held() { return held; }, T,
     say, think, narrate, choice, wait, fade, go, toast, give, take, has, addXP, addCoins, questStart, questDone, setHeld, emote,
-    npc, walk: walkNPC, fly: flyNPC, addNPC, removeNPC, refresh, camTo, faceTo, setParty, showCredits, cargoPuzzle: () => cargoPuzzle(),
+    npc, walk: walkNPC, fly: flyNPC, addNPC, removeNPC, refresh, camTo, faceTo, setParty, showCredits, cargoPuzzle: () => cargoPuzzle(), flintGame: () => flintGame(),
     notice, sfx: (n, a) => AUDIO.sfx(n, a), music: n => AUDIO.music(n), hud, shake: (t = 0.4) => { shakeT = t; },
     fx: f => fx.push(f), particles: p => particles.push(p), get followers() { return followers; }, loadMap, save,
     dbg: DBG, flapMini: (n, o) => flapMini(n, o), openPanel, tip, tipLater, chapterSummary,
