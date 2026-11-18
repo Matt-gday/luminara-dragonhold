@@ -23,6 +23,9 @@ Players wander. For every quest step, ask: *what if they do this first, last, tw
 - Repeat interactions need sensible repeat lines. Closing the app mid-scene must be safe (arrival scenes replay via `onEnter`).
 - Every new feature, button or mechanic gets a one-time tip (`TIPS` in js/game.js) when it first matters,
   with touch wording on phones.
+- Don't hand-hold. Let players make connections themselves (e.g. Fredrick's string snaps on camera; nobody says "ask Fredrick").
+  Every quest step gets a `hint:` instead: `[nudge, clearer hint]` (or a function of state), shown only if the player
+  asks via the Hint button in Quests. Hints describe just the next step.
 - Nothing important may vanish on a timer. Quests, items, levels, journal entries and coins use `G.notice()`:
   they collect into a card the player must tap Continue on (shown before the next line of dialogue).
   `G.toast()` is only for short hints, which stay until tapped or until the player's next action.

@@ -1023,6 +1023,7 @@ const G = (() => {
     xp: () => ({ target: '#hLvlRow', title: 'Experience', text: 'Helping people earns <b>experience</b>. Fill the blue bar to reach a new <b>level</b> — Luminara gets braver (more hearts) and her lantern shines brighter.' }),
     coins: () => ({ target: '#hCoinRow', title: 'Copper coins', text: 'Your copper coins. Spend them at shops and stalls around Kraxenville.' }),
     journal: () => ({ target: '#bar [data-k=quest]', title: 'Your journal', text: 'Memories and discoveries are written in your <b>Journal</b>. Open <b>Quests</b> and choose the <b>Journal</b> tab to read it.' }),
+    hint: () => ({ target: '#panelBody .qhint', title: 'Stuck?', text: `If you ever get stuck, ${isTouch() ? 'tap' : 'click'} <b>Hint</b> next to a quest for a small nudge with just the next step. Asking again gives a clearer hint.` }),
     map: () => ({ target: '#bar [data-k=map]', title: 'Your map', text: `You copied the map of the Kingdom of Krax! Open ${keyName('P', 'Map')} any time to see where you are.` }),
   };
   let tipQueue = [], tipActive = null;
@@ -1239,6 +1240,7 @@ const G = (() => {
       const q = STORY.QUESTS[id]; const stt = S.q[id]; if (!stt) return null;
       const el = document.createElement('div'); el.className = 'q' + (stt === 'done' ? ' done' : '') + (depth ? ' sub' : '');
       el.innerHTML = `<h4>${q.title}${depth === 0 ? (q.side ? '<span class="tag side">Side story · optional</span>' : '<span class="tag main">Main story</span>') : ''}</h4><div class="d">${fmt(q.desc)}${q.giver ? ' — <i>' + q.giver + '</i>' : ''}</div>`;
+      if (stt !== 'done' && nextHints(id)) { const hb = document.createElement('button'); hb.className = 'qhint'; hb.textContent = 'Hint'; hb.title = 'Stuck? Get a small nudge'; hb.onclick = e => { e.stopPropagation(); showHint(id); }; el.querySelector('h4').appendChild(hb); }
       if (q.steps && stt !== 'done') { const ul = document.createElement('ul'); q.steps.forEach(s => { if (s.hide && s.hide(S)) return; const ok = s.done(S); const li = document.createElement('li'); li.className = ok ? 'ok' : ''; li.textContent = (ok ? '✓ ' : '◇ ') + s.t; ul.appendChild(li); }); el.appendChild(ul); }
       for (const cid of Object.keys(STORY.QUESTS)) if (STORY.QUESTS[cid].parent === id) { const c = tree(cid, depth + 1); if (c) el.appendChild(c); }
       return el;
@@ -1249,6 +1251,38 @@ const G = (() => {
     [...active, ...done].forEach(r => { const e = tree(r, 0); if (e) wrap.appendChild(e); });
     if (!wrap.children.length) wrap.innerHTML = '<p>No quests yet. Look around — someone will need your help soon.</p>';
     body.appendChild(wrap);
+    if (wrap.querySelector('.qhint') && !tipSeen('hint')) setTimeout(() => { if (curTab === 'quest') tip('hint'); }, 350);
+  }
+  // ---------- hints: optional, one small nudge at a time for just the next step of a quest
+  function nextHints(id) {
+    const q = STORY.QUESTS[id]; if (!q || !q.steps) return null;
+    for (let i = 0; i < q.steps.length; i++) {
+      const st = q.steps[i]; if (st.hide && st.hide(S)) continue; if (st.done(S)) continue;
+      let h = typeof st.hint === 'function' ? st.hint(S) : st.hint; if (!h) return null;
+      h = Array.isArray(h) ? h : [h];
+      return { st, hints: h, key: id + ':' + i + ':' + h[0].slice(0, 20) };
+    }
+    return null;
+  }
+  async function showHint(id) {
+    const q = STORY.QUESTS[id], n = nextHints(id); if (!n) return;
+    S.hints = S.hints || {};
+    let lvl = S.hints[n.key] || 0;
+    if (!lvl) {
+      const ok = await modal({ title: 'Need a hint?', html: `<p>Working it out yourself is half the fun!</p><p>A hint gives you a small nudge for the next step of <b>${q.title}</b>, and nothing more.</p>`,
+        buttons: [{ label: 'Keep trying', value: false }, { label: 'Show a hint', value: true, primary: true }], escValue: false });
+      if (!ok) return;
+      lvl = 1;
+    }
+    for (;;) {
+      S.hints[n.key] = lvl; S.hintsUsed = Object.keys(S.hints).length;
+      const more = lvl < n.hints.length;
+      const html = `<p class="hstep">Next: ${fmt(n.st.t)}</p>` + n.hints.slice(0, lvl).map((h, i) => `<p class="hint${i === lvl - 1 ? ' new' : ''}">${fmt(h)}</p>`).join('');
+      const v = await modal({ title: lvl > 1 ? 'A clearer hint' : 'Hint', html, buttons: [...(more ? [{ label: 'A clearer hint', value: 'more' }] : []), { label: 'Thanks!', value: true, primary: true }], escValue: true });
+      if (v !== 'more') break;
+      lvl++;
+    }
+    if (curTab === 'quest') renderPanel();
   }
   // ---------- the realm map (Kingdom of Krax & Vosmos)
   const MAP_SPOT = { cottage: [520, 78], hillside: [516, 92], town: [508, 108], guild: [508, 108], cauldron: [508, 108], road: [514, 150], brushwood: [520, 196] };
@@ -1535,6 +1569,7 @@ const G = (() => {
     <li><b>Jump:</b> Space — to reach things up high, and over logs and streams.</li>
     <li><b>Satchel (I):</b> look at items, <i>Use</i> them on things, or <i>Combine</i> two together.</li>
     <li><b>Quests (J):</b> every task, and the little tasks inside each big one. <b>Map (P)</b> shows the Kingdom of Krax.</li>
+    <li><b>Stuck?</b> Open Quests and press <b>Hint</b> next to a quest for a small nudge.</li>
     <li>Help people to earn experience — level up to grow braver and brighter.</li>
     <li>The game <b>saves by itself</b> every few seconds and when you close it. Each player has their own save slot.</li></ul>`;
   function toTitle() {
