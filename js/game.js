@@ -1682,7 +1682,12 @@ const G = (() => {
     g.fillStyle = '#c02a2a'; g.fillRect(113, 54, 6, 4);
     // forest
     for (let x = -6; x < VW + 10; x += 7) { const h = 18 + GFX.hash(x, 9) * 16; g.fillStyle = '#140e1e'; g.beginPath(); g.moveTo(x, VH); g.lineTo(x + 5, VH - h - 12); g.lineTo(x + 10, VH); g.fill(); }
-    g.fillStyle = '#100a16'; g.fillRect(0, VH - 12, VW, 12);
+    // forest floor: a misty purple ground with grass tufts (not a flat dark strip, which read as a black bar)
+    g.fillStyle = '#2a1e3c'; g.fillRect(0, VH - 9, VW, 9);
+    for (let x = 0; x < VW; x += 2) { const h = 1 + Math.floor(GFX.hash(x, 21) * 4); g.fillStyle = GFX.hash(x, 22) < 0.5 ? '#1c1428' : '#221932'; g.fillRect(x, VH - 9 - h + 1, 1, h); }
+    for (let i = 0; i < 40; i++) { g.fillStyle = 'rgba(160,120,190,0.25)'; g.fillRect(Math.floor(GFX.hash(i, 23) * VW), VH - 7 + Math.floor(GFX.hash(i, 24) * 6), 2, 1); }
+    const mist = g.createLinearGradient(0, VH - 34, 0, VH); mist.addColorStop(0, 'rgba(150,100,170,0)'); mist.addColorStop(1, 'rgba(150,100,170,0.28)');
+    g.fillStyle = mist; g.fillRect(0, VH - 34, VW, 34);
     return c;
   }
   function renderTitle(dt) {
