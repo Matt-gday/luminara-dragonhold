@@ -2284,6 +2284,7 @@ const STORY = (() => {
       G.sfx('lute');
       const c = await G.choice('luminara', '*Fredrick is plucking his lute and humming an old tune.*', ['Donate a few copper coins', 'Just listen']);
       if (c === 0 && G.S.coins > 0) { G.addCoins(-Math.min(2, G.S.coins)); await say('fredrick', 'Thank you, that is very kind of you.'); G.addXP(5, true); f.donated = true; }
+      else if (c === 0) { await L("Oh — my purse is empty. I'm sorry, Fredrick."); await say('fredrick', 'No matter! A friendly ear is payment enough.'); }
       await L('Have you heard about the rumours of a magical gateway in the Dark Forest?');
       await say('fredrick', "Yes, of course! The talk is all through the town. I was turning it into a song. I, too, wonder what lies on the other side, but I won't be going into the forest any time soon, that's for sure!");
       await say('fredrick', 'Old songs speak of such danger, warning: *doors of mystery should never be opened unless the traveller has a key*.');
@@ -2416,6 +2417,7 @@ const STORY = (() => {
     if (!f.wished) {
       const c = await G.choice('luminara', '*The fountain sparkles in the sunlight. Coins glitter on the bottom.*', ['Toss in a copper and make a wish', 'Just admire it']);
       if (c === 0 && G.S.coins > 0) { G.addCoins(-1); G.sfx('splash'); f.wished = true; await think('I wish… that everyone I love stays safe, always.'); G.addXP(3); }
+      else if (c === 0) await think("I haven't a single copper to toss in. Another time.");
       return;
     }
     await nar('The fountain sparkles. Water splashes softly from the top.');
