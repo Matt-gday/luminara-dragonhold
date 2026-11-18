@@ -1598,8 +1598,11 @@ const G = (() => {
     <li><b>Stuck?</b> Open Quests and press <b>Hint</b> next to a quest for a small nudge.</li>
     <li>Help people to earn experience — level up to grow braver and brighter.</li>
     <li>The game <b>saves by itself</b> every few seconds and when you close it. Each player has their own save slot.</li></ul>`;
+  // The film bars are switched by the gameplay loop, which stops on the title and credits screens, so clear them here.
+  function clearCine() { cineOn = false; document.body.classList.remove('cine'); }
   function toTitle() {
     if (mode === 'play') save();
+    clearCine();
     mode = 'title'; AUDIO.music('title'); hud(); $('toasts').innerHTML = '';
     $('where').style.display = 'none'; $('objective').style.display = 'none'; $('held').style.display = 'none';
     const ls = lastSlot(), last0 = ls ? readSlot(ls) : null, last = compatible(last0) ? last0 : null;
@@ -1815,7 +1818,7 @@ const G = (() => {
   // =================================================================== CREDITS
   let creditsT = 0, creditsText = [];
   function showCredits(lines) {
-    mode = 'credits'; creditsT = 0; creditsText = lines; hud();
+    mode = 'credits'; creditsT = 0; creditsText = lines; hud(); clearCine();
     $('where').style.display = 'none'; $('objective').style.display = 'none';
     AUDIO.music('wonder');
     titleEl.style.display = 'flex'; titleEl.classList.remove('home'); titleEl.innerHTML = '<div class="menu" style="margin-top:auto"><button id="cBack">Return to title</button></div>';
