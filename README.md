@@ -1,4 +1,4 @@
-# Luminara the Light-Bearer — Chapter One
+# Luminara the Light-Bearer
 
 A pixel-art adventure game based on Lisa's story about Luminara.
 It is a point-and-click adventure with a little RPG mixed in.
@@ -29,9 +29,7 @@ The game saves by itself every few seconds, and the moment it's closed, so playe
 
 **Add it to your Home Screen:** open the link on a phone or tablet. On an iPhone or iPad, tap Share → *Add to Home Screen*; on Android, use the browser menu → *Add to Home screen* / *Install app*. It then opens full-screen like a normal app, works offline, and keeps its saves.
 
-## What is in Chapter One
-
-The chapter follows *Luminara the Light-## The story
+## The story
 
 The game follows Lisa's book, *Luminara the Light-Bearer*, scene by scene. Lisa's own words are used for the narration wherever possible.
 *The Three Dragons* is Lisa's separate children's story, so it will be a separate game.
@@ -39,7 +37,7 @@ The game follows Lisa's book, *Luminara the Light-Bearer*, scene by scene. Lisa'
 | Game chapter | Book chapters | Status |
 |---|---|---|
 | One: The Light-Bearer | 1 The Light-Bearer, 2 The Journey | **Playable** |
-| Two: The Dark Forest | 3 to 6 (the forest, Lesterfield, Gwendolyn, the market) | Coming next |
+| Two: The Dark Forest | 3 to 6 (the forest, Lesterfield, Gwendolyn, the market) | Being built: stage 1 of 4 done (hidden; open the game with `?preview` to see it) |
 | Three: The Dragon Tamer | 7 to 8 (Savaric, the guild's quest, the cottage) | Planned |
 | Four: The Gateway | 9 to 11 (the Ruined Keep, the wolves, the gateway) | Planned |
 | Five: Vaeloria | 12 to 13 (the cyan realm, locking the gateway) | Planned |
@@ -68,11 +66,14 @@ Luminara levels up as she helps people. Each level gives her more courage (heart
 Pixel-art generator: characters, dragons, creatures, buildings, tiles, item icons |
 | `js/maps.js` | Every location, built with a small map-building toolkit |
 | `js/story.js` | The story engine shared by every chapter: quests, goals and the compass, journal, chapter summary |
-| `js/ch1.js` | Chapter One: its items, quests, every conversation and puzzle (one file per chapter) |
+| `js/ch1.js`, `js/ch2.js` | One file per chapter: its items, quests, every conversation and puzzle |
+| `tests/` | Automated checks (Playwright): `npm install`, `npx playwright install chromium`, then `npm test` |
 | `js/game.js` | Engine: movement, jumping, lighting, speech bubbles, satchel, quest log, saving, title screen |
 | `js/audio.js` | Synthesised music and sound effects |
 | `build.py` | Rebuilds `luminara-single-file.html` after any change (`python3 build.py`) |
 
-**Adding a chapter:** create `js/chN.js` that calls `STORY.register({ n: N, ... })` (copy the shape of `js/ch1.js`), add it to `index.html` and `sw.js`, and add its places to `js/maps.js`.
+**Adding a chapter:** create `js/chN.js` that calls `STORY.register({ n: N, ... })` (copy the shape of `js/ch2.js`), add it to `index.html` and `sw.js`, and add its places to `js/maps.js`.
 
 *Story & world by Lisa. Made with love by Dad.*
+
+For developers: start with `CLAUDE.md` (the project guide) and `docs/STATUS.md` (where things stand and what's next).

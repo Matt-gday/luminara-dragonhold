@@ -1,0 +1,13 @@
+{
+  "name": "luminara-the-light-bearer",
+  "private": true,
+  "description": "A pixel-art adventure game for Lisa's story. Everything is generated in code; no build step is needed to play.",
+  "scripts": {
+    "test": "node tests/run-all.js",
+    "build": "python build.py",
+    "serve": "python -m http.server 8000"
+  },
+  "devDependencies": {
+    "playwright": "1.63.0"
+  }
+}
