@@ -1,2 +1,6 @@
 node_modules/
 tests/out/
+
+# Lisa's book, images and emails: private, kept locally only. Never commit.
+lisa-materials/
+Story/

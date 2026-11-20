@@ -27,7 +27,12 @@ then `docs/chapter-2-plan.md` (the design for the chapter being built).
   - Where to find it: Matt's Gmail, an email from Lisa titled "Luminara entire book plus images - handy maps"
     (Nov 16 2026), attachment "Luminara the Light-Bearer - Game File.odt". (Early on, Matt thought the "Game File" was
     something else and said not to use it; he later confirmed it **is** Lisa's full book and is the source.)
-  - **Do not commit the book text to this repo.** The repo is public. Keep a copy outside the repo if you need it.
+  - **A local copy of everything Lisa sent is in `lisa-materials/`** (git-ignored, never committed): the book, her
+    images, her emails, and `INDEX.md` saying what each file is and what it's used for.
+    **Follow `lisa-materials/book/book.md`**: the book's full text, one `## Chapter N: Title` heading per chapter.
+    It keeps her wording exactly, typos included (fix those only in the game).
+  - **Do not commit the book text, images or emails to this repo.** The repo is public. Keep them in `lisa-materials/`
+    (or `Story/`, also git-ignored). Run `git status` before every commit to check nothing from there is staged.
 - **Lisa doesn't review anything.** She just plays the game. Never send her drafts or questions.
   Additions (side stories, puzzles, small characters) are welcome surprises, **as long as nothing contradicts her story.**
 - **Fix typos and grammar in her text quietly**, in the game. A list of known book typos is in docs/chapter-2-plan.md.
@@ -144,8 +149,9 @@ Players wander. For every quest step, ask: *what if they do this first, last, tw
 - Draw new characters to match Lisa's references (see below) where she has given one.
 
 ## Lisa's artwork and how it's used
-She sent reference images by email (in Matt's Gmail). They are **references only**: nothing from them is embedded in
-the game; all art is drawn in code to match them.
+She sent reference images by email (in Matt's Gmail; local copies in `lisa-materials/images/`, described in
+`lisa-materials/INDEX.md`). They are **references only**: nothing from them is embedded in the game, and they must never
+be committed; all art is drawn in code to match them.
 - Email "Luminara" (Nov 16 2026): a Dragonhold reference sheet (view from the road, main entrance with red dragon
   banners, outer bailey, great hall, staircase, living quarters, a room) → the title screen castle; and Luminara with
   Gwendolyn at the Iron Cauldron (stew, bread, lantern) → Luminara's and Gwen's looks.
