@@ -225,7 +225,17 @@ body.cine #cineTop,body.cine #cineBot{transform:none}
 #hud,#objective,#where,#toasts{z-index:2}
 #bar{z-index:3}
 .panel{z-index:6}
-body.touch #bar kbd{display:none}
+[data-input=touch] #bar kbd{display:none}
+/* ---------- keys and controller buttons named in text ---------- */
+kbd{font-family:inherit;display:inline-block;min-width:1.3em;padding:0 .3em;border:2px solid currentColor;border-bottom-width:3px;border-radius:4px;line-height:1.05;text-align:center;font-size:.92em;font-weight:600}
+#bar button kbd{opacity:.6;border-width:1px 1px 2px}
+.gp{display:inline-block;min-width:1.25em;height:1.25em;line-height:1.2em;padding:0 .2em;border-radius:50%;text-align:center;font-size:.88em;font-weight:600;color:#fff;background:#4a4458;border:2px solid #1c1424;vertical-align:.05em;font-style:normal;text-shadow:0 1px 0 rgba(0,0,0,.5)}
+.gp-a{background:#2f9e44}.gp-b{background:#d0342c}.gp-x{background:#2b6fd6}.gp-y{background:#d9a400}
+.gp-lb,.gp-rb,.gp-view,.gp-menu{border-radius:6px;padding:0 .4em;background:#5a5468;font-size:.78em}
+#padfocus{position:absolute;display:none;border:3px solid #ffd860;border-radius:10px;box-shadow:0 0 0 2px #1c1424,0 0 14px #ffd860;pointer-events:none;z-index:25;transition:left .08s,top .08s,width .08s,height .08s}
+#padhint{position:absolute;left:50%;bottom:6px;transform:translateX(-50%);display:none;background:rgba(18,13,28,.82);color:#fff;border-radius:8px;padding:2px 10px 3px;font-size:calc(var(--fs)*.75);white-space:nowrap;pointer-events:none;z-index:26}
+[data-input=pad] #touch{display:none!important}
+#held{cursor:pointer}
 .narr,.bubble{z-index:4}
 body.cine .narr{bottom:calc(7% + 12px)}
 body.cine #touch{opacity:.35}
@@ -288,7 +298,7 @@ body.panelopen #touch{display:none}
     <div id="nameTag" style="display:none"></div>
     <div id="cineTop"></div><div id="cineBot"></div>
     <div id="where" style="display:none"></div>
-    <div id="held"><canvas width="16" height="16"></canvas><span></span> <span style="opacity:.6">(Esc to drop)</span></div>
+    <div id="held"><canvas width="16" height="16"></canvas><span></span> <span id="heldHow" style="opacity:.6">(Esc to drop)</span></div>
     <div id="toasts"></div>
     <div id="bar" style="display:none">
       <button data-k="inv">Satchel <kbd>I</kbd></button>

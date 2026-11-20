@@ -5,7 +5,6 @@
 // =====================================================================
 (() => {
   const { F, has, say, think, nar, L, journalAdd, pick, startQuest, finishQuest } = STORY.H;
-  const touch = () => document.body.classList.contains('touch');
   const ITEMS = {
     teaTin: { name: 'Tin of Green Tea', icon: 'teaTin', desc: 'Floral green tea leaves. Lovely — but even lovelier sweetened.' },
     sugar: { name: 'Sugar Pot', icon: 'sugar', desc: 'A little pot of sugar.' },
@@ -36,58 +35,57 @@
     pail: { name: 'Pail of Water', icon: 'pail', desc: 'From Winston at the Brushwood Tavern — for the thirsty horses.' },
   };
 
-  const tapOr = (t, k) => touch() ? t : k;
   const LEAF_WHERE = [['hill1', 'near the top right of the leafy lane'], ['hill2', 'near the bottom left of the leafy lane'], ['town1', 'in the far south-west corner of town'], ['town2', 'at the far east edge of town, near the top'], ['manor', 'in the manor garden, north-east']];
   const QUESTS = {
     morning: { title: 'A New Dawn', desc: 'Get ready for the day ahead.', xp: 15, steps: [
-      { t: 'Find your satchel', done: s => s.flags.hasSatchel, hint: ['It\'s somewhere in your cottage. Look near the door.', 'Your satchel is on the floor, a little to the right of the front door. Click it to pick it up.'] },
-      { t: 'Make a cup of sweet green tea', done: s => s.flags.teaMade, hint: s => s.inv.includes('teaBlend') ? ['The kettle is hot, over on the stove.', `Open your satchel, choose the Sweet Tea Blend, ${tapOr('tap', 'click')} <b>Use…</b>, then ${tapOr('tap', 'click')} the stove.`]
-        : s.inv.includes('teaTin') && s.inv.includes('sugar') ? ['Two things in your satchel belong together.', `Open your satchel, choose the tea, ${tapOr('tap', 'click')} <b>Combine</b>, then choose the sugar.`]
+      { t: 'Find your satchel', done: s => s.flags.hasSatchel, hint: ['It\'s somewhere in your cottage. Look near the door.', 'Your satchel is on the floor, a little to the right of the front door. {Act:it} to pick it up.'] },
+      { t: 'Make a cup of sweet green tea', done: s => s.flags.teaMade, hint: s => s.inv.includes('teaBlend') ? ['The kettle is hot, over on the stove.', `Open your satchel, choose the Sweet Tea Blend, {btn:Use…}, then {act:the stove}.`]
+        : s.inv.includes('teaTin') && s.inv.includes('sugar') ? ['Two things in your satchel belong together.', `Open your satchel, choose the tea, {btn:Combine…}, then choose the sugar.`]
         : ['Tea and sugar are kept along the kitchen wall.', 'The tea is in the cupboard on the right. The sugar is on the shelf, left of the stove.'] },
-      { t: 'Drink it in your chair outside as the sun rises', done: s => s.flags.teaDrunk, hint: ['Luminara loves to drink her tea outside.', 'Go out of the front door. Your chair is just beside the cottage. Click it.'] },
+      { t: 'Drink it in your chair outside as the sun rises', done: s => s.flags.teaDrunk, hint: ['Luminara loves to drink her tea outside.', 'Go out of the front door. Your chair is just beside the cottage. {Act:it}.'] },
       { t: 'Put on the blue cloak Mother made', done: s => s.flags.cloak, hint: ['Where are clothes kept?', 'Your cloak is in the wardrobe, at the top left of the cottage.'] },
-      { t: "Take Father's compass from the safekeeping box", done: s => s.flags.gotCompass, hint: s => s.flags.gotKey ? ['You have the little key now.', `Open your satchel, choose the brass key, ${tapOr('tap', 'click')} <b>Use…</b>, then ${tapOr('tap', 'click')} the box beside the bed.`] : ['The box is locked. Where would you keep a key close while you sleep?', 'The key is under your pillow. Click your bed.'] },
+      { t: "Take Father's compass from the safekeeping box", done: s => s.flags.gotCompass, hint: s => s.flags.gotKey ? ['You have the little key now.', `Open your satchel, choose the brass key, {btn:Use…}, then {act:the box beside the bed}.`] : ['The box is locked. Where would you keep a key close while you sleep?', 'The key is under your pillow. {Act:your bed}.'] },
       { t: 'Take your lantern', done: s => s.flags.hasLantern, hint: ['Have a look on the table.', 'Your lantern is on the little table in the middle of the room.'] },
-      { t: 'Pack your travelling rations', done: s => s.flags.gotRations, hint: ['Food is kept in the pantry.', 'Click the barrel in the bottom-left corner of the cottage.'] },
+      { t: 'Pack your travelling rations', done: s => s.flags.gotRations, hint: ['Food is kept in the pantry.', '{Act:the barrel in the bottom-left corner of the cottage}.'] },
     ] },
     totown: { title: 'Into Kraxenville', desc: 'A day of guild work begins in town.', xp: 20, steps: [
       { t: 'Walk the leafy lane to Kraxenville', done: s => s.flags.arrivedTown, hint: ['Follow the lane downhill.', 'Walk down the path from your cottage, all the way to the bottom of the hill.'] },
       { t: 'Buy a hot pie at the bakery (down the alley, south of the market)', done: s => s.flags.pieBought, hint: ['Follow your nose, south of the market square.', 'Go down the alley south of the market. Mistress Pell is standing outside her shop. Talk to her.'] },
-      { t: 'Eat it outside the pie shop', done: s => s.flags.pieEaten, hint: ['A pie tastes best sitting down.', 'Click the bench right outside the pie shop.'] },
+      { t: 'Eat it outside the pie shop', done: s => s.flags.pieEaten, hint: ['A pie tastes best sitting down.', '{Act:the bench right outside the pie shop}.'] },
       { t: 'Listen to Fredrick the bard by the fountain', done: s => s.flags.metFredrick, hint: ['Listen for the music.', 'Fredrick plays his lute just below the fountain in the market square. Talk to him.'] },
     ] },
     lantern: { title: 'Light for the Road', desc: 'Your lantern needs fresh tallow and a new wick before the Dark Forest.', xp: 20, steps: [
       { t: 'Get tallow (try the Iron Cauldron kitchen)', done: s => s.inv.includes('tallow') || s.flags.lanternReady || s.inv.includes('lanternTallow'), hint: ['Tallow is made in kitchens.', 'Ask Brenna, the cook inside the Iron Cauldron, south-west of the market.'] },
       { t: 'Get a linen wick (try the cloth stall in the market)', done: s => s.inv.includes('wick') || s.flags.lanternReady || s.inv.includes('lanternWick'), hint: ['Linen is cloth. Who sells cloth?', 'Talk to Tilda at the cloth stall with the green and white awning, below and to the left of the fountain.'] },
-      { t: 'Fill your lantern (combine them with it)', done: s => s.flags.lanternReady, hint: ['Both go into the lantern, one at a time.', `Open your satchel, choose the lantern, ${tapOr('tap', 'click')} <b>Combine</b>, then choose the tallow. Do the same again with the wick.`] },
+      { t: 'Fill your lantern (combine them with it)', done: s => s.flags.lanternReady, hint: ['Both go into the lantern, one at a time.', `Open your satchel, choose the lantern, {btn:Combine…}, then choose the tallow. Do the same again with the wick.`] },
     ] },
     journey: { title: 'The Journey', desc: "Escort the guild's goods from Kraxenville, first to Brushwood.", giver: 'Merchants\' Guild', xp: 40, steps: [
       { t: 'Find the caravan outside the Merchants\' Guild', done: s => s.flags.metCrew, hint: ['The Merchants\' Guild is near the top of town.', 'The wagons are in the yard just to the right of the Guild, the building with the green shield and crossed axes.'] },
-      { t: 'Help fit the cargo onto the wagons', done: s => s.flags.cargoDone, hint: ['Click a wagon, and start with the biggest piece.', 'Big crate in a corner, the two long casks turned upright beside it, and the four little barrels in a row along the bottom.'] },
+      { t: 'Help fit the cargo onto the wagons', done: s => s.flags.cargoDone, hint: ['{Act:a wagon}, and start with the biggest piece.', 'Big crate in a corner, the two long casks turned upright beside it, and the four little barrels in a row along the bottom.'] },
       { t: 'Collect the strongbox and its key from Guild Master Henry', done: s => s.flags.gotStrongbox, hint: ['The Guild Master is inside.', 'Go in through the brown door beside the green shield with the crossed axes, and talk to Guild Master Henry.'] },
       { t: 'Get your lantern ready', done: s => s.flags.lanternReady, hint: ['See the quest <b>Light for the Road</b>, and ask for a hint there.'] },
       { t: 'Tell Gerald you are ready to set off', done: s => s.flags.departed, hint: ['Gerald is waiting by the wagons.', 'Talk to Gerald in the caravan yard. If you\'re not ready yet, he\'ll tell you what\'s left.'] },
     ] },
     brushwood: { title: 'First Stop: Brushwood', desc: 'Deliver the barrels to the Brushwood Tavern.', xp: 40, steps: [
       { t: 'Lead the caravan down the road to Brushwood', done: s => s.flags.atBrushwood, hint: ['Keep following the road.', 'Walk down the road to the bottom of the map.'] },
-      { t: 'Feed and water the three horses', done: s => s.flags.horsesDone, hint: ['Kalen and Winston brought something for the horses.', 'Click each of the three horses standing in front of the wagons.'] },
-      { t: 'Help bring the last barrel into the tavern', done: s => s.flags.lastBarrel, hint: ['The barrels are still on the wagons.', 'Click one of the wagons.'] },
-      { t: 'Take a break: fill your water pouch at the well', done: s => s.flags.pouchFilled, hint: ['Where does a village get its water?', 'Click the well, to the right of the wagons.'] },
+      { t: 'Feed and water the three horses', done: s => s.flags.horsesDone, hint: ['Kalen and Winston brought something for the horses.', '{Act:each of the three horses standing in front of the wagons}.'] },
+      { t: 'Help bring the last barrel into the tavern', done: s => s.flags.lastBarrel, hint: ['The barrels are still on the wagons.', '{Act:one of the wagons}.'] },
+      { t: 'Take a break: fill your water pouch at the well', done: s => s.flags.pouchFilled, hint: ['Where does a village get its water?', 'Go to the well, to the right of the wagons, and {act:it}.'] },
       { t: 'Collect the coins from Winston', done: s => s.flags.paid, hint: ['Winston looks after the tavern.', 'Talk to Winston, near the wagons.'] },
     ] },
     // ---- side stories (optional)
     moments: { title: 'Precious Moments', side: true, desc: 'Butterflies rest on the big rocks along the leafy lane.', xp: 20, steps: [
       { t: 'Watch the butterflies on the Mossy Rock', done: s => s.flags.bf_rock1, hint: ['The big rocks are along the leafy lane.', 'The Mossy Rock is on the left of the lane, near the top.'] }, { t: 'Watch the butterflies on the Big Rock', done: s => s.flags.bf_rock2, hint: ['The big rocks are along the leafy lane.', 'The Big Rock is on the right of the lane, about halfway down.'] }, { t: 'Watch the butterflies on the Sunny Rock', done: s => s.flags.bf_rock3, hint: ['The big rocks are along the leafy lane.', 'The Sunny Rock is on the left of the lane, near the bottom.'] }] },
     ball: { title: 'The Runaway Ball', side: true, desc: "Pip and Nell's ball is stuck up in the big oak by the north gate.", giver: 'Pip & Nell', xp: 20, steps: [
-      { t: 'Get the ball down from the big oak (try jumping!)', done: s => s.flags.ballDown, hint: ['The ball is only just out of reach.', `Stand right under the ball in the big oak by the north gate, and ${tapOr('tap <b>Jump</b>', 'press <b>Space</b>')}.`] },
+      { t: 'Get the ball down from the big oak (try jumping!)', done: s => s.flags.ballDown, hint: ['The ball is only just out of reach.', `Stand right under the ball in the big oak by the north gate, and {press:jump}.`] },
       { t: 'Return the ball to Pip and Nell', done: s => s.flags.ballReturned, hint: ['Pip and Nell are on the grass near the north gate.', 'Talk to the children.'] },
     ] },
     clover: { title: 'A Shoe for Clover', side: true, desc: 'Clover is meant to pull your wagon today, but she has thrown a shoe.', giver: 'Bertram', xp: 25, steps: [
       { t: 'Hear what happened from Bertram at the Coach House', done: s => s.flags.knowFountain, hint: ['Bertram is at the Coach House, on the east side of the square.'] },
       { t: 'Find something to use as a hook', done: s => s.flags.gotNail || s.flags.gotShoe, hint: ['Bertram mentioned something he dropped.', 'Look on the ground near the water trough by the Coach House. Something small is glinting.'] },
       { t: 'Find something long and strong to use as a line', done: s => s.flags.gotString || s.flags.gotShoe, hint: ['Did you hear something snap?', "Ask Fredrick, by the fountain, about his broken lute string."] },
-      { t: 'Make a hook and line', done: s => s.inv.includes('hookLine') || s.flags.gotShoe, hint: ['Two things in your satchel belong together.', `Open your satchel, choose the string, ${tapOr('tap', 'click')} <b>Combine</b>, then choose the nail.`] },
-      { t: 'Fish the horseshoe out of the fountain', done: s => s.flags.gotShoe, hint: ['Where did the shoe go *plop*?', `Open your satchel, choose the hook and line, ${tapOr('tap', 'click')} <b>Use…</b>, then ${tapOr('tap', 'click')} the fountain.`] },
+      { t: 'Make a hook and line', done: s => s.inv.includes('hookLine') || s.flags.gotShoe, hint: ['Two things in your satchel belong together.', `Open your satchel, choose the string, {btn:Combine…}, then choose the nail.`] },
+      { t: 'Fish the horseshoe out of the fountain', done: s => s.flags.gotShoe, hint: ['Where did the shoe go *plop*?', `Open your satchel, choose the hook and line, {btn:Use…}, then {act:the fountain}.`] },
       { t: 'Bring the horseshoe to Bertram', done: s => s.flags.shod, hint: ['Bertram can fit it.', 'Talk to Bertram at the Coach House.'] },
     ] },
     leaves: { title: "Old Maud's Golden Leaves", side: true, desc: 'Old Maud says five lucky golden leaves are hidden around Kraxenville and the leafy lane.', giver: 'Old Maud', xp: 40, steps: [
@@ -181,7 +179,7 @@
   };
   ACT.stove = async () => {
     if (F().teaMade) return nar('The stove is still warm. The kettle ticks as it cools.');
-    if (has('teaBlend')) { await L('The kettle is hot. I just need to use my sweet tea blend here.'); if (G.S.flags.tip_use) G.toast('Satchel → tap the tea blend → <b>Use…</b> → tap the stove.'); await G.tip('use'); }
+    if (has('teaBlend')) { await L('The kettle is hot. I just need to use my sweet tea blend here.'); if (G.S.flags.tip_use) G.toast('Satchel → {act:the tea blend} → {btn:Use…} → {act:the stove}.'); await G.tip('use'); }
     else if (has('teaTin')) await think("I like my green tea sweetened. I should combine it with some sugar first.");
     else await nar('The stove is warm and the kettle is full. All you need is tea!');
   };
@@ -373,7 +371,7 @@
     if (F().ballDown) return nar('A grand old oak, glowing orange with autumn leaves.');
     if (!F().kidsAsked) return think('A ball is wedged up in the branches of the old oak. It must belong to those two children on the green.');
     await think("Pip and Nell's ball is wedged in the low branches, just out of reach. If I stand right underneath and jump…");
-    if (G.S.flags.tip_jump) G.toast(touch() ? 'Tap <b>Jump</b>!' : 'Press <b>Space</b> to jump!'); await G.tip('jump');
+    if (G.S.flags.tip_jump) G.toast('{Press:jump} to jump!'); await G.tip('jump');
   };
   ACT.ballTreeJump = async () => {
     if (F().ballDown) return;
@@ -519,7 +517,7 @@
     await say('gerald', 'We need an extra pair of hands. Why don\'t you hop on and help?');
     await nar('Rarely did Gerald do any hard work for the guild. Whenever work needed to be done, he would order people around and point his finger about. Not one person in the guild could remember a time when he was actually doing anything productive.');
     startQuest('journey');
-    await think("The cargo is in a muddle. If I move things around, I'm sure everything will fit. (Tap the wagon.)");
+    await think("The cargo is in a muddle. If I move things around, I'm sure everything will fit. ({Act:the wagon}.)");
   }
   ACT.crew = async (t) => {
     const f = F(), who = t.id;

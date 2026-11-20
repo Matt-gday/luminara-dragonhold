@@ -13,6 +13,9 @@
   - Lisa's Dragonhold centred under the glowing title (option B, light rays).
   - Luminara with her lantern on the left, dragons overhead, lumina wisps and leaves; tap the sky for a wisp.
   - Menu on the right; the chapter line above it; Continue shows name · place · level.
+- **Xbox controller support (21 Nov):** play, menus, satchel, tabs, tips, dialogue and both puzzles work with a
+  controller. Text names the device used last (controller buttons, keys or taps) and switches on the fly. Control
+  words in hints now use placeholders (`{act:…}` etc.), which also fixed hints that said "click" on phones.
 - **Recent fixes:** black bars after the credits, the dark strip on the title, the hook-and-line hints (Fredrick's
   string now snaps on camera), the guild door colour in hints, empty-purse lines.
 
@@ -44,7 +47,10 @@ Design: `docs/chapter-2-plan.md` (four stages, decisions agreed with Matt, book 
    This is by design. Possible improvements: colour the bars, or show more of the world on wider screens.
 5. **Only emulated phones have been tested** (Playwright's iPhone 13 landscape), not a real phone or iPad.
 6. **Saves are kept per address:** the website, `localhost` and a double-clicked `index.html` each have separate saves.
-7. **Old code from the first draft is still in the files**, unused. It's harmless, but worth tidying:
+7. **The controller has only been tested with a pretend one** (tests/controller.js). Try a real Xbox controller.
+   Browsers only start sound after a click or key press; a controller button may not count, so the title shows a
+   small note until sound is on.
+8. **Old code from the first draft is still in the files**, unused. It's harmless, but worth tidying:
    - Goblinites in the forest (`goblins`, `scareGoblin`, `drawGoblin`). Keep the goblinite art for Chapter Four
      (the book's two-headed goblinite).
    - Waystones (`wsId`).

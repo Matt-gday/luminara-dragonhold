@@ -6,8 +6,6 @@
 // =====================================================================
 (() => {
   const { F, has, say, think, nar, L, journalAdd, pick, startQuest, finishQuest } = STORY.H;
-  const touch = () => document.body.classList.contains('touch');
-  const tapOr = (t, k) => touch() ? t : k;
 
   const ITEMS = {
     flatRock: { name: 'Flat Rock', icon: 'flatRock', desc: 'A flat, heavy stone. Sturdy enough to hold something up.' },
@@ -17,15 +15,15 @@
   const QUESTS = {
     darkforest: { title: 'The Dark Forest', desc: 'Lead the caravan safely through the Dark Forest to Lesterfield.', xp: 40, steps: [
       { t: 'Help Ronald with his loose wheel', done: s => s.flags.wheelFixed, hint: ['See the quest <b>A Loose Wheel</b>, and ask for a hint there.'] },
-      { t: 'Light your lantern', done: s => s.flags.lanternLit, hint: ['It is getting dark, and you have everything you need in your satchel.', `Open your satchel, choose your flint and steel, ${tapOr('tap', 'click')} <b>Combine</b>, then choose your lantern.`] },
-      { t: 'Find the way through the mist', done: s => s.flags.trailFound, hint: ['The path vanishes into thick mist. What could cut through it?', `Stand by the old waymarker stone at the edge of the mist and ${tapOr('tap <b>Raise Light</b>', 'press <b>Q</b>')} to hold your lantern high.`] },
+      { t: 'Light your lantern', done: s => s.flags.lanternLit, hint: ['It is getting dark, and you have everything you need in your satchel.', `Open your satchel, choose your flint and steel, {btn:Combine…}, then choose your lantern.`] },
+      { t: 'Find the way through the mist', done: s => s.flags.trailFound, hint: ['The path vanishes into thick mist. What could cut through it?', `Stand by the old waymarker stone at the edge of the mist and {press:light} to hold your lantern high.`] },
       { t: 'Reach Lesterfield', done: s => s.flags.reachedLesterfield, hint: ['Keep following the path south.', 'Follow the glowing trail through the bog, all the way to the bottom of the map.'] },
     ] },
     wheel: { title: 'A Loose Wheel', parent: 'darkforest', desc: "Ronald's old wagon has a loose wheel. He needs the barrels off the back to mend it.", giver: 'Ronald', xp: 25, steps: [
-      { t: "Take the barrels off Ronald's wagon", done: s => s.flags.barrelsOff, hint: ["The barrels are on the back of Ronald's wagon.", "Click Ronald's wagon."] },
+      { t: "Take the barrels off Ronald's wagon", done: s => s.flags.barrelsOff, hint: ["The barrels are on the back of Ronald's wagon.", "{Act:Ronald's wagon}."] },
       { t: 'Find something to prop up the wagon', done: s => s.flags.gotFlatRock || s.flags.rockPlaced, hint: ['Ronald needs something flat and sturdy. Round things roll.', 'There is a flat rock by the path, a little way back up the forest, on the right.'] },
-      { t: 'Prop up the wagon', done: s => s.flags.rockPlaced, hint: ['Put it under the wagon.', `Open your satchel, choose the flat rock, ${tapOr('tap', 'click')} <b>Use…</b>, then ${tapOr('tap', 'click')} Ronald's wagon.`] },
-      { t: 'Load the barrels back on', done: s => s.flags.barrelsBack, hint: ['The wheel is mended.', "Click Ronald's wagon again."] },
+      { t: 'Prop up the wagon', done: s => s.flags.rockPlaced, hint: ['Put it under the wagon.', `Open your satchel, choose the flat rock, {btn:Use…}, then {act:Ronald's wagon}.`] },
+      { t: 'Load the barrels back on', done: s => s.flags.barrelsBack, hint: ['The wheel is mended.', "{Act:Ronald's wagon} again."] },
     ] },
     lumina: { title: 'The Lumina', side: true, desc: 'A lumina, a little living light, is floating near the path. Nobody has ever caught one.', xp: 20, steps: [
       { t: 'Try to catch the lumina', done: s => s.flags.wispFaded && s.flags.wispTries >= 3, hint: ['It is floating just off the path.', 'Walk up to the glowing light and try to take hold of it, more than once.'] },
@@ -143,7 +141,7 @@
   }
   const COMBOS = { 'flint+lanternReady': lightLantern };
   SELF.lanternReady = lightLantern;
-  SELF.lanternLit = () => nar('The flame burns steady behind the glass. ' + (touch() ? 'Tap Raise Light' : 'Press Q') + ' to hold it high.');
+  SELF.lanternLit = () => nar('The flame burns steady behind the glass. {Press:light} to hold it high.');
 
   // ================================================================ THE LUMINA
   const WISP_SPOTS = [[20, 33], [8, 35], [19, 38]];
@@ -198,7 +196,7 @@
       await G.fade(true, 600); G.music('wonder');
       await nar('For a moment, Luminara imagined spreading her arms like wings, rising over the black spruce, through the rain and into the clouds…');
       await G.fade(false, 400);
-      await G.flapMini(4, { label: `Beat your wings: ${touch() ? 'tap' : 'press <b>Space</b>'} when the ring turns <b style="color:#ffd860">gold</b>.`, icon: '🪶', msgs: ['Higher!', 'Over the treetops!', 'Into the clouds!', 'Flying!'] });
+      await G.flapMini(4, { label: `Beat your wings: {press:jump} when the ring turns <b style="color:#ffd860">gold</b>.`, icon: '🪶', msgs: ['Higher!', 'Over the treetops!', 'Into the clouds!', 'Flying!'] });
       await G.fade(true, 500); G.music('forest'); await G.fade(false, 500);
       await think('Someday, perhaps.');
     }

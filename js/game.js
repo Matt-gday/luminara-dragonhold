@@ -164,6 +164,10 @@ const G = (() => {
     AUDIO.init();
     const k = KEYMAP[e.code]; if (!k) return;
     e.preventDefault();
+    keyDown(k);
+  });
+  // One place for every action, whether it came from the keyboard or a game controller.
+  function keyDown(k) {
     if (!keys[k]) pressed[k] = true;
     keys[k] = true;
     if (tipActive) { if (k === 'act' || k === 'jump' || k === 'esc') tipActive(); return; }
@@ -178,9 +182,202 @@ const G = (() => {
     else if (k === 'inv') toast('You have no satchel yet.', null, null, 3500);
     if (k === 'quest') openPanel('quest');
     if (k === 'map') { if (S.flags.sawMap) openPanel('map'); else toast("You don't have a map yet.", null, null, 3500); }
-  });
+  }
   window.addEventListener('keyup', e => { const k = KEYMAP[e.code]; if (k) keys[k] = false; });
-  window.addEventListener('blur', () => { for (const k in keys) keys[k] = false; });
+  window.addEventListener('blur', () => { for (const k in keys) keys[k] = false; for (const d in padDir) padDir[d] = false; });
+
+  // =================================================================== INPUT DEVICE: keyboard & mouse, touch, or game controller
+  // Like most PC games, whatever was used last decides how controls are named on screen: press a controller button and
+  // tips, hints, help and the toolbar show controller buttons; touch the keyboard or mouse and they switch back.
+  // starts as touch on phones and tablets (a finger is the main pointer), keyboard & mouse everywhere else
+  let inputMode = ('ontouchstart' in window || navigator.maxTouchPoints > 0) && !(window.matchMedia && matchMedia('(pointer: fine)').matches) ? 'touch' : 'kb';
+  document.body.dataset.input = inputMode;
+  function setInput(m) {
+    if (m === inputMode) return;
+    inputMode = m; document.body.dataset.input = m;
+    refreshControls();
+    if (m === 'pad' && mode === 'play' && S && !tipSeen('pad')) { if (busy || dialog || tipActive) tipLater('pad'); else run(() => tip('pad')); }
+  }
+  // only real key presses and pointer use switch the device (not the game's own pretend key presses)
+  window.addEventListener('keydown', e => { if (e.isTrusted && !(e.target && e.target.tagName === 'INPUT' && e.target.type === 'text')) setInput('kb'); }, true);
+  window.addEventListener('pointerdown', e => { if (e.isTrusted) setInput(e.pointerType === 'mouse' ? 'kb' : 'touch'); }, true);
+  window.addEventListener('pointermove', e => { if (e.isTrusted && e.pointerType === 'mouse' && Math.abs(e.movementX) + Math.abs(e.movementY) > 6) setInput('kb'); }, true);
+  window.addEventListener('gamepadconnected', () => { if (mode === 'play' || mode === 'title') toast('Controller connected', null, null, 2500); });
+
+  // How each action is shown on each device.
+  const KB_NAME = { act: 'E', jump: 'Space', light: 'Q', inv: 'I', quest: 'J', map: 'P', menu: 'Esc', back: 'Esc' };
+  const PAD_NAME = { act: 'A', back: 'B', jump: 'X', light: 'Y', inv: 'View', quest: 'LB', map: 'RB', menu: 'Menu' };
+  const TOUCH_NAME = { act: 'Talk/Use', jump: 'Jump', light: 'Raise Light', inv: 'Satchel', quest: 'Quests', map: 'Map', menu: 'Menu', back: '✕' };
+  function glyph(a, m = inputMode) {
+    if (m === 'pad') { const n = PAD_NAME[a] || a; return `<span class="gp gp-${n.toLowerCase()}">${n}</span>`; }
+    if (m === 'touch') return `<b>${TOUCH_NAME[a] || a}</b>`;
+    return `<kbd>${KB_NAME[a] || a}</kbd>`;
+  }
+  // Control words inside any text, filled in when it's shown, for the device used last:
+  //   {act:the stove}  → "click the stove" / "tap the stove" / "walk up to the stove and press (A)"
+  //   {btn:Use…}       → "click Use…" / "tap Use…" / "choose Use…"   (an on-screen button)
+  //   {press:jump}     → "press Space" / "tap Jump" / "press (X)"      {key:jump} → just the key or button
+  // A capital letter ({Act:…}, {Btn:…}, {Press:…}) starts a sentence.
+  function ctl(text) {
+    return String(text).replace(/\{(act|btn|press|key):([^}]+)\}/gi, (_, k, v) => {
+      const lo = k.toLowerCase(), pad = inputMode === 'pad', touch = inputMode === 'touch';
+      const s = lo === 'act' ? (pad ? `walk up to ${v} and press ${glyph('act')}` : `${touch ? 'tap' : 'click'} ${v}`)
+        : lo === 'btn' ? `${pad ? 'choose' : touch ? 'tap' : 'click'} <b>${v}</b>`
+        : lo === 'press' ? `${touch ? 'tap' : 'press'} ${glyph(v)}` : glyph(v);
+      return k[0] !== lo[0] && /^[a-z]/.test(s) ? s[0].toUpperCase() + s.slice(1) : s;
+    });
+  }
+  const BAR_LABEL = { inv: 'Satchel', quest: 'Quests', map: 'Map', menu: 'Menu' };
+  function moreLabel() { return inputMode === 'pad' ? `${glyph('act')} continue` : 'continue ▶'; }
+  // Redraw everything that names a control, after the device changes.
+  function refreshControls() {
+    document.querySelectorAll('#bar button').forEach(b => { const k = b.dataset.k; b.innerHTML = BAR_LABEL[k] + (inputMode === 'touch' ? '' : ' ' + glyph(k)); });
+    $('heldHow').innerHTML = inputMode === 'touch' ? '(tap here to drop)' : `(${glyph('back')} to drop)`;
+    if (dialog && dialog.more) dialog.more.innerHTML = moreLabel();
+    if (flapGame) flapText();
+    if (tipShown && TIPS[tipShown.id]) tipShown.p.innerHTML = TIPS[tipShown.id]().text;
+    if (panelOpen()) renderPanel();
+  }
+  $('held').addEventListener('click', e => { e.stopPropagation(); setHeld(null); });
+
+  // =================================================================== GAME CONTROLLER (Xbox and similar, through the browser's Gamepad API)
+  // Buttons (standard layout): A talk/use/choose · B back/drop · X jump · Y raise lantern · View satchel · LB quests ·
+  // RB map · Menu pause · left stick or D-pad walk and move around menus · right stick scrolls long pages.
+  const PAD = { A: 0, B: 1, X: 2, Y: 3, LB: 4, RB: 5, VIEW: 8, MENU: 9, UP: 12, DOWN: 13, LEFT: 14, RIGHT: 15 };
+  const padDir = { up: false, down: false, left: false, right: false };
+  let padPrev = [], navHeld = null, navT = 0;
+  function readPad() {
+    let list = []; try { list = navigator.getGamepads ? navigator.getGamepads() : []; } catch (e) { }
+    for (const gp of list || []) if (gp && gp.connected !== false && gp.buttons && gp.buttons.length >= 10) return gp;
+    return null;
+  }
+  function pollPad(dt) {
+    const gp = readPad();
+    if (!gp) { padPrev = []; navHeld = null; for (const d in padDir) padDir[d] = false; return; }
+    const now = gp.buttons.map(b => !!(b && (b.pressed || b.value > 0.5)));
+    const ax = gp.axes[0] || 0, ay = gp.axes[1] || 0, ry = gp.axes[3] || 0, DZ = 0.35;
+    const prev = padPrev; padPrev = now;
+    const edge = i => now[i] && !prev[i];
+    if (now.some((v, i) => v && !prev[i]) || Math.hypot(ax, ay) > 0.6 || Math.abs(ry) > 0.6) { setInput('pad'); if (now.some((v, i) => v && !prev[i])) AUDIO.init(); }
+    if (inputMode !== 'pad') { for (const d in padDir) padDir[d] = false; return; }
+    const layer = padLayer();
+    // walking: the stick or D-pad, only when no menu or card is open
+    const walk = !layer && mode === 'play';
+    padDir.up = walk && (now[PAD.UP] || ay < -DZ); padDir.down = walk && (now[PAD.DOWN] || ay > DZ);
+    padDir.left = walk && (now[PAD.LEFT] || ax < -DZ); padDir.right = walk && (now[PAD.RIGHT] || ax > DZ);
+    // one step at a time through menus and choices, repeating while held
+    let nd = now[PAD.UP] ? 'up' : now[PAD.DOWN] ? 'down' : now[PAD.LEFT] ? 'left' : now[PAD.RIGHT] ? 'right' : null;
+    if (!nd && Math.max(Math.abs(ax), Math.abs(ay)) > 0.55) nd = Math.abs(ax) > Math.abs(ay) ? (ax < 0 ? 'left' : 'right') : (ay < 0 ? 'up' : 'down');
+    let fire = false;
+    if (nd !== navHeld) { navHeld = nd; navT = 0.4; fire = !!nd; } else if (nd) { navT -= dt; if (navT <= 0) { navT = 0.13; fire = true; } }
+    if (layer) {
+      if (fire) navMove(layer, nd);
+      if (edge(PAD.A)) navPress(layer);
+      if (edge(PAD.B)) navBack(layer);
+      if (layer === $('panel')) {
+        if (edge(PAD.LB) || edge(PAD.RB)) cycleTab(edge(PAD.RB) ? 1 : -1);
+        if (edge(PAD.VIEW)) { if (curTab === 'inv') closePanel(); else openPanel('inv'); }
+        if (edge(PAD.MENU)) closePanel();
+      }
+      if (Math.abs(ry) > 0.25) scrollLayer(layer, ry * dt * 700);
+      return;
+    }
+    if (fire && dialog) dialogKey(nd);
+    const tap = k => { keyDown(k); keys[k] = false; };
+    if (edge(PAD.A)) tap('act');
+    if (edge(PAD.X)) tap('jump');
+    if (edge(PAD.Y)) tap('light');
+    if (edge(PAD.B)) { if (dialog) dialogKey('esc'); else if (held && mode === 'play') setHeld(null); }
+    if (edge(PAD.MENU)) { if (held && !dialog) setHeld(null); tap('esc'); }
+    if (edge(PAD.VIEW)) tap('inv');
+    if (edge(PAD.LB)) tap('quest');
+    if (edge(PAD.RB)) tap('map');
+  }
+  // The menu, card or screen the controller is moving around in (the top-most one), or null while playing.
+  function padLayer() {
+    const bgs = ui.querySelectorAll(':scope > .modal-bg'); if (bgs.length) return bgs[bgs.length - 1];
+    const tl = ui.querySelectorAll(':scope > .tiplayer'); if (tl.length) return tl[tl.length - 1];
+    if (dialog) return null;
+    if (panelOpen()) return $('panel');
+    if (mode !== 'play' && titleEl.style.display !== 'none' && titleEl.querySelector('button')) return titleEl;
+    return null;
+  }
+  // ---- moving a highlight between buttons, items and sliders, like a console menu
+  const NAV_SEL = 'button, input[type=range], input[type=checkbox], .slot, .cg-cell, .cg-tray .cg-piece, .cg-label';
+  let navEl = null, navLayer = null, navRect = null;
+  function navItems(layer) { return [...layer.querySelectorAll(NAV_SEL)].filter(el => !el.disabled && el.getClientRects().length && getComputedStyle(el).visibility !== 'hidden'); }
+  const centre = r => [r.left + r.width / 2, r.top + r.height / 2];
+  function navReset() { navEl = null; navRect = null; }
+  function navCurrent(layer) {
+    if (navLayer !== layer) { navLayer = layer; navReset(); }
+    const items = navItems(layer);
+    if (navEl && items.includes(navEl)) { navRect = navEl.getBoundingClientRect(); return navEl; }
+    let pick = null;
+    if (navRect) { // what was highlighted has been redrawn: stay in the same spot
+      const [cx, cy] = centre(navRect); let bd = 1e9;
+      for (const el of items) { const [x, y] = centre(el.getBoundingClientRect()); const d = Math.hypot(x - cx, y - cy); if (d < bd) { bd = d; pick = el; } }
+    }
+    if (!pick && layer === $('panel')) pick = layer.querySelector('#panelBody .slot.sel') || items.find(el => el.closest('#panelBody')) || layer.querySelector('header button.on');
+    if (!pick) pick = items.find(el => el.classList.contains('primary')) || items[0] || null;
+    navEl = pick; navRect = pick ? pick.getBoundingClientRect() : null;
+    return pick;
+  }
+  function navMove(layer, d) {
+    const cur = navCurrent(layer);
+    if (!cur) { scrollLayer(layer, d === 'up' ? -80 : d === 'down' ? 80 : 0); return; }
+    if (cur.type === 'range' && (d === 'left' || d === 'right')) {
+      const st = +cur.step || 0.05; cur.value = Math.max(+cur.min, Math.min(+cur.max, +cur.value + (d === 'left' ? -st : st)));
+      cur.dispatchEvent(new Event('input', { bubbles: true })); AUDIO.sfx('blip', 1.1); return;
+    }
+    const [ax, ay] = centre(cur.getBoundingClientRect());
+    let best = null, bs = 1e9;
+    for (const el of navItems(layer)) {
+      if (el === cur) continue;
+      const [x, y] = centre(el.getBoundingClientRect()), dx = x - ax, dy = y - ay;
+      const ahead = d === 'left' ? -dx : d === 'right' ? dx : d === 'up' ? -dy : dy;
+      const aside = d === 'left' || d === 'right' ? Math.abs(dy) : Math.abs(dx);
+      if (ahead <= 2) continue;
+      const s = ahead + aside * 2.5; if (s < bs) { bs = s; best = el; }
+    }
+    if (best) { navEl = best; navRect = best.getBoundingClientRect(); best.scrollIntoView({ block: 'nearest', inline: 'nearest' }); AUDIO.sfx('blip', 1.25); }
+    else if (d === 'up' || d === 'down') scrollLayer(layer, d === 'up' ? -80 : 80);
+  }
+  function navPress(layer) {
+    const el = navCurrent(layer); if (!el || el.type === 'range') return;
+    AUDIO.init(); el.click();
+  }
+  function navBack(layer) {
+    if (layer.classList.contains('modal-bg')) { if (layer.dataset.esc) document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', code: 'Escape', bubbles: true })); return; }
+    if (layer.classList.contains('tiplayer')) { if (tipActive) tipActive(); return; }
+    if (layer === $('panel')) { if (combineFrom) { combineFrom = null; renderPanel(); } else closePanel(); return; }
+    if (layer === titleEl) { const b = $('sBack'); if (b) b.click(); }
+  }
+  function scrollLayer(layer, dy) {
+    for (const el of [layer, ...layer.querySelectorAll('*')]) if (el.scrollHeight > el.clientHeight + 2 && /auto|scroll/.test(getComputedStyle(el).overflowY)) { el.scrollTop += dy; return; }
+  }
+  const TABS = ['inv', 'quest', 'map', 'journal', 'opts'];
+  function cycleTab(n) { const i = TABS.indexOf(curTab); openPanel(TABS[(i + n + TABS.length) % TABS.length]); }
+  // the highlight ring, and a small strip saying what the buttons do (like "(A) Choose  (B) Back")
+  const navRing = document.createElement('div'); navRing.id = 'padfocus'; ui.appendChild(navRing);
+  const navLegend = document.createElement('div'); navLegend.id = 'padhint'; ui.appendChild(navLegend);
+  function drawNav() {
+    const layer = inputMode === 'pad' ? padLayer() : null;
+    const el = layer && navCurrent(layer);
+    if (!el) navRing.style.display = 'none';
+    else {
+      const sr = stage.getBoundingClientRect(), r = el.getBoundingClientRect();
+      Object.assign(navRing.style, { display: 'block', left: (r.left - sr.left - 4) + 'px', top: (r.top - sr.top - 4) + 'px', width: (r.width + 8) + 'px', height: (r.height + 8) + 'px' });
+    }
+    let h = '';
+    if (layer) {
+      const back = layer === $('panel') ? 'Close' : layer.classList.contains('tiplayer') ? '' : layer.classList.contains('modal-bg') ? (layer.dataset.esc ? 'Back' : '') : $('sBack') ? 'Back' : '';
+      h = `${glyph('act')} ${el && el.type === 'range' ? 'Slide ◀ ▶' : 'Choose'}${back ? ` &nbsp; ${glyph('back')} ${back}` : ''}${layer === $('panel') ? ` &nbsp; ${glyph('quest')} ${glyph('map')} Tabs` : ''}`;
+      // browsers only allow sound after a click or key press, which a controller button may not count as
+      if (mode !== 'play' && AUDIO.state !== 'running') h += ' &nbsp; <span style="opacity:.8">(sound starts after a click or key press)</span>';
+    }
+    if (navLegend.innerHTML !== h) navLegend.innerHTML = h;
+    navLegend.style.display = h ? 'block' : 'none';
+  }
 
   function toWorld(ev) {
     const r = cv.getBoundingClientRect();
@@ -347,6 +544,7 @@ const G = (() => {
   let last = 0;
   function loop(ts) {
     const dt = Math.min(0.05, (ts - last) / 1000 || 0); last = ts; time += dt;
+    try { pollPad(dt); drawNav(); } catch (e) { console.error(e); }
     if (mode === 'play') { update(dt); render(); }
     else if (mode === 'title') renderTitle(dt);
     else if (mode === 'credits') renderCredits(dt);
@@ -403,7 +601,7 @@ const G = (() => {
     let mx = 0, my = 0;
     const canMove = !busy && !dialog && !transitioning && !panelOpen() && !flapGame;
     if (canMove) {
-      if (keys.left) mx -= 1; if (keys.right) mx += 1; if (keys.up) my -= 1; if (keys.down) my += 1;
+      if (keys.left || padDir.left) mx -= 1; if (keys.right || padDir.right) mx += 1; if (keys.up || padDir.up) my -= 1; if (keys.down || padDir.down) my += 1;
       if (mx || my) { p.path = []; p.pendingAct = null; }
     }
     if (!mx && !my && p.path.length && (canMove || p.scripted)) {
@@ -833,6 +1031,13 @@ const G = (() => {
     if (it.type === 'npc') { const n = it.n; y = n.y - (n.kind === 'horse' ? 32 : n.kind === 'dragon' ? 26 : n.kind === 'critter' ? 14 : 38) + (n.def.perch || 0); x = n.x; }
     else if (it.o.img && !it.o.invisible) y = (it.o.y + it.o.fh) * T - it.o.img.height + (it.o.dy || 0) - 4;
     y += Math.sin(time * 5) * 1.5;
+    if (inputMode === 'pad') { // a little green (A) button over the person or thing, as in console games
+      const cx = Math.round(x), cy = Math.round(y - 4);
+      ctx.fillStyle = '#1c1424'; ctx.beginPath(); ctx.arc(cx + 0.5, cy + 0.5, 5.5, 0, 7); ctx.fill();
+      ctx.fillStyle = usingItem ? '#3a8ad0' : '#2f9e44'; ctx.beginPath(); ctx.arc(cx + 0.5, cy + 0.5, 4.5, 0, 7); ctx.fill();
+      ctx.fillStyle = '#fff'; ['.#.', '#.#', '###', '#.#', '#.#'].forEach((row, j) => [...row].forEach((c, i) => { if (c === '#') ctx.fillRect(cx - 1 + i, cy - 2 + j, 1, 1); }));
+      return;
+    }
     ctx.fillStyle = '#1c1424'; ctx.fillRect(Math.round(x - 4), Math.round(y - 5), 9, 6);
     ctx.fillStyle = usingItem ? '#8ad0ff' : '#ffe070';
     ctx.fillRect(Math.round(x - 3), Math.round(y - 4), 7, 1); ctx.fillRect(Math.round(x - 2), Math.round(y - 3), 5, 1); ctx.fillRect(Math.round(x - 1), Math.round(y - 2), 3, 1); ctx.fillRect(Math.round(x), Math.round(y - 1), 1, 1);
@@ -931,7 +1136,7 @@ const G = (() => {
     if (id === 'luminara' || id === 'player') return player;
     return npcs.find(n => n.id === id) || followers.find(f => f.id === id) || null;
   }
-  function fmt(t) { return t.replace(/\{friend\}/g, S.friendName).replace(/\*(.+?)\*/g, '<i>$1</i>'); }
+  function fmt(t) { return ctl(t.replace(/\{friend\}/g, S ? S.friendName : 'Gwendolyn').replace(/\*(.+?)\*/g, '<i>$1</i>')); }
   function speakerInfo(who) {
     if (who === 'luminara') return { name: 'Luminara', color: '#2c3a78', voice: 1, ent: player };
     const e = entityById(who);
@@ -949,7 +1154,7 @@ const G = (() => {
       el.className = 'bubble' + (opts.think ? ' think' : '');
       if (!opts.think) el.innerHTML = `<span class="who" style="--who:${info.color}">${info.name}</span>`;
       const body = document.createElement('div'); el.appendChild(body);
-      const more = document.createElement('span'); more.className = 'more'; more.textContent = 'continue ▶'; more.style.display = 'none'; el.appendChild(more);
+      const more = document.createElement('span'); more.className = 'more'; more.innerHTML = moreLabel(); more.style.display = 'none'; el.appendChild(more);
       ui.appendChild(el); sceneLines++;
       const full = fmt(text);
       const plain = full.replace(/<[^>]+>/g, '');
@@ -964,7 +1169,7 @@ const G = (() => {
     return new Promise(res => {
       const el = document.createElement('div'); el.className = 'narr' + (opts.big ? ' big' : '');
       const body = document.createElement('div'); el.appendChild(body);
-      const more = document.createElement('span'); more.className = 'more'; more.textContent = 'continue ▶'; more.style.display = 'none'; el.appendChild(more);
+      const more = document.createElement('span'); more.className = 'more'; more.innerHTML = moreLabel(); more.style.display = 'none'; el.appendChild(more);
       ui.appendChild(el); sceneLines++;
       const full = fmt(text);
       dialog = { el, body, more, full, plain: full.replace(/<[^>]+>/g, ''), shown: 0, res, kind: 'narr', info: { voice: 0.6 } };
@@ -1062,27 +1267,32 @@ const G = (() => {
 
   // =================================================================== TUTORIAL TIPS
   // Each tip appears once per save, the first time the thing it explains matters.
-  const isTouch = () => document.body.classList.contains('touch');
-  const keyName = (k, btn) => isTouch() ? `the <b>${btn}</b> button` : `<b>${k}</b> (or the <b>${btn}</b> button)`;
+  // Wording follows the device used last (see INPUT DEVICE): keyboard & mouse, touch, or a game controller.
+  const isTouch = () => inputMode === 'touch', isPad = () => inputMode === 'pad';
+  const keyName = (a, btn) => isTouch() ? `the <b>${btn}</b> button` : isPad() ? glyph(a) : `${glyph(a)} (or the <b>${btn}</b> button)`;
   const TIPS = {
-    move: () => ({ title: 'Welcome, Light-Bearer!', text: isTouch() ? 'Tap anywhere to walk there. Tap people and things to talk to them, look at them or pick them up.' : 'Walk with the <b>arrow keys</b> (or click where you want to go). Press <b>E</b> next to people and things — or click them — to talk, look or pick up.' }),
+    move: () => ({ title: 'Welcome, Light-Bearer!', text: isTouch() ? 'Tap anywhere to walk there. Tap people and things to talk to them, look at them or pick them up.'
+      : isPad() ? `Walk with the <b>left stick</b> (or the D-pad). Walk up to people and things and press ${glyph('act')} to talk, look or pick up.`
+      : 'Walk with the <b>arrow keys</b> (or click where you want to go). Press <kbd>E</kbd> next to people and things — or click them — to talk, look or pick up.' }),
+    pad: () => ({ title: 'Controller ready!', text: `Walk with the <b>left stick</b> or D-pad. ${glyph('act')} talk, look and pick up · ${glyph('jump')} jump · ${glyph('light')} raise your lantern (once it's lit) · ${glyph('back')} back.<br>${glyph('inv')} satchel · ${glyph('quest')} quests · ${glyph('map')} map · ${glyph('menu')} pause.<br>In menus, move with the stick and press ${glyph('act')} to choose.` }),
     goal: () => ({ target: '#objective', title: 'Your goal', text: 'This gold <b>Goal</b> line always tells you what to do next. Check it whenever you are not sure!' }),
-    quests: () => ({ target: '#bar [data-k=quest]', title: 'Quests', text: `You just got your first quest, <i>A New Dawn</i>. It is a list of little jobs. Open ${keyName('J', 'Quests')} any time to see every quest and tick off what you have done.` }),
-    menu: () => ({ target: '#bar [data-k=menu]', title: 'Menu', text: `${isTouch() ? 'The <b>Menu</b> button' : '<b>Esc</b> (or the <b>Menu</b> button)'} pauses the game. From there you can change options, read how to play, switch players, or go back to the title. Your progress saves by itself — no need to save.` }),
-    satchel: () => ({ target: '#bar [data-k=inv]', title: 'Your Satchel', text: `Everything you pick up goes in your satchel. Open ${keyName('I', 'Satchel')} to look at an item, <b>Use</b> it on something, or <b>Combine</b> two items together.` }),
-    use: () => ({ target: '#bar [data-k=inv]', title: 'Using an item', text: 'Open your <b>Satchel</b> → tap the item → press <b>Use…</b> → then tap the thing you want to use it on.' }),
-    combine: () => ({ target: '#bar [data-k=inv]', title: 'Combining items', text: 'Some items work better together! Open your <b>Satchel</b> → tap one item → press <b>Combine…</b> → then tap the other item.' }),
+    quests: () => ({ target: '#bar [data-k=quest]', title: 'Quests', text: `You just got your first quest, <i>A New Dawn</i>. It is a list of little jobs. Open ${keyName('quest', 'Quests')} any time to see every quest and tick off what you have done.` }),
+    menu: () => ({ target: '#bar [data-k=menu]', title: 'Menu', text: `${isTouch() ? 'The <b>Menu</b> button' : isPad() ? `The ${glyph('menu')} button` : `${glyph('menu')} (or the <b>Menu</b> button)`} pauses the game. From there you can change options, read how to play, switch players, or go back to the title. Your progress saves by itself — no need to save.` }),
+    satchel: () => ({ target: '#bar [data-k=inv]', title: 'Your Satchel', text: `Everything you pick up goes in your satchel. Open ${keyName('inv', 'Satchel')} to look at an item, <b>Use</b> it on something, or <b>Combine</b> two items together.` }),
+    use: () => ({ target: '#bar [data-k=inv]', title: 'Using an item', text: isPad() ? `Open your <b>Satchel</b> ${glyph('inv')} → choose the item → choose <b>Use…</b> → then walk up to the thing you want to use it on and press ${glyph('act')}.`
+      : ctl('Open your <b>Satchel</b> → {act:the item} → {btn:Use…} → then {act:the thing you want to use it on}.') }),
+    combine: () => ({ target: '#bar [data-k=inv]', title: 'Combining items', text: `Some items work better together! Open your <b>Satchel</b>${isPad() ? ' ' + glyph('inv') : ''} → ${ctl(isPad() ? 'choose one item → {btn:Combine…} → then choose the other item.' : '{act:one item} → {btn:Combine…} → then {act:the other item}.')}` }),
     compass: () => ({ target: 'compass', title: "Father's compass", text: 'This compass is special — it does <b>not</b> point north. Its <b style="color:#c03030">red needle</b> always points the way to your <b>next goal</b>. Follow it through doors and paths, and when you are in the right place it points straight at it.' }),
-    jump: () => ({ target: isTouch() ? '#tbtns [data-b=jump]' : null, title: 'Jumping', text: isTouch() ? 'Tap <b>Jump</b> to leap — over logs, across streams, or up at things that are just out of reach.' : 'Press <b>Space</b> to jump — over logs, across streams, or up at things that are just out of reach.' }),
-    light: () => ({ target: '#hLightRow', title: 'Lantern light', text: `This bar shows your lantern's light. ${isTouch() ? 'Tap <b>Raise Light</b>' : 'Press <b>Q</b>'} to hold your lantern high and light up the darkness further. It uses a little light, and refills by itself.` }),
-    hearts: () => ({ target: '#hHearts', title: 'Courage', text: `These hearts are Luminara's courage. Goblinites take one away if they catch her — keep them back with ${keyName('Q', 'Raise Light')}. Hearts come back slowly, and if they run out she just picks herself up again.` }),
+    jump: () => ({ target: isTouch() ? '#tbtns [data-b=jump]' : null, title: 'Jumping', text: ctl('{Press:jump} to leap — over logs, across streams, or up at things that are just out of reach.') }),
+    light: () => ({ target: '#hLightRow', title: 'Lantern light', text: `This bar shows your lantern's light. ${ctl('{Press:light}')} to hold your lantern high and light up the darkness further. It uses a little light, and refills by itself.` }),
+    hearts: () => ({ target: '#hHearts', title: 'Courage', text: `These hearts are Luminara's courage. Goblinites take one away if they catch her — keep them back with ${keyName('light', 'Raise Light')}. Hearts come back slowly, and if they run out she just picks herself up again.` }),
     xp: () => ({ target: '#hLvlRow', title: 'Experience', text: 'Helping people earns <b>experience</b>. Fill the blue bar to reach a new <b>level</b> — Luminara gets braver (more hearts) and her lantern shines brighter.' }),
     coins: () => ({ target: '#hCoinRow', title: 'Copper coins', text: 'Your copper coins. Spend them at shops and stalls around Kraxenville.' }),
-    journal: () => ({ target: '#bar [data-k=quest]', title: 'Your journal', text: 'Memories and discoveries are written in your <b>Journal</b>. Open <b>Quests</b> and choose the <b>Journal</b> tab to read it.' }),
-    hint: () => ({ target: '#panelBody .qhint', title: 'Stuck?', text: `If you ever get stuck, ${isTouch() ? 'tap' : 'click'} <b>Hint</b> next to a quest for a small nudge with just the next step. Asking again gives a clearer hint.` }),
-    map: () => ({ target: '#bar [data-k=map]', title: 'Your map', text: `You copied the map of the Kingdom of Krax! Open ${keyName('P', 'Map')} any time to see where you are.` }),
+    journal: () => ({ target: '#bar [data-k=quest]', title: 'Your journal', text: `Memories and discoveries are written in your <b>Journal</b>. Open <b>Quests</b>${isPad() ? ' ' + glyph('quest') : ''} and choose the <b>Journal</b> tab to read it.` }),
+    hint: () => ({ target: '#panelBody .qhint', title: 'Stuck?', text: `If you ever get stuck, ${ctl('{btn:Hint}')} next to a quest for a small nudge with just the next step. Asking again gives a clearer hint.` }),
+    map: () => ({ target: '#bar [data-k=map]', title: 'Your map', text: `You copied the map of the Kingdom of Krax! Open ${keyName('map', 'Map')} any time to see where you are.` }),
   };
-  let tipQueue = [], tipActive = null;
+  let tipQueue = [], tipActive = null, tipShown = null;
   function tipSeen(id) { return S && S.flags['tip_' + id]; }
   function tipLater(id) { if (!S || tipSeen(id) || tipQueue.includes(id)) return; tipQueue.push(id); }
   async function flushTips() { while (tipQueue.length && mode === 'play') await tip(tipQueue.shift()); }
@@ -1123,7 +1333,8 @@ const G = (() => {
       }
       box.style.left = bx + 'px'; box.style.top = by + 'px';
       AUDIO.sfx('ding');
-      const done = () => { layer.remove(); tipActive = null; res(); };
+      tipShown = { id, p: box.querySelector('p') };
+      const done = () => { layer.remove(); tipActive = null; tipShown = null; res(); };
       tipActive = done;
       box.querySelector('button').onclick = e => { e.stopPropagation(); done(); };
       layer.addEventListener('pointerdown', e => { if (e.target === layer || e.target === ring) e.stopPropagation(); });
@@ -1189,7 +1400,7 @@ const G = (() => {
     for (const n of list) {
       h += `<div class="nrow ${n.kind || ''}">${iconHTML(n.icon)}<div><div class="nt">${fmt(n.text)}</div>${n.tag ? `<span class="ntag ${n.side ? 'side' : 'main'}">${n.tag}</span>` : ''}${n.desc ? `<div class="nd">${fmt(n.desc)}</div>` : ''}</div></div>`;
     }
-    if (list.some(n => n.kind === 'quest')) h += `<p class="nfoot">Your goal is always at the top of the screen. Every step is in <b>Quests</b>${isTouch() ? '' : ' (J)'}.</p>`;
+    if (list.some(n => n.kind === 'quest')) h += `<p class="nfoot">Your goal is always at the top of the screen. Every step is in <b>Quests</b>${isTouch() ? '' : ' ' + glyph('quest')}.</p>`;
     return new Promise(res => {
       const layer = document.createElement('div'); layer.className = 'tiplayer ncard-bg';
       const box = document.createElement('div'); box.className = 'ncard';
@@ -1244,7 +1455,7 @@ const G = (() => {
   // =================================================================== PANELS
   let curTab = null, selItem = null, combineFrom = null;
   function panelOpen() { return $('panel').classList.contains('open'); }
-  function openPanel(tab) { curTab = tab; $('panel').classList.add('open'); document.body.classList.add('panelopen'); renderPanel(); AUDIO.sfx('blip', 0.8); }
+  function openPanel(tab) { navReset(); curTab = tab; $('panel').classList.add('open'); document.body.classList.add('panelopen'); renderPanel(); AUDIO.sfx('blip', 0.8); }
   function closePanel() { $('panel').classList.remove('open'); document.body.classList.remove('panelopen'); combineFrom = null; curTab = null; }
   document.querySelectorAll('#panel header button').forEach(b => b.addEventListener('click', () => { const t = b.dataset.tab; if (t === 'close') closePanel(); else openPanel(t); }));
   document.querySelectorAll('#bar button').forEach(b => b.addEventListener('click', e => {
@@ -1281,11 +1492,11 @@ const G = (() => {
       if (combineFrom) det.innerHTML += `<p><b>Choose another item to combine with ${STORY.ITEMS[combineFrom].name}…</b></p>`;
       const acts = document.createElement('div'); acts.className = 'acts';
       const mkb = (t, f) => { const b = document.createElement('button'); b.textContent = t; b.onclick = f; acts.appendChild(b); };
-      mkb('Use…', () => { setHeld(selItem); closePanel(); toast('Now walk up to something and press E (or click it) to use the ' + it.name + '.'); });
+      mkb('Use…', () => { setHeld(selItem); closePanel(); toast(isTouch() ? `Now tap the thing you want to use the ${it.name} on.` : isPad() ? `Now walk up to something and press ${glyph('act')} to use the ${it.name}.` : `Now walk up to something and press ${glyph('act')} (or click it) to use the ${it.name}.`); });
       mkb('Combine…', () => { combineFrom = selItem; renderPanel(); });
       if (it.self) mkb(it.selfLabel || 'Use now', () => { const id = selItem; closePanel(); run(() => STORY.useSelf(id)); });
       det.appendChild(acts);
-    } else det.innerHTML = '<h3>Satchel</h3><p>Click an item to look at it, use it on something in the world, or combine it with another item.</p>';
+    } else det.innerHTML = `<h3>Satchel</h3><p>${isPad() ? `Choose an item with ${glyph('act')}` : isTouch() ? 'Tap an item' : 'Click an item'} to look at it, use it on something in the world, or combine it with another item.</p>`;
     const st = document.createElement('div'); st.className = 'stats';
     st.innerHTML = `<span>Level</span><b>${S.lvl}</b><span>Experience</span><b>${S.xp}${LEVELS[S.lvl] ? ' / ' + LEVELS[S.lvl] : ''}</b><span>Courage</span><b>${S.hearts} / ${S.maxHearts} ♥</b><span>Lantern light</span><b>${S.light} / ${S.maxLight}</b><span>Copper</span><b>${S.coins}</b><span>Golden leaves</span><b>${S.leaves.length} / ${STORY.TOTAL_LEAVES}</b>`;
     det.appendChild(st);
@@ -1394,14 +1605,11 @@ const G = (() => {
   function renderJournal(body) { const d = document.createElement('div'); d.className = 'journal qlist'; d.innerHTML = STORY.journal(S); body.appendChild(d); }
   function renderOpts(body) {
     const d = document.createElement('div'); d.className = 'qlist';
-    d.innerHTML = `<h4>Controls</h4>
-      <p>Move: <b>Arrow keys / WASD</b> — or click / tap where you want to go.<br>
-      Talk / look / use: <b>E</b>, <b>Enter</b> — or click on a person or thing.<br>
-      Jump: <b>Space</b> &nbsp; Raise lantern: <b>Q</b> &nbsp; Satchel: <b>I</b> &nbsp; Quests: <b>J</b> &nbsp; Map: <b>P</b> &nbsp; Menu: <b>Esc</b> &nbsp; Sound on/off: <b>M</b></p>
+    d.innerHTML = `<h4>Controls</h4>${controlsHTML()}
       <h4>Sound</h4>
       <p>Music <input type="range" id="oMus" min="0" max="0.7" step="0.05" value="${AUDIO.musicVol}"> &nbsp; Effects <input type="range" id="oSfx" min="0" max="1" step="0.05" value="${AUDIO.sfxVol}"><br>
       <label style="cursor:pointer"><input type="checkbox" id="oMute" ${AUDIO.muted ? 'checked' : ''} style="transform:scale(1.4);margin-right:8px">Turn all sound off</label></p>
-      <div style="display:${isTouch() ? 'block' : 'none'}"><h4>Touch controls</h4>
+      <div style="display:${document.body.classList.contains('touch') ? 'block' : 'none'}"><h4>Touch controls</h4>
       <p><label style="cursor:pointer"><input type="checkbox" id="oDpad" ${document.body.classList.contains('nodpad') ? '' : 'checked'} style="transform:scale(1.4);margin-right:8px">Show the arrow pad on screen</label><br>
       <span style="opacity:.75">Turn it off to just tap where you want Luminara to walk. The Jump, Talk and Raise Light buttons stay.</span></p></div>
       <h4>Tips</h4><p>New-player tips appear once each. You can see them all again from the start.</p>`;
@@ -1476,7 +1684,7 @@ const G = (() => {
       let pieces = start(), sel = null, moves = 0;
       const bg = document.createElement('div'); bg.className = 'modal-bg';
       const box = document.createElement('div'); box.className = 'modal cargo'; bg.appendChild(box);
-      box.innerHTML = `<h3>Make it fit!</h3><p class="dim">Tap a piece to pick it up, then tap where it should go on the wagon. Long casks can be turned with <b>↻ Turn</b>. Everything must fit — even the great cask on the ground!</p>
+      box.innerHTML = `<h3>Make it fit!</h3><p class="dim">${isPad() ? `Choose a piece with ${glyph('act')} to pick it up, then choose where it should go on the wagon.` : isTouch() ? 'Tap a piece to pick it up, then tap where it should go on the wagon.' : 'Click a piece to pick it up, then click where it should go on the wagon.'} Long casks can be turned with <b>↻ Turn</b>. Everything must fit — even the great cask on the ground!</p>
         <div class="cg-area"><div class="cg-grid"></div></div><div class="cg-tray"><span class="cg-label">On the ground:</span></div><p class="cg-msg"></p>
         <div class="modal-btns"><button class="cg-hint">Hint</button><button class="cg-reset">Start again</button><button class="cg-rot">↻ Turn</button></div>`;
       ui.appendChild(bg);
@@ -1531,7 +1739,7 @@ const G = (() => {
     paused = false;
     if (v === 'opts') openPanel('opts');
     if (v === 'sum') { paused = true; await chapterSummary(STORY.summaryHTML(S, 1)); paused = false; }
-    if (v === 'how') { paused = true; await modal({ title: 'How to Play', html: HOW, escValue: true, buttons: [{ label: 'Back to the game', value: true, primary: true }] }); paused = false; }
+    if (v === 'how') { paused = true; await modal({ title: 'How to Play', html: HOW(), escValue: true, buttons: [{ label: 'Back to the game', value: true, primary: true }] }); paused = false; }
     if (v === 'slots') { save(); toTitle(); showSlots(); }
     if (v === 'title') { save(); toTitle(); }
   }
@@ -1610,7 +1818,7 @@ const G = (() => {
       $('flapgame').style.display = 'block'; flapText();
     });
   };
-  function flapText() { const o = flapGame.opts; $('flapgame').innerHTML = `${o.label || 'Press <b>Space</b> (or tap) when the ring turns <b style="color:#ffd860">gold</b>.'}<br>${(o.icon || '✦').repeat(flapGame.hits)}${'◇'.repeat(flapGame.target - flapGame.hits)} ${flapGame.msg}`; }
+  function flapText() { const o = flapGame.opts; $('flapgame').innerHTML = `${ctl(o.label || '{Press:jump} when the ring turns <b style="color:#ffd860">gold</b>.')}<br>${(o.icon || '✦').repeat(flapGame.hits)}${'◇'.repeat(flapGame.target - flapGame.hits)} ${flapGame.msg}`; }
   function updateFlap(dt) { const f = flapGame; f.t += dt; f.ring -= dt * 0.75; if (f.ring < 0) f.ring = 1; f.cool -= dt; }
   function flapTap() {
     const f = flapGame; if (!f || f.cool > 0) return;
@@ -1644,6 +1852,7 @@ const G = (() => {
     return new Promise(res => {
       const bg = document.createElement('div'); bg.className = 'modal-bg';
       const box = document.createElement('div'); box.className = 'modal' + (o.stack ? ' stack' : '') + (o.wide ? ' wide' : ''); bg.appendChild(box);
+      bg.dataset.esc = '1'; // the controller's B button works like Esc here
       box.innerHTML = `<h3>${o.title}</h3>${o.html || ''}${o.input ? `<input class="modal-in" maxlength="16" value="${esc(o.input)}">` : ''}`;
       const row = document.createElement('div'); row.className = 'modal-btns'; box.appendChild(row);
       const inp = box.querySelector('.modal-in');
@@ -1657,16 +1866,32 @@ const G = (() => {
   }
   function fmtTime(sec) { sec = Math.floor(sec || 0); const h = Math.floor(sec / 3600), m = Math.floor(sec / 60) % 60; return h ? `${h} h ${m} min` : `${Math.max(1, m)} min`; }
   function fmtDate(t) { if (!t) return ''; const d = new Date(t); return d.toLocaleDateString(undefined, { day: 'numeric', month: 'short' }) + ', ' + d.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' }); }
-  const HOW = `<ul class="how">
-    <li><b>Walk:</b> arrow keys / WASD, or click or tap where you want to go.</li>
-    <li><b>Talk, look, pick up, open doors:</b> press E (or Enter), or click/tap on the person or thing.</li>
-    <li><b>Jump:</b> Space — to reach things up high, and over logs and streams.</li>
-    <li><b>Satchel (I):</b> look at items, <i>Use</i> them on things, or <i>Combine</i> two together.</li>
-    <li><b>Quests (J):</b> every task, and the little tasks inside each big one. <b>Map (P)</b> shows the Kingdom of Krax.</li>
-    <li><b>Raise your lantern (Q)</b> once it's lit, to light up the darkness further.</li>
-    <li><b>Stuck?</b> Open Quests and press <b>Hint</b> next to a quest for a small nudge.</li>
+  // How to Play, in the words of the device being used (keyboard & mouse, touch, or controller)
+  function HOW() {
+    const pad = isPad(), touch = isTouch(), k = a => touch ? '' : ` ${glyph(a)}`;
+    return `<ul class="how">
+    <li><b>Walk:</b> ${pad ? 'the left stick or D-pad.' : touch ? 'tap where you want to go (or use the arrow pad).' : 'arrow keys / WASD, or click where you want to go.'}</li>
+    <li><b>Talk, look, pick up, open doors:</b> ${pad ? `walk up to the person or thing and press ${glyph('act')}.` : touch ? 'tap the person or thing.' : `press ${glyph('act')} (or Enter), or click on the person or thing.`}</li>
+    <li><b>Jump:</b>${touch ? ' the <b>Jump</b> button' : k('jump')} — to reach things up high, and over logs and streams.</li>
+    <li><b>Satchel${k('inv')}:</b> look at items, <i>Use</i> them on things, or <i>Combine</i> two together.</li>
+    <li><b>Quests${k('quest')}:</b> every task, and the little tasks inside each big one. <b>Map${k('map')}</b> shows the Kingdom of Krax.</li>
+    <li><b>Raise your lantern${touch ? '' : k('light')}</b> once it's lit, to light up the darkness further.</li>
+    <li><b>Stuck?</b> Open Quests and ${ctl('{btn:Hint}')} next to a quest for a small nudge.</li>
+    ${pad ? `<li><b>In menus:</b> move with the stick or D-pad, ${glyph('act')} to choose, ${glyph('back')} to go back, ${glyph('quest')} ${glyph('map')} to switch tabs.</li>` : ''}
     <li>Help people to earn experience — level up to grow braver and brighter.</li>
-    <li>The game <b>saves by itself</b> every few seconds and when you close it. Each player has their own save slot.</li></ul>`;
+    <li>The game <b>saves by itself</b> every few seconds and when you close it. Each player has their own save slot.</li>
+    ${pad || touch ? '' : '<li><b>Got an Xbox controller?</b> Plug it in (or pair it) and press any button.</li>'}</ul>`;
+  }
+  // the Controls list in Options
+  function controlsHTML() {
+    if (isPad()) return `<p>Walk: <b>left stick / D-pad</b> &nbsp; Talk / look / use: ${glyph('act')} &nbsp; Back / drop item: ${glyph('back')}<br>
+      Jump: ${glyph('jump')} &nbsp; Raise lantern: ${glyph('light')} &nbsp; Satchel: ${glyph('inv')} &nbsp; Quests: ${glyph('quest')} &nbsp; Map: ${glyph('map')} &nbsp; Menu: ${glyph('menu')}<br>
+      In menus: move with the stick, ${glyph('act')} to choose, ${glyph('quest')} ${glyph('map')} switch tabs, right stick scrolls.</p>`;
+    return `<p>Move: <b>Arrow keys / WASD</b> — or click / tap where you want to go.<br>
+      Talk / look / use: <kbd>E</kbd>, <kbd>Enter</kbd> — or click on a person or thing.<br>
+      Jump: <kbd>Space</kbd> &nbsp; Raise lantern: <kbd>Q</kbd> &nbsp; Satchel: <kbd>I</kbd> &nbsp; Quests: <kbd>J</kbd> &nbsp; Map: <kbd>P</kbd> &nbsp; Menu: <kbd>Esc</kbd> &nbsp; Sound on/off: <kbd>M</kbd><br>
+      <span style="opacity:.75">Xbox controllers work too: press any button on one and the game switches to it.</span></p>`;
+  }
   // The film bars are switched by the gameplay loop, which stops on the title and credits screens, so clear them here.
   function clearCine() { cineOn = false; document.body.classList.remove('cine'); }
   function toTitle() {
@@ -1693,7 +1918,7 @@ const G = (() => {
     if (last) $('tCont').onclick = () => { AUDIO.init(); slot = ls; startGame(readSlot(ls)); };
     else $('tNew').onclick = () => { AUDIO.init(); newGameIn(1); };
     $('tSlots').onclick = () => { AUDIO.init(); showSlots(); };
-    $('tHow').onclick = () => { AUDIO.init(); modal({ title: 'How to Play', html: HOW, buttons: [{ label: 'Got it!', value: true, primary: true }] }); };
+    $('tHow').onclick = () => { AUDIO.init(); modal({ title: 'How to Play', html: HOW(), buttons: [{ label: 'Got it!', value: true, primary: true }] }); };
     titleDragons = [
       { c: 'wyrmRed', x: -60, y: 20, s: 16 }, { c: 'wyrmGreen', x: -220, y: 34, s: 22 }, { c: 'wyrmBronze', x: -360, y: 12, s: 26 },
     ];
@@ -1912,6 +2137,7 @@ const G = (() => {
     mode = 'play';
     MAPS.reset();
     held = null; setHeld(null); followers = [];
+    if (inputMode === 'pad') setTimeout(() => tipLater('pad'), 0); // the controller tip, once S exists
     if (saved) {
       S = Object.assign(newState(), saved);
       S.met = S.met || {};
@@ -1951,7 +2177,7 @@ const G = (() => {
       player.x = e.x * T + 8; player.y = e.y * T + 12; checkExits(); await wait(60); await DBG.idle();
     },
     place(tx, ty, dir) { player.x = tx * T + 8; player.y = ty * T + 12; if (dir) player.dir = dir; lastSafe = { x: player.x, y: player.y }; },
-    jump() { tryJump(); }, keys, get busy() { return busy; }, get dialog() { return !!dialog; }, combine: (a, b) => run(() => STORY.combine(a, b)),
+    jump() { tryJump(); }, keys, get input() { return inputMode; }, get busy() { return busy; }, get dialog() { return !!dialog; }, combine: (a, b) => run(() => STORY.combine(a, b)),
     cam: () => ({ x: cam.x, y: cam.y }), get player() { return player; }, get npcs() { return npcs; }, get mode() { return mode; }, walkable, findPath, tileAt,
   };
   // auto-advance dialogue during automated tests
@@ -1974,6 +2200,7 @@ const G = (() => {
     face(who, dir) { const e = entityById(who); if (e) e.dir = dir; }, entity: entityById, get time() { return time; },
   };
 
+  refreshControls();
   requestAnimationFrame(loop);
   window.addEventListener('load', () => { toTitle(); });
   if (document.readyState === 'complete') setTimeout(toTitle, 0);

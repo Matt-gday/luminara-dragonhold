@@ -13,16 +13,22 @@ All the art, animation, music and sound effects are made by code, so there are n
 - **One file:** `luminara-single-file.html` is the whole game in a single file. You can email it, put it on a USB stick or double-click it.
 - **Online:** host this folder with GitHub Pages and share the link.
 
-| Action | Keyboard | Mouse / touch |
-|---|---|---|
-| Walk | Arrow keys / WASD | Click or tap where to go |
-| Talk, look, pick up, open doors | **E** or Enter | Click the person or thing |
-| Jump | **Space** | Jump button |
-| Satchel (use and combine items) | **I** | Satchel button |
-| Quest log | **J** | Quests button |
-| Map of Krax | **P** | Map button |
-| Pause menu | **Esc** | Menu button |
-| Sound on/off | **M** | Menu → Options |
+| Action | Keyboard | Mouse / touch | Xbox controller |
+|---|---|---|---|
+| Walk | Arrow keys / WASD | Click or tap where to go | Left stick / D-pad |
+| Talk, look, pick up, open doors | **E** or Enter | Click the person or thing | **A** |
+| Jump | **Space** | Jump button | **X** |
+| Raise the lantern (once lit) | **Q** | Raise Light button | **Y** |
+| Satchel (use and combine items) | **I** | Satchel button | **View** |
+| Quest log | **J** | Quests button | **LB** |
+| Map of Krax | **P** | Map button | **RB** |
+| Back / drop the item you're using | **Esc** | Tap the "Using" label | **B** |
+| Pause menu | **Esc** | Menu button | **Menu** |
+| Sound on/off | **M** | Menu → Options | Menu → Options |
+
+**Controllers:** plug in (or pair) an Xbox controller and press any button. In menus, move the gold highlight with the stick or
+D-pad, **A** chooses, **B** goes back, **LB/RB** switch tabs, the right stick scrolls. Tips, hints, help and buttons name
+whatever you used last: controller buttons, keys, or taps.
 
 The game saves by itself every few seconds, and the moment it's closed, so players carry on exactly where they left off.
 **Players & Saves** on the title screen holds three separate save slots, one per player. Each slot has a **Delete** button that asks before deleting. During play, **Menu** (or Esc) pauses the game and leads to Options, How to Play, Players & Saves and Back to Title.

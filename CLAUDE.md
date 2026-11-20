@@ -117,8 +117,18 @@ Players wander. For every quest step, ask: *what if they do this first, last, tw
   `G.notice()`: they collect into one card the player must tap **Continue** on, shown before the next line of dialogue
   (with a short guard so mashing doesn't skip it). `G.toast()` is only for small hints, which stay until tapped or until
   the player's next action; quick feedback (Sound on, splash) passes a short duration.
-- Every new feature, button or mechanic gets a one-time tip (`TIPS` in js/game.js) when it first matters, with touch
-  wording on phones ("tap" instead of key names).
+- Every new feature, button or mechanic gets a one-time tip (`TIPS` in js/game.js) when it first matters, worded for
+  keyboard & mouse, touch ("tap"), and controller.
+- **Three input devices: keyboard & mouse, touch, Xbox controller.** Whatever was used last decides how controls are
+  named on screen (`inputMode` in js/game.js; it switches the moment another device is used, like PC games do).
+  Controller: left stick/D-pad walk, A talk/use/choose, B back/drop, X jump, Y raise lantern, View satchel, LB quests,
+  RB map, Menu pause; in menus a gold highlight moves with the stick, LB/RB switch tabs, the right stick scrolls.
+  Every new button, card or menu must work with the controller too (buttons, `.slot`s, sliders and checkboxes are
+  reached automatically; check with `node tests/controller.js`).
+- **Never write a control name straight into text** ("Click the well", "press Q"). Use the placeholders, which are
+  filled in when shown, for the device in use: `{act:the well}` (click / tap / walk up to it and press A),
+  `{btn:Use…}` (an on-screen button), `{press:jump}`, `{key:light}`. A capital first letter starts a sentence
+  (`{Act:…}`). They work in anything passed through `say`, `think`, `narrate`, `toast`, `notice` and quest hints.
 - Name tags show on hover/facing, only for characters already met ("?" otherwise). No quest details in name tags.
 - People turn to face Luminara while talking, **keep facing her until she walks away** (about 3 tiles), then turn back
   to their usual direction. Wanderers don't stroll off while she's with them.
@@ -196,7 +206,8 @@ One-time setup: install Node.js (LTS), then in the project folder run `npm insta
 - Single checks: `node tests/ch1play.js` (whole Chapter One), `node tests/ch1order.js` (out-of-order routes),
   `node tests/reach.js` (everything reachable), `node tests/audit.js` (every interaction has code),
   `node tests/ending.js` (Chapter One ending into Chapter Two), `node tests/ch2play.js` (Chapter Two so far),
-  `node tests/shots.js`, `ch2shots.js`, `titlenew.js` (desktop and phone screenshots into `tests/out/`).
+  `node tests/shots.js`, `ch2shots.js`, `titlenew.js` (desktop and phone screenshots into `tests/out/`),
+  `node tests/controller.js` (a pretend Xbox controller plays through the menus, tips and dialogue).
 - Tests use the debug hooks in `G.dbg` (auto-advance dialogue, act on a target, place the player, exits, reachability).
   Expected "unreachable" results in reach.js: the exit blocked by Ronald's stuck wagon, the bog exit hidden by mist,
   and the hidden wagon after the wheel is fixed.
