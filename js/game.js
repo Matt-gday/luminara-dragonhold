@@ -592,6 +592,7 @@ const G = (() => {
     const mw = M.w * T, mh = M.h * T;
     cam.x = mw <= VW ? (mw - VW) / 2 : Math.max(0, Math.min(mw - VW, cam.x));
     cam.y = mh <= VH ? (mh - VH) / 2 : Math.max(0, Math.min(mh - VH, cam.y));
+    if (!camOverride) { const b = bounds(); if (b && b.view != null) cam.y = b.view * T; } // a fixed view (see keepInBounds)
   }
   function snapCam() { cam.x = player.x - VW / 2; cam.y = player.y - 12 - VH / 2; clampCam(); }
 
@@ -623,6 +624,7 @@ const G = (() => {
       if (p.z === 0) { stepT += dt; if (stepT > 0.28) { stepT = 0; AUDIO.sfx(M.particles === 'leaves' && GFX.hash(Math.floor(p.x / 16), Math.floor(p.y / 16), 4) < 0.3 ? 'leaf' : 'step'); } }
       checkExits();
     } else { p.frame = 0; p.t = 0; }
+    if (!p.scripted) keepInBounds(my);
     // jump physics
     if (p.z > 0 || p.vz > 0) {
       p.vz -= 640 * dt; p.z += p.vz * dt;
@@ -640,6 +642,26 @@ const G = (() => {
     if (!trail.length || Math.hypot(p.x - trail[0].x, p.y - trail[0].y) >= 1) { trail.unshift({ x: p.x, y: p.y }); if (trail.length > 160) trail.pop(); }
     // knockback
     if (p.kb) { const nx = p.x + p.kb.x * dt, ny = p.y + p.kb.y * dt; if (!boxBlocked(nx, ny, false, player)) { p.x = nx; p.y = ny; } p.kb.t -= dt; if (p.kb.t <= 0) p.kb = null; }
+  }
+  // Some places limit how far up or down Luminara can walk (story.boundsFor), e.g. while the caravan is stopped the
+  // screen around the wagons is the whole area. The edge of the screen is the edge, and walking into it gets a line from
+  // her instead of an invisible wall. { view: row } fixes the camera at that row and uses the screen's top and bottom;
+  // { top: row, bottom: row } just sets limits. up / down are what she says.
+  let edgeSaid = null;
+  function bounds() {
+    const b = M && STORY.boundsFor ? STORY.boundsFor(M.id) : null; if (!b) return null;
+    const top = b.view != null ? b.view * T + 34 : b.top != null ? b.top * T : -1e9;
+    const bot = b.view != null ? b.view * T + VH - 16 : b.bottom != null ? b.bottom * T : 1e9;
+    return { top, bot, up: b.up, down: b.down, view: b.view };
+  }
+  function keepInBounds(my) {
+    const b = bounds(); if (!b) { edgeSaid = null; return; }
+    const p = player; let hit = null;
+    if (p.y < b.top) { p.y = b.top; hit = 'up'; } else if (p.y > b.bot) { p.y = b.bot; hit = 'down'; }
+    if (!hit) { if (p.y > b.top + 12 && p.y < b.bot - 12) edgeSaid = null; return; }
+    if (p.path.length) { p.path = []; p.pendingAct = null; }
+    const pushing = hit === 'up' ? my < 0 : my > 0;
+    if (pushing && b[hit] && edgeSaid !== hit && !busy && !dialog && !transitioning) { edgeSaid = hit; run(() => say('luminara', b[hit])); }
   }
   function checkDoorBump(hit, mx, my) {
     if (!hit || !hit.tile || busy) return;

@@ -1909,8 +1909,8 @@ const MAPS = (() => {
     m.spr(S.log, 4, 13, { fw: 2, id: 'logF1', name: 'Fallen Log', look: 'A fallen spruce, soft with moss.' });
     m.spr(S.log, 20, 28, { fw: 2, id: 'logF2', name: 'Fallen Log', look: 'White mushrooms grow along the rotting bark.' });
     m.spr(S.stump, 22, 19, { id: 'stumpF', name: 'Old Stump', look: 'An old stump, damp and dark.' });
-    // a flat rock (it can prop up a wagon) and a couple of round ones that can't
-    m.spr(S.flatRock, 20, 5, { solid: false, id: 'flatRock', name: 'Flat Rock', act: 'flatRock', if: s => !s.flags.gotFlatRock });
+    // a flat rock (it can prop up a wagon), half hidden behind a pine like the round ones that can't
+    m.spr(S.flatRock, 19, 5, { dx: 10, solid: false, id: 'flatRock', name: 'Flat Rock', act: 'flatRock', if: s => !s.flags.gotFlatRock });
     m.spr(S.rock, 7, 9, { id: 'roundRock1', name: 'Round Rock', look: 'A round, mossy rock. It would roll right out from under anything.' });
     m.spr(S.rock, 22, 8, { id: 'roundRock2', name: 'Round Rock', look: 'Smooth and round. Not much use for propping anything up.' });
     // Ronald's wagon, stopped across the path with a loose wheel; the barrels beside it once unloaded
@@ -1918,8 +1918,6 @@ const MAPS = (() => {
     m.spr(S.wagon, 12, 11, { fw: 3, id: 'ronWagon', name: "Ronald's Wagon", act: 'ronWagon', if: stopped });
     m.spr(S.flatRock, 13, 12, { solid: false, decal: true, id: 'rockUnder', if: s => stopped(s) && s.flags.rockPlaced });
     for (const [x, y] of [[16, 10], [17, 10], [16, 11]]) m.spr(S.barrel, x, y, { if: s => stopped(s) && s.flags.barrelsOff && !s.flags.barrelsBack });
-    m.obj({ x: 0, y: 12, fw: 12, fh: 1, invisible: true, if: stopped });
-    m.obj({ x: 15, y: 12, fw: 13, fh: 1, invisible: true, if: stopped });
     m.npc({ id: 'ronaldF', char: 'ronald', x: 11, y: 10, dir: 'right', name: 'Ronald', act: 'ronaldF', color: '#7a5a3a', voice: 0.7, if: stopped });
     m.npc({ id: 'aldricF', char: 'aldric', x: 18, y: 9, dir: 'left', name: 'Aldric', act: 'aldricF', color: '#3a6a9a', voice: 1.05, if: stopped });
     m.keep(9, 0, 10, 14); m.keepRoad('fpath');
@@ -2045,6 +2043,8 @@ const STORY = (() => {
   function musicFor(id) { const c = chapter(); return c.musicFor ? c.musicFor(id) : null; }
   function tintFor(id) { const c = chapter(); return c.tintFor ? c.tintFor(id) : null; }
   function darkFor(id) { const c = chapter(); return c.darkFor ? c.darkFor(id) : null; }
+  // how far Luminara may walk up and down a place right now, and what she says at the edge (see game.js updatePlayer)
+  function boundsFor(id) { const c = chapter(); return c.boundsFor ? c.boundsFor(id) : null; }
 
   // ------------------------------------------------------------------ goals & the compass
   // How the places join up (the tile in each map that leads to the next one).
@@ -2106,7 +2106,7 @@ const STORY = (() => {
     register, H, ITEMS, QUESTS, SPEAKERS, CHAPTERS, LINKS, ACT, USE,
     get TOTAL_LEAVES() { return LEAVES.length; },
     get chapterInfo() { return chapter(); },
-    intro, interact, combine, useSelf, zone, gate, onEnter, onLoad, onFlash, particlesFor, nextChapter, advance, objective, compass, journal, summaryHTML, musicFor, tintFor, darkFor,
+    intro, interact, combine, useSelf, zone, gate, onEnter, onLoad, onFlash, particlesFor, nextChapter, advance, objective, compass, journal, summaryHTML, musicFor, tintFor, darkFor, boundsFor,
   };
 })();
 
@@ -3280,6 +3280,16 @@ const STORY = (() => {
     onLoad: async () => { if (!F().ch2Started) await begin(); },
     musicFor: id => (id === 'forest_path' || id === 'forest_bog') ? 'forest' : null,
     tintFor: id => id === 'forest_bog' && F().sunShower ? 'gold' : null,
+    // While Ronald's wagon is broken, the screen around the wagons is the whole area: walking off its top or bottom edge
+    // gets a line from Luminara instead of an invisible wall. The top of the path always says why it's closed.
+    boundsFor: id => {
+      if (id !== 'forest_path') return null;
+      const f = F();
+      if (f.wheelStopped && !f.wheelFixed) return { view: 1.5,
+        up: "Brushwood is back the way we came. Let's mend Ronald's wheel and carry on to Lesterfield.",
+        down: "I can't go on without the others. Ronald's wheel needs mending first." };
+      return { top: 1.6, up: "Brushwood is back the way we came. We're bound for Lesterfield." };
+    },
     darkFor: id => id === 'forest_path' ? (F().clouds ? 0.6 : 0.3) : id === 'forest_bog' ? (F().sunShower ? 0.25 : 0.6) : null,
     particlesFor: id => id === 'forest_bog' ? (F().sunShower ? 'drizzle' : 'rain') : null,
     journal: {
@@ -3898,6 +3908,7 @@ const G = (() => {
     const mw = M.w * T, mh = M.h * T;
     cam.x = mw <= VW ? (mw - VW) / 2 : Math.max(0, Math.min(mw - VW, cam.x));
     cam.y = mh <= VH ? (mh - VH) / 2 : Math.max(0, Math.min(mh - VH, cam.y));
+    if (!camOverride) { const b = bounds(); if (b && b.view != null) cam.y = b.view * T; } // a fixed view (see keepInBounds)
   }
   function snapCam() { cam.x = player.x - VW / 2; cam.y = player.y - 12 - VH / 2; clampCam(); }
 
@@ -3929,6 +3940,7 @@ const G = (() => {
       if (p.z === 0) { stepT += dt; if (stepT > 0.28) { stepT = 0; AUDIO.sfx(M.particles === 'leaves' && GFX.hash(Math.floor(p.x / 16), Math.floor(p.y / 16), 4) < 0.3 ? 'leaf' : 'step'); } }
       checkExits();
     } else { p.frame = 0; p.t = 0; }
+    if (!p.scripted) keepInBounds(my);
     // jump physics
     if (p.z > 0 || p.vz > 0) {
       p.vz -= 640 * dt; p.z += p.vz * dt;
@@ -3946,6 +3958,26 @@ const G = (() => {
     if (!trail.length || Math.hypot(p.x - trail[0].x, p.y - trail[0].y) >= 1) { trail.unshift({ x: p.x, y: p.y }); if (trail.length > 160) trail.pop(); }
     // knockback
     if (p.kb) { const nx = p.x + p.kb.x * dt, ny = p.y + p.kb.y * dt; if (!boxBlocked(nx, ny, false, player)) { p.x = nx; p.y = ny; } p.kb.t -= dt; if (p.kb.t <= 0) p.kb = null; }
+  }
+  // Some places limit how far up or down Luminara can walk (story.boundsFor), e.g. while the caravan is stopped the
+  // screen around the wagons is the whole area. The edge of the screen is the edge, and walking into it gets a line from
+  // her instead of an invisible wall. { view: row } fixes the camera at that row and uses the screen's top and bottom;
+  // { top: row, bottom: row } just sets limits. up / down are what she says.
+  let edgeSaid = null;
+  function bounds() {
+    const b = M && STORY.boundsFor ? STORY.boundsFor(M.id) : null; if (!b) return null;
+    const top = b.view != null ? b.view * T + 34 : b.top != null ? b.top * T : -1e9;
+    const bot = b.view != null ? b.view * T + VH - 16 : b.bottom != null ? b.bottom * T : 1e9;
+    return { top, bot, up: b.up, down: b.down, view: b.view };
+  }
+  function keepInBounds(my) {
+    const b = bounds(); if (!b) { edgeSaid = null; return; }
+    const p = player; let hit = null;
+    if (p.y < b.top) { p.y = b.top; hit = 'up'; } else if (p.y > b.bot) { p.y = b.bot; hit = 'down'; }
+    if (!hit) { if (p.y > b.top + 12 && p.y < b.bot - 12) edgeSaid = null; return; }
+    if (p.path.length) { p.path = []; p.pendingAct = null; }
+    const pushing = hit === 'up' ? my < 0 : my > 0;
+    if (pushing && b[hit] && edgeSaid !== hit && !busy && !dialog && !transitioning) { edgeSaid = hit; run(() => say('luminara', b[hit])); }
   }
   function checkDoorBump(hit, mx, my) {
     if (!hit || !hit.tile || busy) return;

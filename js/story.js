@@ -76,6 +76,8 @@ const STORY = (() => {
   function musicFor(id) { const c = chapter(); return c.musicFor ? c.musicFor(id) : null; }
   function tintFor(id) { const c = chapter(); return c.tintFor ? c.tintFor(id) : null; }
   function darkFor(id) { const c = chapter(); return c.darkFor ? c.darkFor(id) : null; }
+  // how far Luminara may walk up and down a place right now, and what she says at the edge (see game.js updatePlayer)
+  function boundsFor(id) { const c = chapter(); return c.boundsFor ? c.boundsFor(id) : null; }
 
   // ------------------------------------------------------------------ goals & the compass
   // How the places join up (the tile in each map that leads to the next one).
@@ -137,6 +139,6 @@ const STORY = (() => {
     register, H, ITEMS, QUESTS, SPEAKERS, CHAPTERS, LINKS, ACT, USE,
     get TOTAL_LEAVES() { return LEAVES.length; },
     get chapterInfo() { return chapter(); },
-    intro, interact, combine, useSelf, zone, gate, onEnter, onLoad, onFlash, particlesFor, nextChapter, advance, objective, compass, journal, summaryHTML, musicFor, tintFor, darkFor,
+    intro, interact, combine, useSelf, zone, gate, onEnter, onLoad, onFlash, particlesFor, nextChapter, advance, objective, compass, journal, summaryHTML, musicFor, tintFor, darkFor, boundsFor,
   };
 })();

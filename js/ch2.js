@@ -294,6 +294,16 @@
     onLoad: async () => { if (!F().ch2Started) await begin(); },
     musicFor: id => (id === 'forest_path' || id === 'forest_bog') ? 'forest' : null,
     tintFor: id => id === 'forest_bog' && F().sunShower ? 'gold' : null,
+    // While Ronald's wagon is broken, the screen around the wagons is the whole area: walking off its top or bottom edge
+    // gets a line from Luminara instead of an invisible wall. The top of the path always says why it's closed.
+    boundsFor: id => {
+      if (id !== 'forest_path') return null;
+      const f = F();
+      if (f.wheelStopped && !f.wheelFixed) return { view: 1.5,
+        up: "Brushwood is back the way we came. Let's mend Ronald's wheel and carry on to Lesterfield.",
+        down: "I can't go on without the others. Ronald's wheel needs mending first." };
+      return { top: 1.6, up: "Brushwood is back the way we came. We're bound for Lesterfield." };
+    },
     darkFor: id => id === 'forest_path' ? (F().clouds ? 0.6 : 0.3) : id === 'forest_bog' ? (F().sunShower ? 0.25 : 0.6) : null,
     particlesFor: id => id === 'forest_bog' ? (F().sunShower ? 'drizzle' : 'rain') : null,
     journal: {

@@ -1,7 +1,7 @@
 // Runs every check in this folder, one after another, and reports which ones found problems.
 // Usage: npm test   (or: node tests/run-all.js)
 const { spawnSync } = require('child_process'), path = require('path');
-const tests = ['audit.js', 'reach.js', 'ch1play.js', 'ch1order.js', 'ending.js', 'ch2play.js', 'shots.js', 'ch2shots.js', 'titlenew.js', 'controller.js'];
+const tests = ['audit.js', 'reach.js', 'ch1play.js', 'ch1order.js', 'ending.js', 'ch2play.js', 'shots.js', 'ch2shots.js', 'titlenew.js', 'controller.js', 'ch2wheel.js'];
 let bad = 0;
 for (const t of tests) {
   process.stdout.write(`\n=== ${t} ===\n`);

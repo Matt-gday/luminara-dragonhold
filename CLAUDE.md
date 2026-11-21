@@ -99,6 +99,9 @@ Players wander. For every quest step, ask: *what if they do this first, last, tw
 - `goal()` must never point backwards at something skipped (see the `metCrew` cargo check in ch1).
 - Repeat interactions need sensible repeat lines. Closing the app mid-scene must be safe (arrival scenes replay via
   `onEnter`; the caravan is restored on entering a place).
+- **No invisible walls.** They feel like bugs. Where Luminara can't go yet, use the place's bounds (`boundsFor` in the
+  chapter: the edge of the screen is the edge) and give her a line saying why (e.g. "Ronald's wheel needs mending first").
+  Things the player must find may be partly hidden (a rock peeking out from behind a pine) but never completely.
 - **Nothing the story needs may cost more than the player can be sure to have** (the pie goes on credit, Tilda's wick
   is free with no copper). Empty-purse choices get a kind line, never silence.
 
@@ -207,7 +210,8 @@ One-time setup: install Node.js (LTS), then in the project folder run `npm insta
   `node tests/reach.js` (everything reachable), `node tests/audit.js` (every interaction has code),
   `node tests/ending.js` (Chapter One ending into Chapter Two), `node tests/ch2play.js` (Chapter Two so far),
   `node tests/shots.js`, `ch2shots.js`, `titlenew.js` (desktop and phone screenshots into `tests/out/`),
-  `node tests/controller.js` (a pretend Xbox controller plays through the menus, tips and dialogue).
+  `node tests/controller.js` (a pretend Xbox controller plays through the menus, tips and dialogue),
+  `node tests/ch2wheel.js` (Ronald's wheel played like a player: the screen edges, the half-hidden rock).
 - Tests use the debug hooks in `G.dbg` (auto-advance dialogue, act on a target, place the player, exits, reachability).
   Expected "unreachable" results in reach.js: the exit blocked by Ronald's stuck wagon, the bog exit hidden by mist,
   and the hidden wagon after the wheel is fixed.

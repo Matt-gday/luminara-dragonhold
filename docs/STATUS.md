@@ -16,6 +16,9 @@
 - **Xbox controller support (21 Nov):** play, menus, satchel, tabs, tips, dialogue and both puzzles work with a
   controller. Text names the device used last (controller buttons, keys or taps) and switches on the fly. Control
   words in hints now use placeholders (`{act:…}` etc.), which also fixed hints that said "click" on phones.
+- **Ronald's wheel (21 Nov, from Matt's play-test):** the flat rock was completely hidden behind a pine; it now just
+  pokes out. The invisible walls around the stopped wagons are gone: the screen's edges are the edges, and Luminara says
+  why at each (`boundsFor` in js/ch2.js).
 - **Recent fixes:** black bars after the credits, the dark strip on the title, the hook-and-line hints (Fredrick's
   string now snaps on camera), the guild door colour in hints, empty-purse lines.
 

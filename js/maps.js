@@ -350,8 +350,8 @@ const MAPS = (() => {
     m.spr(S.log, 4, 13, { fw: 2, id: 'logF1', name: 'Fallen Log', look: 'A fallen spruce, soft with moss.' });
     m.spr(S.log, 20, 28, { fw: 2, id: 'logF2', name: 'Fallen Log', look: 'White mushrooms grow along the rotting bark.' });
     m.spr(S.stump, 22, 19, { id: 'stumpF', name: 'Old Stump', look: 'An old stump, damp and dark.' });
-    // a flat rock (it can prop up a wagon) and a couple of round ones that can't
-    m.spr(S.flatRock, 20, 5, { solid: false, id: 'flatRock', name: 'Flat Rock', act: 'flatRock', if: s => !s.flags.gotFlatRock });
+    // a flat rock (it can prop up a wagon), half hidden behind a pine like the round ones that can't
+    m.spr(S.flatRock, 19, 5, { dx: 10, solid: false, id: 'flatRock', name: 'Flat Rock', act: 'flatRock', if: s => !s.flags.gotFlatRock });
     m.spr(S.rock, 7, 9, { id: 'roundRock1', name: 'Round Rock', look: 'A round, mossy rock. It would roll right out from under anything.' });
     m.spr(S.rock, 22, 8, { id: 'roundRock2', name: 'Round Rock', look: 'Smooth and round. Not much use for propping anything up.' });
     // Ronald's wagon, stopped across the path with a loose wheel; the barrels beside it once unloaded
@@ -359,8 +359,6 @@ const MAPS = (() => {
     m.spr(S.wagon, 12, 11, { fw: 3, id: 'ronWagon', name: "Ronald's Wagon", act: 'ronWagon', if: stopped });
     m.spr(S.flatRock, 13, 12, { solid: false, decal: true, id: 'rockUnder', if: s => stopped(s) && s.flags.rockPlaced });
     for (const [x, y] of [[16, 10], [17, 10], [16, 11]]) m.spr(S.barrel, x, y, { if: s => stopped(s) && s.flags.barrelsOff && !s.flags.barrelsBack });
-    m.obj({ x: 0, y: 12, fw: 12, fh: 1, invisible: true, if: stopped });
-    m.obj({ x: 15, y: 12, fw: 13, fh: 1, invisible: true, if: stopped });
     m.npc({ id: 'ronaldF', char: 'ronald', x: 11, y: 10, dir: 'right', name: 'Ronald', act: 'ronaldF', color: '#7a5a3a', voice: 0.7, if: stopped });
     m.npc({ id: 'aldricF', char: 'aldric', x: 18, y: 9, dir: 'left', name: 'Aldric', act: 'aldricF', color: '#3a6a9a', voice: 1.05, if: stopped });
     m.keep(9, 0, 10, 14); m.keepRoad('fpath');
