@@ -1949,6 +1949,7 @@ const G = (() => {
         ${!last && last0 ? `<div class="hint" style="font-size:calc(var(--fs)*.8)">The story has been rebuilt from Lisa's book — older saves need a fresh start.</div>` : ''}
         ${last ? `<button id="tCont">Continue<small>${esc(last.playerName || 'Player ' + ls)} · ${esc(last.where || '')} · Level ${last.lvl || 1}</small></button>` : '<button id="tNew">Begin the Story</button>'}
         <button id="tSlots">Players &amp; Saves</button>
+        ${STORY.startable().map(c => `<button data-chap="${c.n}">Start at Chapter ${NUM[c.n] || c.n}<small>preview · Chapter One already played</small></button>`).join('')}
         <button id="tHow">How to Play</button>
       </div>
       <div class="hint">A story by Lisa · Made with love by Dad</div>`;
@@ -1956,6 +1957,7 @@ const G = (() => {
     if (last) $('tCont').onclick = () => { AUDIO.init(); slot = ls; startGame(readSlot(ls)); };
     else $('tNew').onclick = () => { AUDIO.init(); newGameIn(1); };
     $('tSlots').onclick = () => { AUDIO.init(); showSlots(); };
+    titleEl.querySelectorAll('[data-chap]').forEach(b => b.onclick = () => { AUDIO.init(); startChapterIn(+b.dataset.chap); });
     $('tHow').onclick = () => { AUDIO.init(); modal({ title: 'How to Play', html: HOW(), buttons: [{ label: 'Got it!', value: true, primary: true }] }); };
     titleDragons = [
       { c: 'wyrmRed', x: -60, y: 20, s: 16 }, { c: 'wyrmGreen', x: -220, y: 34, s: 22 }, { c: 'wyrmBronze', x: -360, y: 12, s: 26 },
@@ -1975,10 +1977,17 @@ const G = (() => {
     if (mode !== 'title' || e.target !== titleEl) return;
     const r = cv.getBoundingClientRect(); addTitleWisp((e.clientX - r.left) / r.width * VW, (e.clientY - r.top) / r.height * VH, true);
   });
-  async function newGameIn(n) {
-    const name = await modal({ title: "Who's playing?", html: '<p>Type a name for this save.</p>', input: 'Player ' + n, buttons: [{ label: 'Cancel', value: false }, { label: 'Begin the story', value: true, primary: true }] });
+  const NUM = { 2: 'Two', 3: 'Three', 4: 'Four', 5: 'Five' };
+  async function newGameIn(n, chapter) {
+    const name = await modal({ title: "Who's playing?", html: '<p>Type a name for this save.</p>' + (chapter ? `<p class="dim">It starts at Chapter ${NUM[chapter] || chapter}, with Chapter One played along its main story (no side stories).</p>` : ''), input: 'Player ' + n, buttons: [{ label: 'Cancel', value: false }, { label: 'Begin the story', value: true, primary: true }] });
     if (!name) return;
-    slot = n; startGame(null, name);
+    slot = n; startGame(null, name, chapter);
+  }
+  // Play-testing a preview chapter without playing the ones before it: a new save in the first empty slot.
+  async function startChapterIn(chapter) {
+    let n = 0; for (let i = 1; i <= SLOTS && !n; i++) if (!readSlot(i)) n = i;
+    if (!n) return modal({ title: 'All three saves are in use', html: `<p>Starting at Chapter ${NUM[chapter] || chapter} needs an empty save slot. Delete one in <b>Players &amp; Saves</b> first (each Delete asks before it deletes).</p>`, buttons: [{ label: 'OK', value: true, primary: true }] });
+    newGameIn(n, chapter);
   }
   function showSlots() {
     titleEl.style.display = 'flex'; titleEl.classList.remove('home');
@@ -1995,13 +2004,14 @@ const G = (() => {
         <div class="si dim">Played ${fmtTime(d.time)}${d.savedAt ? ' · last played ' + fmtDate(d.savedAt) : ''}</div>
         <div class="sb"><button data-play="${n}" class="primary">Play</button><button data-del="${n}" class="danger">Delete</button></div></div>`);
       else cards.push(`<div class="slotcard empty"><div class="sn">Empty slot ${n}</div><div class="si dim">Start a fresh adventure here. Other saves stay safe.</div>
-        <div class="sb"><button data-new="${n}" class="primary">New game</button></div></div>`);
+        <div class="sb"><button data-new="${n}" class="primary">New game</button>${STORY.startable().map(c => `<button data-newch="${n}" data-ch="${c.n}">Start at Chapter ${NUM[c.n] || c.n}</button>`).join('')}</div></div>`);
     }
     titleEl.innerHTML = `<div class="slots"><h2>Players &amp; Saves</h2><div class="slotgrid">${cards.join('')}</div><button id="sBack">Back</button></div>`;
     $('sBack').onclick = () => toTitle();
     titleEl.querySelectorAll('[data-play]').forEach(b => b.onclick = () => { AUDIO.init(); slot = +b.dataset.play; startGame(readSlot(slot)); });
     titleEl.querySelectorAll('[data-fresh]').forEach(b => b.onclick = () => { AUDIO.init(); const n = +b.dataset.fresh, d = readSlot(n); slot = n; startGame(null, d.playerName || 'Player ' + n); });
     titleEl.querySelectorAll('[data-new]').forEach(b => b.onclick = () => { AUDIO.init(); newGameIn(+b.dataset.new); });
+    titleEl.querySelectorAll('[data-newch]').forEach(b => b.onclick = () => { AUDIO.init(); newGameIn(+b.dataset.newch, +b.dataset.ch); });
     titleEl.querySelectorAll('[data-del]').forEach(b => b.onclick = async () => {
       const n = +b.dataset.del, d = readSlot(n), name = esc(d.playerName || 'Player ' + n);
       const ok = await modal({ title: 'Delete this save?', html: `<p>This will delete <b>${name}</b>'s game — Level ${d.lvl || 1}, played ${fmtTime(d.time)}.</p><p>The other saves are not touched. <b>This can't be undone.</b></p>`, buttons: [{ label: 'Keep it', value: false }, { label: 'Yes, delete it', value: true, danger: true }] });
@@ -2168,7 +2178,7 @@ const G = (() => {
   }
 
   // =================================================================== START
-  function startGame(saved, playerName) {
+  function startGame(saved, playerName, startChapter) {
     titleEl.style.display = 'none';
     try { if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => { }); } catch (e) { }
     autosaveT = 0;
@@ -2184,6 +2194,10 @@ const G = (() => {
       // saves from before Luminara drove her own wagon had a loose horse and wagon following her: swap in the new caravan
       if (S.party && S.party.length) setParty(S.party.some(p => p.sprite === 'wagon') && STORY.caravan && STORY.caravan() || S.party);
       hud();
+      run(async () => { if (STORY.onLoad) await STORY.onLoad(); if (STORY.onEnter) await STORY.onEnter(S.map); });
+    } else if (startChapter && (S = newState(), S.playerName = playerName || 'Player ' + slot, STORY.startAt(startChapter, S))) {
+      // a play-test start at a later chapter: carry on from where the chapter before it ended, like a finished save does
+      loadMap(S.map, 'north'); save(); hud();
       run(async () => { if (STORY.onLoad) await STORY.onLoad(); if (STORY.onEnter) await STORY.onEnter(S.map); });
     } else {
       S = newState(); S.playerName = playerName || 'Player ' + slot;

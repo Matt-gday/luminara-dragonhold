@@ -302,6 +302,18 @@
     items: ITEMS, quests: QUESTS, act: ACT, use: USE, combos: COMBOS, gates: GATES, onEnter, self: SELF, zones: ZONES, caravan: party,
     intro: async () => { }, goal, onFlash,
     onLoad: async () => { if (!F().ch2Started) await begin(); },
+    // Starting here for a play-test: Chapter One finished along its main story (no side stories), as if just left Brushwood.
+    startState: s => {
+      Object.assign(s.flags, { hasSatchel: 1, teaMade: 1, teaDrunk: 1, cloak: 1, gotCompass: 1, hasLantern: 1, gotRations: 1, arrivedTown: 1,
+        metFredrick: 1, metCrew: 1, cargoDone: 1, gotStrongbox: 1, lanternReady: 1, departed: 1, atBrushwood: 1, horsesDone: 1, lastBarrel: 1,
+        pouchFilled: 1, paid: 1, ateRations: 1, ch1Done: 1 });
+      for (const k of ['move', 'goal', 'quests', 'menu', 'satchel', 'xp', 'coins', 'journal', 'hint', 'combine', 'use', 'compass', 'hearts']) s.flags['tip_' + k] = 1;
+      s.inv = ['compass', 'flint', 'strongbox', 'guildKey', 'lanternReady'];
+      s.q = { morning: 'done', totown: 'done', journey: 'done', lantern: 'done', brushwood: 'done' };
+      s.journal = ['father', 'mother', 'song', 'strongbox'];
+      Object.assign(s, { xp: 200, lvl: 4, hearts: 6, maxHearts: 6, light: 6, maxLight: 6, coins: 16, chapterDone: 1, map: 'brushwood' });
+      s.met = Object.assign(s.met || {}, { Aldric: 1, Ronald: 1, Gerald: 1, Fredrick: 1, Kalen: 1, Winston: 1 });
+    },
     musicFor: id => (id === 'forest_path' || id === 'forest_bog') ? 'forest' : null,
     tintFor: id => id === 'forest_bog' && F().sunShower ? 'gold' : null,
     // While Ronald's wagon is broken, the screen around the wagons is the whole area: walking off its top or bottom edge

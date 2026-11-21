@@ -25,13 +25,16 @@
   wait in a line with their horses hitched. Drawn in `GFX.rig` (front, back and side views); a party entry with
   `kind: 'drive'` makes her drive, `kind: 'rig'` entries follow. Jumping while driving gets a line. Saves from before
   swap in the new caravan when loaded. The book's wording already fits (she holds the reins), so no text changed.
+- **Start at Chapter Two (21 Nov):** with `?preview`, the title has **Start at Chapter Two**: a new save in the first
+  empty slot with Chapter One played along its main story, starting in the Dark Forest. Lisa never sees it.
 - **Compass:** with no particular place to go, the needle turns slowly round and round (it used to wag around north).
 - **Recent fixes:** black bars after the credits, the dark strip on the title, the hook-and-line hints (Fredrick's
   string now snaps on camera), the guild door colour in hints, empty-purse lines.
 
 ## Half done: Chapter Two, "The Dark Forest" (hidden preview)
 Design: `docs/chapter-2-plan.md` (four stages, decisions agreed with Matt, book typo list).
-**Hidden from Lisa** with `preview: true` in `js/ch2.js`. To see it, open the game once with `?preview`.
+**Hidden from Lisa** with `preview: true` in `js/ch2.js`. To see it, open the game once with `?preview`, then choose
+**Start at Chapter Two** on the title (or carry on from a save that finished Chapter One).
 - **Stage 1, the Dark Forest (book ch3): built and tested.** Two places: `forest_path` and `forest_bog`.
   - Ronald's wheel (barrels off, flat rock to prop the wagon, barrels back).
   - The flint-and-steel mini-game: the first strike always fails, "CLICK, CLACK!"

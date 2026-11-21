@@ -40,7 +40,9 @@ then `docs/chapter-2-plan.md` (the design for the chapter being built).
   Each chapter is designed first in `docs/chapter-N-plan.md`, then built in stages.
 - **Unfinished chapters stay hidden.** A chapter being built is registered with `preview: true`. It's hidden from normal
   players (Lisa) and only appears in a browser that has opened the game once with `?preview` (`?nopreview` turns it off).
-  Remove `preview: true` when the chapter is finished. When a chapter goes live, saves that finished the previous chapter
+  Remove `preview: true` when the chapter is finished. With preview on, the title also offers **Start at Chapter N**
+  (a new save in the first empty slot, the chapters before played along their main story: the chapter's `startState`),
+  so a chapter can be play-tested without playing the earlier ones. Give each new chapter a `startState`. When a chapter goes live, saves that finished the previous chapter
   automatically move on to it (`STORY.advance`).
 
 ### What was changed or removed, and why
@@ -214,7 +216,8 @@ One-time setup: install Node.js (LTS), then in the project folder run `npm insta
   `node tests/ending.js` (Chapter One ending into Chapter Two), `node tests/ch2play.js` (Chapter Two so far),
   `node tests/shots.js`, `ch2shots.js`, `titlenew.js` (desktop and phone screenshots into `tests/out/`),
   `node tests/controller.js` (a pretend Xbox controller plays through the menus, tips and dialogue),
-  `node tests/ch2wheel.js` (Ronald's wheel played like a player: the screen edges, the half-hidden rock).
+  `node tests/ch2wheel.js` (Ronald's wheel played like a player: the screen edges, the half-hidden rock),
+  `node tests/ch2start.js` (Start at Chapter Two: preview only, its own save slot).
 - Tests use the debug hooks in `G.dbg` (auto-advance dialogue, act on a target, place the player, exits, reachability).
   Expected "unreachable" results in reach.js: the exit blocked by Ronald's stuck wagon, the bog exit hidden by mist,
   and the hidden wagon after the wheel is fixed.

@@ -70,6 +70,10 @@ const STORY = (() => {
   // A chapter marked preview is hidden until a browser opts in with ?preview (so unfinished chapters stay out of Lisa's game).
   const previewOn = () => { try { return localStorage.getItem('luminara_preview') === '1'; } catch (e) { return false; } };
   const ready = c => c && (!c.preview || previewOn());
+  // For play-testing: in a browser with preview on, a new game can start at a later chapter, with the chapters before
+  // it played along their main story (each chapter's startState). Lisa never sees this.
+  const startable = () => previewOn() ? CHAPTERS.filter(c => c.n > 1 && c.startState && ready(c)) : [];
+  function startAt(n, s) { const c = startable().find(c => c.n === n); if (!c) return false; c.startState(s); s.chapter = n; return true; }
   function nextChapter(n) { const c = CHAPTERS.find(c => c.n === n + 1); return ready(c) ? c : null; }
   // A save that finished its chapter moves on to the next one, once that chapter is ready.
   function advance(s) { const n = s.chapter || 1; if (s.flags['ch' + n + 'Done'] && nextChapter(n)) s.chapter = n + 1; }
@@ -142,6 +146,6 @@ const STORY = (() => {
     register, H, ITEMS, QUESTS, SPEAKERS, CHAPTERS, LINKS, ACT, USE,
     get TOTAL_LEAVES() { return LEAVES.length; },
     get chapterInfo() { return chapter(); },
-    intro, interact, combine, useSelf, zone, gate, onEnter, onLoad, onFlash, particlesFor, nextChapter, advance, objective, compass, journal, summaryHTML, musicFor, tintFor, darkFor, boundsFor, caravan, partyFor,
+    intro, interact, combine, useSelf, zone, gate, onEnter, onLoad, onFlash, particlesFor, nextChapter, advance, objective, compass, journal, summaryHTML, musicFor, tintFor, darkFor, boundsFor, caravan, partyFor, startable, startAt,
   };
 })();
