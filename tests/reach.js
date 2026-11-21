@@ -16,7 +16,7 @@ const OUTDIR = path.join(__dirname, 'out') + path.sep; fs.mkdirSync(OUTDIR, { re
       const D = G.dbg, M = G.M, T = 16;
       const [px, py] = D.tileAt(D.player.x, D.player.y - 2);
       const bad = [];
-      const ids = new Set([...M.objects.filter(o => o.act || o.enter || o.leafId).map(o => o.id), ...D.npcs.map(n => n.id)]);
+      const ids = new Set([...M.objects.filter(o => (o.act || o.enter || o.leafId) && (!o.if || o.if(G.S))).map(o => o.id), ...D.npcs.map(n => n.id)]);
       for (const t of ids) { const r = D.canReach(t); if (r !== true) bad.push(t + '=' + r); }
       for (const e of M.exits) { let ok = false; for (let x = e.x; x < e.x + e.w && !ok; x++) for (let y = e.y; y < e.y + e.h && !ok; y++) { for (const [nx, ny] of [[x, y], [x, y - 1], [x, y + 1], [x - 1, y], [x + 1, y]]) if (D.walkable(nx, ny, D.player) && D.findPath(px, py, nx, ny, D.player, 30000)) { ok = true; break; } } if (!ok) bad.push('exit->' + e.to); }
       const g = STORY.compass(id);

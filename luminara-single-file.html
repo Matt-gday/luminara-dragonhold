@@ -398,6 +398,7 @@ const AUDIO = (() => {
   // ------------------------------------------------------------- SFX
   const SFX = {
     step(t) { noise(t, 0.05, 0.05, 900 + Math.random() * 300, 'lowpass'); },
+    clop(t) { noise(t, 0.03, 0.1, 1700, 'bandpass'); noise(t + 0.1, 0.03, 0.08, 1400, 'bandpass'); },
     leaf(t) { noise(t, 0.09, 0.07, 2500 + Math.random() * 1500, 'bandpass'); },
     jump(t) { tone(260, t, 0.16, 'square', 0.08, sfxBus, { slide: 620 }); },
     land(t) { noise(t, 0.08, 0.12, 500, 'lowpass'); },
@@ -970,8 +971,56 @@ const GFX = (() => {
       p.r(3, 4, 1, 4, '#f4ece0');
       p.outline(OUT); return p;
     });
-    return { left: fr.map(p => p.c), right: fr.map(p => p.flipped()), w: 36, h: 30 };
+    return { left: fr.map(p => p.c), right: fr.map(p => p.flipped()), w: 36, h: 30, b, m };
   }
+  // The same horse seen from the front (walking towards you, in harness) and from behind. Two frames: legs step.
+  function horseFront(b, m) {
+    return [0, 1].map(f => {
+      const p = new Pix(18, 31), bd = dk(b[1], 0.3);
+      p.e(9, 18, 7.5, 5.5, b[1]); p.e(9, 17, 6.5, 4.5, b[0]);                          // chest and shoulders
+      const lift = [f ? 2 : 0, f ? 0 : 2];                                                // one foreleg lifts as it steps
+      [[4, lift[0]], [11, lift[1]]].forEach(([x, l]) => { p.r(x, 21, 3, 7 - l, b[0]); p.r(x, 21, 1, 7 - l, b[2]); p.r(x, 26 - l, 3, 2, m); p.r(x, 28 - l, 3, 2, '#3a2a20'); });
+      p.r(8, 21, 2, 6, bd);                                                               // the far legs, in shadow
+      p.e(9, 15, 7, 2.2, '#5a3020'); p.r(3, 14, 12, 1, P.gold[0]);                         // harness collar
+      p.poly([[5, 2], [13, 2], [13.5, 11], [11.5, 14.5], [6.5, 14.5], [4.5, 11]], b[0]);   // long face
+      p.poly([[5, 2], [6.5, 2], [6, 12], [5, 11]], b[2]);
+      p.r(8, 3, 2, 9, '#f4ece0');                                                          // white blaze
+      p.e(9, 13, 3.2, 1.8, b[1]); p.p(8, 13, '#2a1a10'); p.p(10, 13, '#2a1a10');            // muzzle, nostrils
+      p.poly([[4.5, 3], [4.5, -1], [7, 2]], b[0]); p.poly([[11, 2], [13.5, -1], [13.5, 3]], b[0]); // ears
+      p.r(7, 0, 4, 3, m); p.p(9, 3, m);                                                    // forelock
+      p.p(5, 6, '#1c1424'); p.p(12, 6, '#1c1424');                                          // eyes
+      p.ln(5, 9, 12, 9, '#5a3020'); p.p(4, 9, P.gold[0]); p.p(13, 9, P.gold[0]);             // bridle
+      p.outline(OUT); return p.c;
+    });
+  }
+  function horseBack(b, m) {
+    return [0, 1].map(f => {
+      const p = new Pix(20, 30), md = dk(m, 0.18);
+      [[4, f ? 2 : 0], [13, f ? 0 : 2]].forEach(([x, l]) => { p.r(x, 20, 3, 7 - l, b[1]); p.r(x, 27 - l, 3, 2, '#3a2a20'); });
+      p.e(10, 15, 8, 6.5, b[0]); p.e(10, 12, 6.5, 3, b[2]); p.e(10, 19, 7, 2.5, b[1]);     // rump
+      p.r(9, 13, 3, 9, md); p.r(9, 13, 2, 10, m); p.p(10, 23, md);                          // tail
+      p.poly([[7, 9], [13, 9], [12, 3], [8, 3]], b[0]); p.r(9, 2, 2, 9, m);                 // neck and mane
+      p.poly([[7, 3], [7.5, -1], [9, 2]], b[0]); p.poly([[11, 2], [12.5, -1], [13, 3]], b[0]); // ears
+      p.r(5, 10, 10, 1, '#5a3020');                                                         // harness strap
+      p.outline(OUT); return p.c;
+    });
+  }
+  // A covered wagon seen from the front (the driver's bench in front of the opening) and from behind.
+  const WAGON_FRONT = () => mk(44, 38, p => {
+    p.r(1, 22, 5, 15, '#5a3a1e'); p.r(38, 22, 5, 15, '#5a3a1e'); p.r(2, 23, 2, 13, '#8a5a30'); p.r(39, 23, 2, 13, '#8a5a30');
+    p.r(5, 22, 34, 11, '#8a5a30'); p.r(5, 22, 34, 2, '#a87440'); p.r(5, 27, 34, 1, '#6a4426');
+    p.e(22, 13, 20, 12, '#e8dcc0'); p.r(2, 13, 40, 10, '#e8dcc0'); p.e(22, 12, 18, 10, '#f4ecd8');
+    p.e(22, 15, 13, 9, '#3a2a24'); p.r(9, 15, 26, 8, '#3a2a24');                            // the dark inside
+    for (const x of [12, 22, 32]) p.r(x, 4, 1, 3, '#d8ccb0');                                 // the hoops of the cover
+    p.r(20, 33, 4, 5, '#6a4426');                                                           // the shaft to the horse
+  });
+  const WAGON_BACK = () => mk(44, 38, p => {
+    p.r(1, 22, 5, 15, '#5a3a1e'); p.r(38, 22, 5, 15, '#5a3a1e'); p.r(2, 23, 2, 13, '#8a5a30'); p.r(39, 23, 2, 13, '#8a5a30');
+    p.r(5, 21, 34, 12, '#8a5a30'); p.r(5, 21, 34, 2, '#a87440'); for (let x = 12; x < 38; x += 8) p.r(x, 23, 1, 10, '#6a4426');
+    p.e(22, 13, 20, 12, '#e8dcc0'); p.r(2, 13, 40, 9, '#e8dcc0'); p.e(22, 11, 17, 9, '#f4ecd8');
+    p.e(22, 15, 6, 5, '#3a2a24');                                                           // the drawn-up back opening
+    for (const [x, y] of [[13, 9], [31, 9], [12, 18], [32, 18]]) p.ln(22, 15, x, y, '#c8bca0');
+  });
   function deerUpright() {
     return [0, 1].map(f => {
       const p = new Pix(18, 34), c = '#3a3048', d = '#2a2234';
@@ -1552,7 +1601,46 @@ const GFX = (() => {
   function deadSprite(seed) { const k = 'dead' + seed % 3; return cache[k] || (cache[k] = deadTree(300 + seed % 3)); }
   function houseSprite(key, o) { return cache['h' + key] || (cache['h' + key] = house(o)); }
 
-  return { human, dragon, T, Pix, RNG, hash, cnv, mk, flipC, tint, renderGround, GROUND, SPR, ICONS, CHAR, buildCharacters, treeSprite, pineSprite, pineDark, deadSprite, houseSprite, house, signIcon, P };
+  // A horse hitched to a covered wagon, with a driver on the bench (or nobody, when it's parked), facing any way.
+  // Returns { c: canvas, ax, ay }: (ax, ay) is the point on the ground below the driver, which is where the
+  // driver "stands" in the world, so speech bubbles and the lantern line up with her.
+  function rig(horseName, driverName, dir = 'down', frame = 0) {
+    const key = ['rig', horseName, driverName, dir, frame].join('|'); if (cache[key]) return cache[key];
+    const H = CHAR[horseName], D = driverName ? CHAR[driverName] : null;
+    H.front = H.front || horseFront(H.b, H.m); H.back = H.back || horseBack(H.b, H.m);
+    cache.wagonFront = cache.wagonFront || WAGON_FRONT(); cache.wagonBack = cache.wagonBack || WAGON_BACK();
+    const seat = (p, img, x, y, rows) => p.g.drawImage(img, 0, 0, 22, rows, x, y, 22, rows);   // the top of a person, sitting
+    let out;
+    if (dir === 'down') {
+      const p = new Pix(44, 60);
+      p.g.drawImage(cache.wagonFront, 0, 0);
+      if (D) seat(p, D.frames.down[0], 11, 0, 27);
+      p.r(7, 25, 30, 3, '#6a4426'); p.r(7, 25, 30, 1, '#a87440'); p.r(6, 28, 32, 1, OUT);    // the driver's bench
+      p.g.drawImage(H.front[frame % 2], 13, 29);
+      if (D) { p.ln(16, 21, 18, 37, '#3a2416'); p.ln(28, 21, 26, 37, '#3a2416'); }           // reins
+      out = { c: p.c, ax: 22, ay: 38 };
+    } else if (dir === 'up') {
+      const p = new Pix(44, 58);
+      p.g.drawImage(H.back[frame % 2], 12, 0);
+      p.g.drawImage(cache.wagonBack, 0, 20);
+      out = { c: p.c, ax: 22, ay: 57 };
+    } else {
+      const p = new Pix(98, 42);
+      p.g.drawImage(SPR.wagon, 0, 2);
+      for (const cx of [9, 41]) {                                                          // spokes turn as it rolls
+        if (frame % 2) { p.ln(cx - 3, 29, cx + 3, 35, '#3a2416'); p.ln(cx - 3, 35, cx + 3, 29, '#3a2416'); }
+        else { p.r(cx - 4, 32, 9, 1, '#3a2416'); p.r(cx, 28, 1, 9, '#3a2416'); }
+      }
+      p.ln(50, 28, 84, 24, '#6a4426'); p.ln(50, 29, 84, 25, '#5a3a1e');                     // the shaft to the harness
+      p.g.drawImage(H.right[frame % 2], 62, 11);
+      if (D) { seat(p, D.frames.right[0], 41, 0, 27); p.r(41, 25, 20, 3, '#6a4426'); p.r(41, 25, 20, 1, '#a87440'); p.r(40, 28, 22, 1, OUT); p.ln(57, 17, 91, 18, '#3a2416'); }
+      out = { c: p.c, ax: 52, ay: 38 };
+      if (dir === 'left') out = { c: p.flipped(), ax: 98 - 52, ay: 38 };
+    }
+    return (cache[key] = out);
+  }
+
+  return { human, dragon, T, Pix, RNG, hash, cnv, mk, flipC, tint, renderGround, GROUND, SPR, ICONS, CHAR, buildCharacters, treeSprite, pineSprite, pineDark, deadSprite, houseSprite, house, signIcon, P, rig };
 })();
 
 </script>
@@ -1913,19 +2001,26 @@ const MAPS = (() => {
     m.spr(S.flatRock, 19, 5, { dx: 10, solid: false, id: 'flatRock', name: 'Flat Rock', act: 'flatRock', if: s => !s.flags.gotFlatRock });
     m.spr(S.rock, 7, 9, { id: 'roundRock1', name: 'Round Rock', look: 'A round, mossy rock. It would roll right out from under anything.' });
     m.spr(S.rock, 22, 8, { id: 'roundRock2', name: 'Round Rock', look: 'Smooth and round. Not much use for propping anything up.' });
-    // Ronald's wagon, stopped across the path with a loose wheel; the barrels beside it once unloaded
+    // While Ronald's wheel is mended, the three wagons stand in a line on the path facing south, horses still hitched:
+    // Luminara's at the front, Aldric's behind it, and Ronald's at the back (the barrels beside it once unloaded).
     const stopped = s => s.flags.wheelStopped && !s.flags.wheelFixed;
-    m.spr(S.wagon, 12, 11, { fw: 3, id: 'ronWagon', name: "Ronald's Wagon", act: 'ronWagon', if: stopped });
-    m.spr(S.flatRock, 13, 12, { solid: false, decal: true, id: 'rockUnder', if: s => stopped(s) && s.flags.rockPlaced });
-    for (const [x, y] of [[16, 10], [17, 10], [16, 11]]) m.spr(S.barrel, x, y, { if: s => stopped(s) && s.flags.barrelsOff && !s.flags.barrelsBack });
-    m.npc({ id: 'ronaldF', char: 'ronald', x: 11, y: 10, dir: 'right', name: 'Ronald', act: 'ronaldF', color: '#7a5a3a', voice: 0.7, if: stopped });
-    m.npc({ id: 'aldricF', char: 'aldric', x: 18, y: 9, dir: 'left', name: 'Aldric', act: 'aldricF', color: '#3a6a9a', voice: 1.05, if: stopped });
+    const parked = (horse, gy, o) => { const r = GFX.rig(horse, null, 'down'); // gy: the ground line below the bench, in pixels
+      return m.spr(r.c, 14, gy / T - 2, Object.assign({ fw: 2, fh: 2, dx: 232 - r.ax - 14 * T, dy: r.c.height - r.ay }, o)); };
+    parked('horse', 176, { id: 'myWagonC', name: 'Your Wagon', act: 'myWagon', if: s => stopped(s) && s.flags.shod });
+    parked('horseCream', 176, { id: 'myWagonB', name: 'Your Wagon', act: 'myWagon', if: s => stopped(s) && !s.flags.shod });
+    parked('horseDark', 112, { id: 'aldWagon', name: "Aldric's Wagon", act: 'aldWagon', if: stopped });
+    parked('horseGrey', 64, { id: 'ronWagon', name: "Ronald's Wagon", act: 'ronWagon', if: stopped });
+    m.spr(S.flatRock, 13, 3, { solid: false, noShadow: true, dx: 6, dy: 3, sortOff: 1, id: 'rockUnder', if: s => stopped(s) && s.flags.rockPlaced });
+    for (const [x, y] of [[17, 2], [18, 2], [17, 3]]) m.spr(S.barrel, x, y, { if: s => stopped(s) && s.flags.barrelsOff && !s.flags.barrelsBack });
+    m.npc({ id: 'ronaldF', char: 'ronald', x: 12, y: 4, dir: 'right', name: 'Ronald', act: 'ronaldF', color: '#7a5a3a', voice: 0.7, if: stopped });
+    m.npc({ id: 'aldricF', char: 'aldric', x: 17, y: 6, dir: 'left', name: 'Aldric', act: 'aldricF', color: '#3a6a9a', voice: 1.05, if: stopped });
     m.keep(9, 0, 10, 14); m.keepRoad('fpath');
     m.scatter((x, y) => m.pine(x, y), 150, [0, 0, 28, 48], new Set(['forest', 'mud']), 211, 2);
     m.zone(0, 7, 28, 2, 'wheelStop', s => !s.flags.wheelStopped);
     m.zone(0, 30, 28, 2, 'luminaWisp', s => s.flags.lanternLit && !s.flags.wispSeen);
     m.exit(13, 47, 4, 1, 'forest_bog', 'north', { gate: 'toBog' });
     m.spawn('north', 14, 2, 'down'); m.spawn('south', 14, 45, 'up');
+    m.spawn('wheel', 12, 9, 'up'); m.spawn('drive', 14, 10, 'down');   // climbing down from her wagon, and back up
     return m;
   };
 
@@ -2102,11 +2197,14 @@ const STORY = (() => {
     return h + '</div>';
   }
 
+  function caravan() { const c = chapter(); return c.caravan ? c.caravan() : null; }
+  function partyFor(id) { const c = chapter(); return c.partyFor ? c.partyFor(id) : null; }
+
   return {
     register, H, ITEMS, QUESTS, SPEAKERS, CHAPTERS, LINKS, ACT, USE,
     get TOTAL_LEAVES() { return LEAVES.length; },
     get chapterInfo() { return chapter(); },
-    intro, interact, combine, useSelf, zone, gate, onEnter, onLoad, onFlash, particlesFor, nextChapter, advance, objective, compass, journal, summaryHTML, musicFor, tintFor, darkFor, boundsFor,
+    intro, interact, combine, useSelf, zone, gate, onEnter, onLoad, onFlash, particlesFor, nextChapter, advance, objective, compass, journal, summaryHTML, musicFor, tintFor, darkFor, boundsFor, caravan, partyFor,
   };
 })();
 
@@ -2702,10 +2800,9 @@ const STORY = (() => {
   function caravanParty() {
     const f = F();
     return [
-      { id: f.shod ? 'clover' : 'biscuit', char: f.shod ? 'horse' : 'horseCream', kind: 'horse', name: f.shod ? 'Clover' : 'Biscuit', gap: 20 },
-      { id: 'wagonF', sprite: 'wagon', kind: 'sprite', gap: 26 },
-      { id: 'aldric', char: 'aldric', kind: 'human', name: 'Aldric', color: '#4a7a9a', gap: 22 },
-      { id: 'ronald', char: 'ronald', kind: 'human', name: 'Ronald', color: '#7a5a3a', gap: 16 },
+      { kind: 'drive', id: f.shod ? 'clover' : 'biscuit', char: f.shod ? 'horse' : 'horseCream', name: f.shod ? 'Clover' : 'Biscuit' },
+      { id: 'aldric', kind: 'rig', char: 'horseDark', driver: 'aldric', name: 'Aldric', color: '#4a7a9a', gap: 90 },
+      { id: 'ronald', kind: 'rig', char: 'horseGrey', driver: 'ronald', name: 'Ronald', color: '#7a5a3a', gap: 90 },
     ];
   }
 
@@ -2934,7 +3031,8 @@ const STORY = (() => {
 
   STORY.register({
     n: 1, title: 'The Light-Bearer', subtitle: 'Chapter One · The Light-Bearer',
-    items: ITEMS, quests: QUESTS, act: ACT, use: USE, combos: COMBOS, gates: GATES, onEnter, self: SELF, speakers: SPEAKERS, zones: ZONES,
+    items: ITEMS, quests: QUESTS, act: ACT, use: USE, combos: COMBOS, gates: GATES, onEnter, self: SELF, speakers: SPEAKERS, zones: ZONES, caravan: caravanParty,
+    partyFor: id => id === 'brushwood' && !F().atBrushwood ? [] : null,   // the wagons pull up outside the tavern
     leaves: ['hill1', 'hill2', 'town1', 'town2', 'manor'],
     intro, goal,
     musicFor: id => id === 'road' ? 'town' : null,
@@ -3007,7 +3105,7 @@ const STORY = (() => {
     ] },
     wheel: { title: 'A Loose Wheel', parent: 'darkforest', desc: "Ronald's old wagon has a loose wheel. He needs the barrels off the back to mend it.", giver: 'Ronald', xp: 25, steps: [
       { t: "Take the barrels off Ronald's wagon", done: s => s.flags.barrelsOff, hint: ["The barrels are on the back of Ronald's wagon.", "{Act:Ronald's wagon}."] },
-      { t: 'Find something to prop up the wagon', done: s => s.flags.gotFlatRock || s.flags.rockPlaced, hint: ['Ronald needs something flat and sturdy. Round things roll.', 'There is a flat rock by the path, a little way back up the forest, on the right.'] },
+      { t: 'Find something to prop up the wagon', done: s => s.flags.gotFlatRock || s.flags.rockPlaced, hint: ['Ronald needs something flat and sturdy. Round things roll.', "There is a flat rock just off the path, up near Ronald's wagon on the right, peeking out from behind a pine."] },
       { t: 'Prop up the wagon', done: s => s.flags.rockPlaced, hint: ['Put it under the wagon.', `Open your satchel, choose the flat rock, {btn:Use…}, then {act:Ronald's wagon}.`] },
       { t: 'Load the barrels back on', done: s => s.flags.barrelsBack, hint: ['The wheel is mended.', "{Act:Ronald's wagon} again."] },
     ] },
@@ -3021,14 +3119,13 @@ const STORY = (() => {
 
   const ACT = {}, USE = {}, SELF = {};
 
-  // ---- the caravan: Luminara's horse and wagon, then Aldric and Ronald
+  // ---- the caravan: Luminara drives her own wagon; Aldric and Ronald drive theirs behind her
   function party() {
     const f = F();
     return [
-      { id: f.shod ? 'clover' : 'biscuit', char: f.shod ? 'horse' : 'horseCream', kind: 'horse', name: f.shod ? 'Clover' : 'Biscuit', gap: 20 },
-      { id: 'wagonF', sprite: 'wagon', kind: 'sprite', gap: 26 },
-      { id: 'aldric', char: 'aldric', kind: 'human', name: 'Aldric', color: '#4a7a9a', gap: 22 },
-      { id: 'ronald', char: 'ronald', kind: 'human', name: 'Ronald', color: '#7a5a3a', gap: 16 },
+      { kind: 'drive', id: f.shod ? 'clover' : 'biscuit', char: f.shod ? 'horse' : 'horseCream', name: f.shod ? 'Clover' : 'Biscuit' },
+      { id: 'aldric', kind: 'rig', char: 'horseDark', driver: 'aldric', name: 'Aldric', color: '#4a7a9a', gap: 90 },
+      { id: 'ronald', kind: 'rig', char: 'horseGrey', driver: 'ronald', name: 'Ronald', color: '#7a5a3a', gap: 90 },
     ];
   }
 
@@ -3049,9 +3146,11 @@ const STORY = (() => {
   // ================================================================ RONALD'S WHEEL
   async function wheelStop() {
     const f = F(); if (f.wheelStopped) return;
-    f.wheelStopped = true; G.setParty([]); G.refresh();
+    f.wheelStopped = true;
     await say('ronald', 'Stop!');
     await nar('Luminara reined her horse to a halt and turned around.');
+    // she climbs down from her wagon; the three wagons stand in a line on the path
+    await G.fade(true, 450); G.setParty([]); G.loadMap('forest_path', 'wheel'); await G.wait(150); await G.fade(false, 450);
     await L('What is the matter?');
     await say('ronald', 'My right wheel is loose.');
     await nar('His wagon was old and had broken down many times before.');
@@ -3084,12 +3183,13 @@ const STORY = (() => {
   }
   async function loadBarrels() {
     const f = F();
-    await G.fade(true, 350); G.sfx('door'); f.barrelsBack = true; f.wheelFixed = true; G.refresh(); await G.wait(300); await G.fade(false, 350);
+    await G.fade(true, 350); G.sfx('door'); f.barrelsBack = true; G.refresh(); await G.wait(300); await G.fade(false, 350);
     await nar('Once they finished repairing the wheel, they lifted the barrels onto the wagon once again and returned to their own wagons.');
+    // back up onto her wagon, at the front of the line
+    await G.fade(true, 400); f.wheelFixed = true; G.loadMap('forest_path', 'drive'); G.setParty(party()); await G.wait(150); await G.fade(false, 400);
     await L("Why don't we stay in Lesterfield tonight?");
     await nar('Aldric and Ronald nodded.');
     finishQuest('wheel');
-    G.setParty(party()); G.refresh();
     // the clouds come in
     f.clouds = true;
     await nar('As dark clouds began to form overhead, they blocked the sunlight from reaching the forest floor, making it appear to be later in the day than it actually was.');
@@ -3106,6 +3206,13 @@ const STORY = (() => {
     if (!f.rockPlaced) return say('aldric', pick(["Ron's wagon is older than the both of us put together.", "At least it's not as though the wheel has come off."]));
     return say('aldric', "Nearly there. Lesterfield before dark, I'd say.");
   };
+  // the other two wagons, waiting on the path while the wheel is mended
+  ACT.myWagon = async () => {
+    const name = F().shod ? 'Clover' : 'Biscuit';
+    await think(`My wagon. ${name} is resting in the harness. We'll be on our way again once Ronald's wheel is mended.`);
+  };
+  ACT.aldWagon = async () => nar("Aldric's wagon. Juniper, his dark bay, flicks an ear and waits patiently in the harness.");
+  USE.myWagon = USE.aldWagon = async (item) => { if (item !== 'flatRock') return false; await think("It's Ronald's wagon that needs propping up, not this one."); return true; };
   ACT.flatRock = async () => {
     F().gotFlatRock = true; G.give('flatRock'); G.refresh();
     await think('A flat, heavy stone. Sturdy, too.');
@@ -3248,6 +3355,7 @@ const STORY = (() => {
     forest_path: async () => {
       const f = F();
       if ((f.wheelFixed || !f.wheelStopped) && !(G.S.party && G.S.party.length)) G.setParty(party());
+      if (f.wheelStopped && !f.wheelFixed && G.S.party && G.S.party.length) G.setParty([]);  // the wagons are stopped: she's on foot
       if (!f.ch2Intro) await forestIntro();
       if (f.wispSeen && !f.wispFaded) { const [x, y] = WISP_SPOTS[((f.wispTries || 0) + WISP_SPOTS.length - 1) % WISP_SPOTS.length]; spawnWisp(x, y); }
     },
@@ -3260,9 +3368,9 @@ const STORY = (() => {
     const f = F();
     if (!f.wheelStopped) return ['Lead the caravan into the Dark Forest', 'forest_path', 14, 9];
     if (!f.wheelFixed) {
-      if (!f.barrelsOff) return ["Help Ronald: take the barrels off his wagon", 'forest_path', 13, 11];
-      if (!f.rockPlaced) return has('flatRock') ? ["Prop up Ronald's wagon", 'forest_path', 13, 11] : ["Find something to prop up Ronald's wagon", null];
-      return ["Load the barrels back onto Ronald's wagon", 'forest_path', 13, 11];
+      if (!f.barrelsOff) return ["Help Ronald: take the barrels off his wagon", 'forest_path', 14, 4];
+      if (!f.rockPlaced) return has('flatRock') ? ["Prop up Ronald's wagon", 'forest_path', 14, 4] : ["Find something to prop up Ronald's wagon", null];
+      return ["Load the barrels back onto Ronald's wagon", 'forest_path', 14, 4];
     }
     if (!f.lanternLit) return ['Light your lantern', null];
     if (!f.bogIntro) return ['Follow the path south through the Dark Forest', 'forest_path', 14, 47];
@@ -3275,7 +3383,7 @@ const STORY = (() => {
 
   STORY.register({
     n: 2, title: 'The Dark Forest', subtitle: 'Chapter Two · The Dark Forest', preview: true,
-    items: ITEMS, quests: QUESTS, act: ACT, use: USE, combos: COMBOS, gates: GATES, onEnter, self: SELF, zones: ZONES,
+    items: ITEMS, quests: QUESTS, act: ACT, use: USE, combos: COMBOS, gates: GATES, onEnter, self: SELF, zones: ZONES, caravan: party,
     intro: async () => { }, goal, onFlash,
     onLoad: async () => { if (!F().ch2Started) await begin(); },
     musicFor: id => (id === 'forest_path' || id === 'forest_bog') ? 'forest' : null,
@@ -3345,6 +3453,8 @@ const G = (() => {
   let solid = null, low = null;  // collision grids
   let transitioning = false, fadeEl = $('fade');
   let trail = [];
+  // When the caravan is on the move, Luminara drives her own wagon: drive = { char: her horse, name }. Set with setParty.
+  let drive = null, driveJumpSaid = false;
   let flapGame = null;
   let lastSafe = null;
   let lightRegen = 0, heartRegen = 0;
@@ -3433,6 +3543,7 @@ const G = (() => {
   }
   function boxBlocked(x, y, air, self, hw = 5, hh = 5) {
     const pts = [[x - hw, y - hh], [x + hw, y - hh], [x - hw, y], [x + hw, y]];
+    if (hw > 8) pts.push([x, y - hh], [x, y]);   // a wide box (her wagon) checks its middle too
     for (const [px, py] of pts) { const [tx, ty] = tileAt(px, py); if (solidTile(tx, ty, air)) return { tile: [tx, ty] }; }
     for (const n of npcs) {
       if (n === self || n.def.fly || n.def.static && n.def.perch || n.hidden) continue;
@@ -3932,12 +4043,13 @@ const G = (() => {
       const l = Math.hypot(mx, my); mx /= l; my /= l;
       p.dir = Math.abs(mx) > Math.abs(my) + 0.01 ? (mx < 0 ? 'left' : 'right') : (my < 0 ? 'up' : 'down');
       const nx = p.x + mx * speed * dt, ny = p.y + my * speed * dt;
-      const bx = boxBlocked(nx, p.y, air, player), by = boxBlocked(p.x, ny, air, player);
+      const bw = drive ? 12 : 5;   // her wagon is wider than she is, so it keeps clear of tree trunks
+      const bx = boxBlocked(nx, p.y, air, player, bw), by = boxBlocked(p.x, ny, air, player, bw);
       if (!bx) p.x = nx; if (!by) p.y = ny;
       if ((bx || by) && !p.path.length) checkDoorBump(bx || by, mx, my);
       if ((bx && by) && p.path.length) { p.path = []; p.pendingAct = null; }
       p.t += dt * 8; p.frame = Math.floor(p.t) % 4;
-      if (p.z === 0) { stepT += dt; if (stepT > 0.28) { stepT = 0; AUDIO.sfx(M.particles === 'leaves' && GFX.hash(Math.floor(p.x / 16), Math.floor(p.y / 16), 4) < 0.3 ? 'leaf' : 'step'); } }
+      if (p.z === 0) { stepT += dt; if (stepT > (drive ? 0.36 : 0.28)) { stepT = 0; AUDIO.sfx(drive ? 'clop' : M.particles === 'leaves' && GFX.hash(Math.floor(p.x / 16), Math.floor(p.y / 16), 4) < 0.3 ? 'leaf' : 'step'); } }
       checkExits();
     } else { p.frame = 0; p.t = 0; }
     if (!p.scripted) keepInBounds(my);
@@ -3955,7 +4067,7 @@ const G = (() => {
         }
       }
     } else if (!inLowTile(p.x, p.y) && !boxBlocked(p.x, p.y, false, player)) { lastSafe = { x: p.x, y: p.y }; }
-    if (!trail.length || Math.hypot(p.x - trail[0].x, p.y - trail[0].y) >= 1) { trail.unshift({ x: p.x, y: p.y }); if (trail.length > 160) trail.pop(); }
+    if (!trail.length || Math.hypot(p.x - trail[0].x, p.y - trail[0].y) >= 1) { trail.unshift({ x: p.x, y: p.y }); if (trail.length > 300) trail.pop(); }
     // knockback
     if (p.kb) { const nx = p.x + p.kb.x * dt, ny = p.y + p.kb.y * dt; if (!boxBlocked(nx, ny, false, player)) { p.x = nx; p.y = ny; } p.kb.t -= dt; if (p.kb.t <= 0) p.kb = null; }
   }
@@ -4012,6 +4124,7 @@ const G = (() => {
     AUDIO.sfx(opts.silent ? null : 'door');
     await fade(true);
     loadMap(mapId, spawn);
+    const pf = STORY.partyFor && STORY.partyFor(mapId); if (pf) setParty(pf);   // e.g. the wagons are already parked when the screen fades in
     await wait(120);
     await fade(false);
     transitioning = false;
@@ -4023,6 +4136,7 @@ const G = (() => {
 
   function tryJump() {
     const p = player; if (p.z > 0) return;
+    if (drive) { if (!driveJumpSaid && !busy && !dialog) { driveJumpSaid = true; run(() => say('luminara', "Not while I'm holding the reins!")); } return; }
     p.vz = 165; p.z = 0.1; AUDIO.sfx('jump');
     // things that react to a jump
     for (const o of M.objects) if (o.jumpAct && visible(o) && Math.hypot(o.x * T + 8 - p.x, (o.y + 1) * T - p.y) < 22) { const it = o; setTimeout(() => run(() => STORY.interact({ kind: 'obj', id: it.id, o: it, act: it.jumpAct }, null)), 220); }
@@ -4119,7 +4233,9 @@ const G = (() => {
       const ox = f.x, oy = f.y;
       f.x += (tp.x - f.x) * Math.min(1, dt * 6); f.y += (tp.y - f.y) * Math.min(1, dt * 6);
       const dx = ahead.x - tp.x, dy = ahead.y - tp.y, moving = Math.hypot(f.x - ox, f.y - oy) > 0.15;
-      if (Math.abs(dx) + Math.abs(dy) > 0.5) f.dir = f.kind === 'human' ? (Math.abs(dx) > Math.abs(dy) ? (dx < 0 ? 'left' : 'right') : (dy < 0 ? 'up' : 'down')) : (dx < 0 ? 'left' : dx > 0 ? 'right' : f.dir);
+      if (f.kind === 'rig') { const a = trail[Math.max(0, idx - 14)], ddx = a.x - tp.x, ddy = a.y - tp.y; // wagons turn with a little patience, so they don't flicker
+        if (Math.abs(ddx) > Math.abs(ddy) * 1.4 + 1) f.dir = ddx < 0 ? 'left' : 'right'; else if (Math.abs(ddy) > Math.abs(ddx) * 1.4 + 1) f.dir = ddy < 0 ? 'up' : 'down'; }
+      else if (Math.abs(dx) + Math.abs(dy) > 0.5) f.dir = f.kind === 'human' ? (Math.abs(dx) > Math.abs(dy) ? (dx < 0 ? 'left' : 'right') : (dy < 0 ? 'up' : 'down')) : (dx < 0 ? 'left' : dx > 0 ? 'right' : f.dir);
       f.t = (f.t || 0) + dt; f.frame = moving ? Math.floor(f.t * 7) % 4 : 0;
     });
   }
@@ -4220,7 +4336,7 @@ const G = (() => {
       const y = (o.y + o.fh) * T - img.height + (o.dy || 0);
       cast(img, x, y + img.height - (o.kind === 'tree' ? 3 : 0));
     }
-    const cs = playerSprite(); cast(cs.frames[player.dir][player.z > 0 ? 1 : player.frame], player.x - cs.ax, player.y - cs.ay + cs.h - 2);
+    if (!drive) { const cs = playerSprite(); cast(cs.frames[player.dir][player.z > 0 ? 1 : player.frame], player.x - cs.ax, player.y - cs.ay + cs.h - 2); }
     for (const n of npcs) {
       if (n.hidden || n.def.fly || n.flying || n.def.perch || n.def.inHole) continue;
       const c = charFor(n.def);
@@ -4236,14 +4352,20 @@ const G = (() => {
     ctx.drawImage(shadowC, 0, 0); ctx.restore();
   }
   function shadow(x, y, w = 6, a = 0.3) { ctx.fillStyle = `rgba(0,0,0,${a})`; ctx.beginPath(); ctx.ellipse(x, y, w, w * 0.4, 0, 0, 7); ctx.fill(); }
-  function playerSprite() {
-    if (S.flags.playerSprite) return GFX.CHAR[S.flags.playerSprite];
-    if (!S.flags.cloak) return GFX.CHAR.luminaraNoCloak;
-    if (!S.flags.hasLantern) return GFX.CHAR.luminaraCloak;
-    return GFX.CHAR.luminara;
+  function playerSpriteName() { return S.flags.playerSprite || (!S.flags.cloak ? 'luminaraNoCloak' : !S.flags.hasLantern ? 'luminaraCloak' : 'luminara'); }
+  function playerSprite() { return GFX.CHAR[playerSpriteName()]; }
+  // A horse and covered wagon with its driver (x, y: the ground below the driver's seat).
+  function drawRig(x, y, horse, driver, dir, frame) {
+    const r = GFX.rig(horse, driver, dir, frame), left = Math.round(x - r.ax), top = Math.round(y - r.ay);
+    if (dir === 'down') { shadow(x, y, 21, 0.25); shadow(x, y + 21, 8, 0.25); }
+    else if (dir === 'up') shadow(x, y, 21, 0.25);
+    else { const w = r.c.width; shadow(left + (dir === 'right' ? 26 : w - 26), y, 26, 0.25); shadow(left + (dir === 'right' ? 80 : w - 80), y, 14, 0.25); }
+    ctx.drawImage(r.c, left, top);
   }
   function drawPlayer() {
-    const p = player; const c = playerSprite();
+    const p = player;
+    if (drive) return drawRig(p.x, p.y, drive.char, playerSpriteName(), p.dir, (p.frame >> 1) & 1);
+    const c = playerSprite();
     shadow(p.x, p.y, 6 - Math.min(3, p.z / 6), 0.3);
     if (p.invuln > 0 && Math.floor(time * 12) % 2) return;
     const fr = c.frames[p.dir][p.z > 0 ? 1 : p.frame];
@@ -4287,6 +4409,7 @@ const G = (() => {
     ctx.drawImage(fr, Math.round(n.x - c.ax), Math.round(n.y - c.ay - (n.z || 0)));
   }
   function drawFollower(f) {
+    if (f.kind === 'rig') return drawRig(f.x, f.y, f.char, f.driver, f.dir, (f.frame >> 1) & 1);
     if (f.kind === 'sprite') { const img = GFX.SPR[f.sprite]; shadow(f.x, f.y, 20, 0.25); ctx.drawImage(img, Math.round(f.x - img.width / 2), Math.round(f.y - img.height + 4)); return; }
     const c = GFX.CHAR[f.char];
     if (f.kind === 'horse') { const fr = c[f.dir === 'right' ? 'right' : 'left'][f.frame % 2]; shadow(f.x, f.y, 14, 0.25); ctx.drawImage(fr, Math.round(f.x - 18), Math.round(f.y - 28)); return; }
@@ -4384,7 +4507,7 @@ const G = (() => {
     const L = [];
     if (S.flags.lanternLit && !S.flags.playerSprite) {
       const r = (S.flags.lanternFull ? 62 : 40) + S.lvl * 3 + Math.sin(time * 9) * 1.5;
-      L.push({ x: player.x, y: player.y - 10 - player.z, r, c: '255,210,120' });
+      L.push({ x: player.x, y: player.y - (drive ? 16 : 10) - player.z, r, c: '255,210,120' });
     } else L.push({ x: player.x, y: player.y - 10, r: 22, c: '200,200,255' });
     for (const o of M.objects) {
       if (!visible(o)) continue;
@@ -4569,7 +4692,7 @@ const G = (() => {
     const d = dialog; if (!d || d.kind !== 'bubble') return;
     const e = d.ent; let x = VW / 2, y = VH * 0.35;
     if (e) {
-      const h = e === player ? 36 : e.kind === 'critter' ? 12 : e.kind === 'horse' ? 30 : e.kind === 'dragon' ? 26 : e.kind === 'owl' ? 18 : (e.char ? 26 : 38);
+      const h = e === player ? (drive ? 40 : 36) : e.kind === 'critter' ? 12 : e.kind === 'horse' ? 30 : e.kind === 'dragon' ? 26 : e.kind === 'owl' ? 18 : (e.char ? 26 : 38);
       x = e.x - cam.x; y = e.y - h - (e.z || 0) - cam.y + ((e.def && e.def.perch) || 0) - (e.char ? 10 : 0);
     }
     const W = stage.clientWidth, H = stage.clientHeight;
@@ -5112,13 +5235,14 @@ const G = (() => {
   // =================================================================== FOLLOWERS (dragon sisters)
   function setParty(list) {
     S.party = list.map(p => Object.assign({}, p));
-    followers = list.map(p => Object.assign({ x: player.x, y: player.y, dir: 'down', t: Math.random() * 3, frame: 0, color: '#7a5530', voice: 1 }, p));
+    drive = list.find(p => p.kind === 'drive') || null; driveJumpSaid = false;
+    followers = list.filter(p => p.kind !== 'drive').map(p => Object.assign({ x: player.x, y: player.y, dir: 'down', t: Math.random() * 3, frame: 0, color: '#7a5530', voice: 1 }, p));
     seedTrail();
   }
   // Lay the trail out behind the player (followers walk along it, one pixel per point), and put followers in place.
   function seedTrail() {
     const d = { up: [0, 1], down: [0, -1], left: [1, 0], right: [-1, 0] }[player.dir] || [0, -1];
-    trail = []; for (let i = 0; i < 160; i++) trail.push({ x: player.x + d[0] * i, y: player.y + d[1] * i });
+    trail = []; for (let i = 0; i < 300; i++) trail.push({ x: player.x + d[0] * i, y: player.y + d[1] * i });
     let idx = 0; followers.forEach(f => { idx += f.gap || 16; const tp = trail[Math.min(trail.length - 1, idx)]; f.x = tp.x; f.y = tp.y; f.dir = player.dir; });
   }
   function setFollowers(list) { followers = list.map(ch => ({ id: ch, char: ch, x: player.x, y: player.y, dir: 'right', t: Math.random() * 3, name: GFX.CHAR[ch] ? ch[0].toUpperCase() + ch.slice(1) : ch, color: ch === 'sianna' ? '#1f8ea8' : ch === 'yennefer' ? '#b8901a' : '#a02a80', voice: 1.6, kind: 'dragon' })); }
@@ -5474,14 +5598,15 @@ const G = (() => {
     autosaveT = 0;
     mode = 'play';
     MAPS.reset();
-    held = null; setHeld(null); followers = [];
+    held = null; setHeld(null); followers = []; drive = null;
     if (inputMode === 'pad') setTimeout(() => tipLater('pad'), 0); // the controller tip, once S exists
     if (saved) {
       S = Object.assign(newState(), saved);
       S.met = S.met || {};
       if (STORY.advance) STORY.advance(S);
       loadMap(S.map, { x: S.x, y: S.y, dir: S.dir });
-      if (S.party && S.party.length) setParty(S.party);
+      // saves from before Luminara drove her own wagon had a loose horse and wagon following her: swap in the new caravan
+      if (S.party && S.party.length) setParty(S.party.some(p => p.sprite === 'wagon') && STORY.caravan && STORY.caravan() || S.party);
       hud();
       run(async () => { if (STORY.onLoad) await STORY.onLoad(); if (STORY.onEnter) await STORY.onEnter(S.map); });
     } else {
@@ -5515,7 +5640,7 @@ const G = (() => {
       player.x = e.x * T + 8; player.y = e.y * T + 12; checkExits(); await wait(60); await DBG.idle();
     },
     place(tx, ty, dir) { player.x = tx * T + 8; player.y = ty * T + 12; if (dir) player.dir = dir; lastSafe = { x: player.x, y: player.y }; },
-    jump() { tryJump(); }, keys, get input() { return inputMode; }, get busy() { return busy; }, get dialog() { return !!dialog; }, combine: (a, b) => run(() => STORY.combine(a, b)),
+    jump() { tryJump(); }, keys, get input() { return inputMode; }, get drive() { return drive; }, get busy() { return busy; }, get dialog() { return !!dialog; }, combine: (a, b) => run(() => STORY.combine(a, b)),
     cam: () => ({ x: cam.x, y: cam.y }), get player() { return player; }, get npcs() { return npcs; }, get mode() { return mode; }, walkable, findPath, tileAt,
   };
   // auto-advance dialogue during automated tests

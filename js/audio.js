@@ -65,6 +65,7 @@ const AUDIO = (() => {
   // ------------------------------------------------------------- SFX
   const SFX = {
     step(t) { noise(t, 0.05, 0.05, 900 + Math.random() * 300, 'lowpass'); },
+    clop(t) { noise(t, 0.03, 0.1, 1700, 'bandpass'); noise(t + 0.1, 0.03, 0.08, 1400, 'bandpass'); },
     leaf(t) { noise(t, 0.09, 0.07, 2500 + Math.random() * 1500, 'bandpass'); },
     jump(t) { tone(260, t, 0.16, 'square', 0.08, sfxBus, { slide: 620 }); },
     land(t) { noise(t, 0.08, 0.12, 500, 'lowpass'); },

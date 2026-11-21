@@ -16,7 +16,7 @@ const OUTDIR = path.join(__dirname, 'out') + path.sep; fs.mkdirSync(OUTDIR, { re
     await E(() => { Object.assign(G.S.flags, { hasSatchel: 1, cloak: 1, hasLantern: 1, teaDrunk: 1, ch1Done: 1, shod: 1, ch2Started: 1, ch2Intro: 1 }); for (const k of ['move', 'goal', 'quests', 'menu', 'satchel', 'xp', 'coins', 'journal', 'light', 'hint', 'combine', 'use']) G.S.flags['tip_' + k] = 1; G.S.chapter = 2; G.S.inv = ['compass', 'flint', 'strongbox', 'guildKey', 'lanternReady']; });
     const shot = async name => { await p.waitForTimeout(700); await p.screenshot({ path: OUTDIR + `c2_${tag}_${name}.png` }); };
     // the wheel
-    await E(() => { G.loadMap('forest_path', 'north'); G.setParty([]); Object.assign(G.S.flags, { wheelStopped: 1, barrelsOff: 1 }); G.refresh(); G.dbg.place(14, 9, 'down'); });
+    await E(() => { G.loadMap('forest_path', 'north'); G.setParty([]); Object.assign(G.S.flags, { wheelStopped: 1, barrelsOff: 1 }); G.refresh(); G.dbg.place(12, 9, 'up'); });
     await shot('wheel');
     // flint mini-game
     await E(() => { Object.assign(G.S.flags, { rockPlaced: 1, barrelsBack: 1, wheelFixed: 1, clouds: 1 }); G.refresh(); G.dbg.auto = false; window.__fl = G.flintGame(); });

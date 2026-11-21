@@ -24,6 +24,10 @@ const OUTDIR = path.join(__dirname, 'out') + path.sep; fs.mkdirSync(OUTDIR, { re
     await E(() => { Object.assign(G.S.flags, { hasSatchel: 1, teaMade: 1, teaDrunk: 1, cloak: 1, gotCompass: 1, hasLantern: 1, gotRations: 1, arrivedTown: 1, departed: 1, atBrushwood: 1, horsesDone: 1, lastBarrel: 1, pouchFilled: 1, paid: 1, ch1Done: 1, lanternReady: 1, gotStrongbox: 1 }); for (const k of ['move', 'goal', 'quests', 'menu', 'satchel', 'xp', 'coins', 'journal', 'light', 'hint', 'combine', 'use', 'compass']) G.S.flags['tip_' + k] = 1; G.S.inv = ['compass', 'flint', 'strongbox', 'guildKey', 'lanternReady']; G.S.q = { morning: 'done', totown: 'done', journey: 'done', brushwood: 'done', lantern: 'done' }; G.loadMap('brushwood', 'north'); G.save(); });
     await p.reload(); await p.waitForTimeout(1200); await E(() => { G.dbg.auto = true; }); await p.click('#tCont'); await E(() => G.dbg.idle()); await p.waitForTimeout(400); await E(() => G.dbg.idle());
     ok(await E(() => G.M.id) === 'forest_path', 'Chapter Two starts on the forest path');
+    ok(await E(() => G.dbg.drive && G.followers.filter(f => f.kind === 'rig').length === 2), 'Luminara drives her wagon, with Aldric and Ronald driving theirs behind');
+    await E(() => { G.dbg.auto = false; G.dbg.jump(); });
+    ok(/holding the reins/.test(await bubble()), "jumping while driving: \"Not while I'm holding the reins!\"");
+    await closeTalk();
     // the top of the path explains itself
     await E(() => { G.dbg.auto = false; }); await hold('up', 700);
     ok(/Brushwood is back the way we came/.test(await bubble()), 'walking back up the path: Luminara says Brushwood is behind them');
@@ -31,6 +35,8 @@ const OUTDIR = path.join(__dirname, 'out') + path.sep; fs.mkdirSync(OUTDIR, { re
     // walk down until the caravan stops
     await E(() => { G.dbg.auto = true; }); await hold('down', 1500); await E(() => G.dbg.idle()); await E(() => G.dbg.act('ronWagon')); await E(() => { G.dbg.auto = false; });
     ok(await E(() => G.S.flags.wheelStopped && G.S.flags.barrelsOff), 'the caravan stops and the barrels come off');
+    ok(await E(() => !G.dbg.drive && !G.followers.length), 'she climbs down from her wagon while the wheel is mended');
+    ok(await E(() => [/^myWagon/, /^aldWagon$/, /^ronWagon$/].every(re => G.M.objects.some(o => re.test(o.id || '') && (!o.if || o.if(G.S))))), 'the three wagons wait in a line, horses hitched');
     ok(await E(() => !G.M.objects.some(o => o.invisible && !o.door && o.solid !== false && (!o.if || o.if(G.S)))), 'no invisible walls on the path');
     // the bottom of the screen is the edge
     await E(() => G.dbg.place(9, 10, 'down')); await hold('down', 900);
@@ -47,6 +53,7 @@ const OUTDIR = path.join(__dirname, 'out') + path.sep; fs.mkdirSync(OUTDIR, { re
     // mend the wheel and carry on: the edge lifts
     await E(() => { G.dbg.auto = true; }); await E(() => G.dbg.act('ronWagon', 'flatRock')); await E(() => G.dbg.act('ronWagon')); await E(() => G.dbg.idle());
     ok(await E(() => !!G.S.flags.wheelFixed), 'the rock props the wagon and the wheel is mended');
+    ok(await E(() => !!G.dbg.drive && G.followers.length === 2), 'she climbs back up and drives on, the others behind');
     await E(() => { G.dbg.auto = false; G.dbg.place(14, 9, 'down'); }); await hold('down', 1500);
     ok((await tile())[1] > 13, 'after the wheel is mended, the path south is open');
   } catch (e) { errs.push('THREW ' + e.stack); }

@@ -21,7 +21,7 @@
     ] },
     wheel: { title: 'A Loose Wheel', parent: 'darkforest', desc: "Ronald's old wagon has a loose wheel. He needs the barrels off the back to mend it.", giver: 'Ronald', xp: 25, steps: [
       { t: "Take the barrels off Ronald's wagon", done: s => s.flags.barrelsOff, hint: ["The barrels are on the back of Ronald's wagon.", "{Act:Ronald's wagon}."] },
-      { t: 'Find something to prop up the wagon', done: s => s.flags.gotFlatRock || s.flags.rockPlaced, hint: ['Ronald needs something flat and sturdy. Round things roll.', 'There is a flat rock by the path, a little way back up the forest, on the right.'] },
+      { t: 'Find something to prop up the wagon', done: s => s.flags.gotFlatRock || s.flags.rockPlaced, hint: ['Ronald needs something flat and sturdy. Round things roll.', "There is a flat rock just off the path, up near Ronald's wagon on the right, peeking out from behind a pine."] },
       { t: 'Prop up the wagon', done: s => s.flags.rockPlaced, hint: ['Put it under the wagon.', `Open your satchel, choose the flat rock, {btn:Use…}, then {act:Ronald's wagon}.`] },
       { t: 'Load the barrels back on', done: s => s.flags.barrelsBack, hint: ['The wheel is mended.', "{Act:Ronald's wagon} again."] },
     ] },
@@ -35,14 +35,13 @@
 
   const ACT = {}, USE = {}, SELF = {};
 
-  // ---- the caravan: Luminara's horse and wagon, then Aldric and Ronald
+  // ---- the caravan: Luminara drives her own wagon; Aldric and Ronald drive theirs behind her
   function party() {
     const f = F();
     return [
-      { id: f.shod ? 'clover' : 'biscuit', char: f.shod ? 'horse' : 'horseCream', kind: 'horse', name: f.shod ? 'Clover' : 'Biscuit', gap: 20 },
-      { id: 'wagonF', sprite: 'wagon', kind: 'sprite', gap: 26 },
-      { id: 'aldric', char: 'aldric', kind: 'human', name: 'Aldric', color: '#4a7a9a', gap: 22 },
-      { id: 'ronald', char: 'ronald', kind: 'human', name: 'Ronald', color: '#7a5a3a', gap: 16 },
+      { kind: 'drive', id: f.shod ? 'clover' : 'biscuit', char: f.shod ? 'horse' : 'horseCream', name: f.shod ? 'Clover' : 'Biscuit' },
+      { id: 'aldric', kind: 'rig', char: 'horseDark', driver: 'aldric', name: 'Aldric', color: '#4a7a9a', gap: 90 },
+      { id: 'ronald', kind: 'rig', char: 'horseGrey', driver: 'ronald', name: 'Ronald', color: '#7a5a3a', gap: 90 },
     ];
   }
 
@@ -63,9 +62,11 @@
   // ================================================================ RONALD'S WHEEL
   async function wheelStop() {
     const f = F(); if (f.wheelStopped) return;
-    f.wheelStopped = true; G.setParty([]); G.refresh();
+    f.wheelStopped = true;
     await say('ronald', 'Stop!');
     await nar('Luminara reined her horse to a halt and turned around.');
+    // she climbs down from her wagon; the three wagons stand in a line on the path
+    await G.fade(true, 450); G.setParty([]); G.loadMap('forest_path', 'wheel'); await G.wait(150); await G.fade(false, 450);
     await L('What is the matter?');
     await say('ronald', 'My right wheel is loose.');
     await nar('His wagon was old and had broken down many times before.');
@@ -98,12 +99,13 @@
   }
   async function loadBarrels() {
     const f = F();
-    await G.fade(true, 350); G.sfx('door'); f.barrelsBack = true; f.wheelFixed = true; G.refresh(); await G.wait(300); await G.fade(false, 350);
+    await G.fade(true, 350); G.sfx('door'); f.barrelsBack = true; G.refresh(); await G.wait(300); await G.fade(false, 350);
     await nar('Once they finished repairing the wheel, they lifted the barrels onto the wagon once again and returned to their own wagons.');
+    // back up onto her wagon, at the front of the line
+    await G.fade(true, 400); f.wheelFixed = true; G.loadMap('forest_path', 'drive'); G.setParty(party()); await G.wait(150); await G.fade(false, 400);
     await L("Why don't we stay in Lesterfield tonight?");
     await nar('Aldric and Ronald nodded.');
     finishQuest('wheel');
-    G.setParty(party()); G.refresh();
     // the clouds come in
     f.clouds = true;
     await nar('As dark clouds began to form overhead, they blocked the sunlight from reaching the forest floor, making it appear to be later in the day than it actually was.');
@@ -120,6 +122,13 @@
     if (!f.rockPlaced) return say('aldric', pick(["Ron's wagon is older than the both of us put together.", "At least it's not as though the wheel has come off."]));
     return say('aldric', "Nearly there. Lesterfield before dark, I'd say.");
   };
+  // the other two wagons, waiting on the path while the wheel is mended
+  ACT.myWagon = async () => {
+    const name = F().shod ? 'Clover' : 'Biscuit';
+    await think(`My wagon. ${name} is resting in the harness. We'll be on our way again once Ronald's wheel is mended.`);
+  };
+  ACT.aldWagon = async () => nar("Aldric's wagon. Juniper, his dark bay, flicks an ear and waits patiently in the harness.");
+  USE.myWagon = USE.aldWagon = async (item) => { if (item !== 'flatRock') return false; await think("It's Ronald's wagon that needs propping up, not this one."); return true; };
   ACT.flatRock = async () => {
     F().gotFlatRock = true; G.give('flatRock'); G.refresh();
     await think('A flat, heavy stone. Sturdy, too.');
@@ -262,6 +271,7 @@
     forest_path: async () => {
       const f = F();
       if ((f.wheelFixed || !f.wheelStopped) && !(G.S.party && G.S.party.length)) G.setParty(party());
+      if (f.wheelStopped && !f.wheelFixed && G.S.party && G.S.party.length) G.setParty([]);  // the wagons are stopped: she's on foot
       if (!f.ch2Intro) await forestIntro();
       if (f.wispSeen && !f.wispFaded) { const [x, y] = WISP_SPOTS[((f.wispTries || 0) + WISP_SPOTS.length - 1) % WISP_SPOTS.length]; spawnWisp(x, y); }
     },
@@ -274,9 +284,9 @@
     const f = F();
     if (!f.wheelStopped) return ['Lead the caravan into the Dark Forest', 'forest_path', 14, 9];
     if (!f.wheelFixed) {
-      if (!f.barrelsOff) return ["Help Ronald: take the barrels off his wagon", 'forest_path', 13, 11];
-      if (!f.rockPlaced) return has('flatRock') ? ["Prop up Ronald's wagon", 'forest_path', 13, 11] : ["Find something to prop up Ronald's wagon", null];
-      return ["Load the barrels back onto Ronald's wagon", 'forest_path', 13, 11];
+      if (!f.barrelsOff) return ["Help Ronald: take the barrels off his wagon", 'forest_path', 14, 4];
+      if (!f.rockPlaced) return has('flatRock') ? ["Prop up Ronald's wagon", 'forest_path', 14, 4] : ["Find something to prop up Ronald's wagon", null];
+      return ["Load the barrels back onto Ronald's wagon", 'forest_path', 14, 4];
     }
     if (!f.lanternLit) return ['Light your lantern', null];
     if (!f.bogIntro) return ['Follow the path south through the Dark Forest', 'forest_path', 14, 47];
@@ -289,7 +299,7 @@
 
   STORY.register({
     n: 2, title: 'The Dark Forest', subtitle: 'Chapter Two · The Dark Forest', preview: true,
-    items: ITEMS, quests: QUESTS, act: ACT, use: USE, combos: COMBOS, gates: GATES, onEnter, self: SELF, zones: ZONES,
+    items: ITEMS, quests: QUESTS, act: ACT, use: USE, combos: COMBOS, gates: GATES, onEnter, self: SELF, zones: ZONES, caravan: party,
     intro: async () => { }, goal, onFlash,
     onLoad: async () => { if (!F().ch2Started) await begin(); },
     musicFor: id => (id === 'forest_path' || id === 'forest_bog') ? 'forest' : null,

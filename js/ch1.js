@@ -588,10 +588,9 @@
   function caravanParty() {
     const f = F();
     return [
-      { id: f.shod ? 'clover' : 'biscuit', char: f.shod ? 'horse' : 'horseCream', kind: 'horse', name: f.shod ? 'Clover' : 'Biscuit', gap: 20 },
-      { id: 'wagonF', sprite: 'wagon', kind: 'sprite', gap: 26 },
-      { id: 'aldric', char: 'aldric', kind: 'human', name: 'Aldric', color: '#4a7a9a', gap: 22 },
-      { id: 'ronald', char: 'ronald', kind: 'human', name: 'Ronald', color: '#7a5a3a', gap: 16 },
+      { kind: 'drive', id: f.shod ? 'clover' : 'biscuit', char: f.shod ? 'horse' : 'horseCream', name: f.shod ? 'Clover' : 'Biscuit' },
+      { id: 'aldric', kind: 'rig', char: 'horseDark', driver: 'aldric', name: 'Aldric', color: '#4a7a9a', gap: 90 },
+      { id: 'ronald', kind: 'rig', char: 'horseGrey', driver: 'ronald', name: 'Ronald', color: '#7a5a3a', gap: 90 },
     ];
   }
 
@@ -820,7 +819,8 @@
 
   STORY.register({
     n: 1, title: 'The Light-Bearer', subtitle: 'Chapter One · The Light-Bearer',
-    items: ITEMS, quests: QUESTS, act: ACT, use: USE, combos: COMBOS, gates: GATES, onEnter, self: SELF, speakers: SPEAKERS, zones: ZONES,
+    items: ITEMS, quests: QUESTS, act: ACT, use: USE, combos: COMBOS, gates: GATES, onEnter, self: SELF, speakers: SPEAKERS, zones: ZONES, caravan: caravanParty,
+    partyFor: id => id === 'brushwood' && !F().atBrushwood ? [] : null,   // the wagons pull up outside the tavern
     leaves: ['hill1', 'hill2', 'town1', 'town2', 'manor'],
     intro, goal,
     musicFor: id => id === 'road' ? 'town' : null,

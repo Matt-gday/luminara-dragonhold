@@ -19,6 +19,13 @@
 - **Ronald's wheel (21 Nov, from Matt's play-test):** the flat rock was completely hidden behind a pine; it now just
   pokes out. The invisible walls around the stopped wagons are gone: the screen's edges are the edges, and Luminara says
   why at each (`boundsFor` in js/ch2.js).
+- **The caravan (21 Nov, from Lisa's and Matt's notes):** Luminara now drives her own covered wagon on the road, at the
+  reins with her horse in front (Clover, or old Biscuit if Clover's shoe wasn't found). Aldric (Juniper) and Ronald
+  (Bramble) drive their wagons behind her. She climbs down at stops: Brushwood, and Ronald's wheel, where the three wagons
+  wait in a line with their horses hitched. Drawn in `GFX.rig` (front, back and side views); a party entry with
+  `kind: 'drive'` makes her drive, `kind: 'rig'` entries follow. Jumping while driving gets a line. Saves from before
+  swap in the new caravan when loaded. The book's wording already fits (she holds the reins), so no text changed.
+- **Compass:** with no particular place to go, the needle turns slowly round and round (it used to wag around north).
 - **Recent fixes:** black bars after the credits, the dark strip on the title, the hook-and-line hints (Fredrick's
   string now snaps on camera), the guild door colour in hints, empty-purse lines.
 

@@ -29,6 +29,8 @@ const G = (() => {
   let solid = null, low = null;  // collision grids
   let transitioning = false, fadeEl = $('fade');
   let trail = [];
+  // When the caravan is on the move, Luminara drives her own wagon: drive = { char: her horse, name }. Set with setParty.
+  let drive = null, driveJumpSaid = false;
   let flapGame = null;
   let lastSafe = null;
   let lightRegen = 0, heartRegen = 0;
@@ -117,6 +119,7 @@ const G = (() => {
   }
   function boxBlocked(x, y, air, self, hw = 5, hh = 5) {
     const pts = [[x - hw, y - hh], [x + hw, y - hh], [x - hw, y], [x + hw, y]];
+    if (hw > 8) pts.push([x, y - hh], [x, y]);   // a wide box (her wagon) checks its middle too
     for (const [px, py] of pts) { const [tx, ty] = tileAt(px, py); if (solidTile(tx, ty, air)) return { tile: [tx, ty] }; }
     for (const n of npcs) {
       if (n === self || n.def.fly || n.def.static && n.def.perch || n.hidden) continue;
@@ -616,12 +619,13 @@ const G = (() => {
       const l = Math.hypot(mx, my); mx /= l; my /= l;
       p.dir = Math.abs(mx) > Math.abs(my) + 0.01 ? (mx < 0 ? 'left' : 'right') : (my < 0 ? 'up' : 'down');
       const nx = p.x + mx * speed * dt, ny = p.y + my * speed * dt;
-      const bx = boxBlocked(nx, p.y, air, player), by = boxBlocked(p.x, ny, air, player);
+      const bw = drive ? 12 : 5;   // her wagon is wider than she is, so it keeps clear of tree trunks
+      const bx = boxBlocked(nx, p.y, air, player, bw), by = boxBlocked(p.x, ny, air, player, bw);
       if (!bx) p.x = nx; if (!by) p.y = ny;
       if ((bx || by) && !p.path.length) checkDoorBump(bx || by, mx, my);
       if ((bx && by) && p.path.length) { p.path = []; p.pendingAct = null; }
       p.t += dt * 8; p.frame = Math.floor(p.t) % 4;
-      if (p.z === 0) { stepT += dt; if (stepT > 0.28) { stepT = 0; AUDIO.sfx(M.particles === 'leaves' && GFX.hash(Math.floor(p.x / 16), Math.floor(p.y / 16), 4) < 0.3 ? 'leaf' : 'step'); } }
+      if (p.z === 0) { stepT += dt; if (stepT > (drive ? 0.36 : 0.28)) { stepT = 0; AUDIO.sfx(drive ? 'clop' : M.particles === 'leaves' && GFX.hash(Math.floor(p.x / 16), Math.floor(p.y / 16), 4) < 0.3 ? 'leaf' : 'step'); } }
       checkExits();
     } else { p.frame = 0; p.t = 0; }
     if (!p.scripted) keepInBounds(my);
@@ -639,7 +643,7 @@ const G = (() => {
         }
       }
     } else if (!inLowTile(p.x, p.y) && !boxBlocked(p.x, p.y, false, player)) { lastSafe = { x: p.x, y: p.y }; }
-    if (!trail.length || Math.hypot(p.x - trail[0].x, p.y - trail[0].y) >= 1) { trail.unshift({ x: p.x, y: p.y }); if (trail.length > 160) trail.pop(); }
+    if (!trail.length || Math.hypot(p.x - trail[0].x, p.y - trail[0].y) >= 1) { trail.unshift({ x: p.x, y: p.y }); if (trail.length > 300) trail.pop(); }
     // knockback
     if (p.kb) { const nx = p.x + p.kb.x * dt, ny = p.y + p.kb.y * dt; if (!boxBlocked(nx, ny, false, player)) { p.x = nx; p.y = ny; } p.kb.t -= dt; if (p.kb.t <= 0) p.kb = null; }
   }
@@ -696,6 +700,7 @@ const G = (() => {
     AUDIO.sfx(opts.silent ? null : 'door');
     await fade(true);
     loadMap(mapId, spawn);
+    const pf = STORY.partyFor && STORY.partyFor(mapId); if (pf) setParty(pf);   // e.g. the wagons are already parked when the screen fades in
     await wait(120);
     await fade(false);
     transitioning = false;
@@ -707,6 +712,7 @@ const G = (() => {
 
   function tryJump() {
     const p = player; if (p.z > 0) return;
+    if (drive) { if (!driveJumpSaid && !busy && !dialog) { driveJumpSaid = true; run(() => say('luminara', "Not while I'm holding the reins!")); } return; }
     p.vz = 165; p.z = 0.1; AUDIO.sfx('jump');
     // things that react to a jump
     for (const o of M.objects) if (o.jumpAct && visible(o) && Math.hypot(o.x * T + 8 - p.x, (o.y + 1) * T - p.y) < 22) { const it = o; setTimeout(() => run(() => STORY.interact({ kind: 'obj', id: it.id, o: it, act: it.jumpAct }, null)), 220); }
@@ -803,7 +809,9 @@ const G = (() => {
       const ox = f.x, oy = f.y;
       f.x += (tp.x - f.x) * Math.min(1, dt * 6); f.y += (tp.y - f.y) * Math.min(1, dt * 6);
       const dx = ahead.x - tp.x, dy = ahead.y - tp.y, moving = Math.hypot(f.x - ox, f.y - oy) > 0.15;
-      if (Math.abs(dx) + Math.abs(dy) > 0.5) f.dir = f.kind === 'human' ? (Math.abs(dx) > Math.abs(dy) ? (dx < 0 ? 'left' : 'right') : (dy < 0 ? 'up' : 'down')) : (dx < 0 ? 'left' : dx > 0 ? 'right' : f.dir);
+      if (f.kind === 'rig') { const a = trail[Math.max(0, idx - 14)], ddx = a.x - tp.x, ddy = a.y - tp.y; // wagons turn with a little patience, so they don't flicker
+        if (Math.abs(ddx) > Math.abs(ddy) * 1.4 + 1) f.dir = ddx < 0 ? 'left' : 'right'; else if (Math.abs(ddy) > Math.abs(ddx) * 1.4 + 1) f.dir = ddy < 0 ? 'up' : 'down'; }
+      else if (Math.abs(dx) + Math.abs(dy) > 0.5) f.dir = f.kind === 'human' ? (Math.abs(dx) > Math.abs(dy) ? (dx < 0 ? 'left' : 'right') : (dy < 0 ? 'up' : 'down')) : (dx < 0 ? 'left' : dx > 0 ? 'right' : f.dir);
       f.t = (f.t || 0) + dt; f.frame = moving ? Math.floor(f.t * 7) % 4 : 0;
     });
   }
@@ -904,7 +912,7 @@ const G = (() => {
       const y = (o.y + o.fh) * T - img.height + (o.dy || 0);
       cast(img, x, y + img.height - (o.kind === 'tree' ? 3 : 0));
     }
-    const cs = playerSprite(); cast(cs.frames[player.dir][player.z > 0 ? 1 : player.frame], player.x - cs.ax, player.y - cs.ay + cs.h - 2);
+    if (!drive) { const cs = playerSprite(); cast(cs.frames[player.dir][player.z > 0 ? 1 : player.frame], player.x - cs.ax, player.y - cs.ay + cs.h - 2); }
     for (const n of npcs) {
       if (n.hidden || n.def.fly || n.flying || n.def.perch || n.def.inHole) continue;
       const c = charFor(n.def);
@@ -920,14 +928,20 @@ const G = (() => {
     ctx.drawImage(shadowC, 0, 0); ctx.restore();
   }
   function shadow(x, y, w = 6, a = 0.3) { ctx.fillStyle = `rgba(0,0,0,${a})`; ctx.beginPath(); ctx.ellipse(x, y, w, w * 0.4, 0, 0, 7); ctx.fill(); }
-  function playerSprite() {
-    if (S.flags.playerSprite) return GFX.CHAR[S.flags.playerSprite];
-    if (!S.flags.cloak) return GFX.CHAR.luminaraNoCloak;
-    if (!S.flags.hasLantern) return GFX.CHAR.luminaraCloak;
-    return GFX.CHAR.luminara;
+  function playerSpriteName() { return S.flags.playerSprite || (!S.flags.cloak ? 'luminaraNoCloak' : !S.flags.hasLantern ? 'luminaraCloak' : 'luminara'); }
+  function playerSprite() { return GFX.CHAR[playerSpriteName()]; }
+  // A horse and covered wagon with its driver (x, y: the ground below the driver's seat).
+  function drawRig(x, y, horse, driver, dir, frame) {
+    const r = GFX.rig(horse, driver, dir, frame), left = Math.round(x - r.ax), top = Math.round(y - r.ay);
+    if (dir === 'down') { shadow(x, y, 21, 0.25); shadow(x, y + 21, 8, 0.25); }
+    else if (dir === 'up') shadow(x, y, 21, 0.25);
+    else { const w = r.c.width; shadow(left + (dir === 'right' ? 26 : w - 26), y, 26, 0.25); shadow(left + (dir === 'right' ? 80 : w - 80), y, 14, 0.25); }
+    ctx.drawImage(r.c, left, top);
   }
   function drawPlayer() {
-    const p = player; const c = playerSprite();
+    const p = player;
+    if (drive) return drawRig(p.x, p.y, drive.char, playerSpriteName(), p.dir, (p.frame >> 1) & 1);
+    const c = playerSprite();
     shadow(p.x, p.y, 6 - Math.min(3, p.z / 6), 0.3);
     if (p.invuln > 0 && Math.floor(time * 12) % 2) return;
     const fr = c.frames[p.dir][p.z > 0 ? 1 : p.frame];
@@ -971,6 +985,7 @@ const G = (() => {
     ctx.drawImage(fr, Math.round(n.x - c.ax), Math.round(n.y - c.ay - (n.z || 0)));
   }
   function drawFollower(f) {
+    if (f.kind === 'rig') return drawRig(f.x, f.y, f.char, f.driver, f.dir, (f.frame >> 1) & 1);
     if (f.kind === 'sprite') { const img = GFX.SPR[f.sprite]; shadow(f.x, f.y, 20, 0.25); ctx.drawImage(img, Math.round(f.x - img.width / 2), Math.round(f.y - img.height + 4)); return; }
     const c = GFX.CHAR[f.char];
     if (f.kind === 'horse') { const fr = c[f.dir === 'right' ? 'right' : 'left'][f.frame % 2]; shadow(f.x, f.y, 14, 0.25); ctx.drawImage(fr, Math.round(f.x - 18), Math.round(f.y - 28)); return; }
@@ -1068,7 +1083,7 @@ const G = (() => {
     const L = [];
     if (S.flags.lanternLit && !S.flags.playerSprite) {
       const r = (S.flags.lanternFull ? 62 : 40) + S.lvl * 3 + Math.sin(time * 9) * 1.5;
-      L.push({ x: player.x, y: player.y - 10 - player.z, r, c: '255,210,120' });
+      L.push({ x: player.x, y: player.y - (drive ? 16 : 10) - player.z, r, c: '255,210,120' });
     } else L.push({ x: player.x, y: player.y - 10, r: 22, c: '200,200,255' });
     for (const o of M.objects) {
       if (!visible(o)) continue;
@@ -1253,7 +1268,7 @@ const G = (() => {
     const d = dialog; if (!d || d.kind !== 'bubble') return;
     const e = d.ent; let x = VW / 2, y = VH * 0.35;
     if (e) {
-      const h = e === player ? 36 : e.kind === 'critter' ? 12 : e.kind === 'horse' ? 30 : e.kind === 'dragon' ? 26 : e.kind === 'owl' ? 18 : (e.char ? 26 : 38);
+      const h = e === player ? (drive ? 40 : 36) : e.kind === 'critter' ? 12 : e.kind === 'horse' ? 30 : e.kind === 'dragon' ? 26 : e.kind === 'owl' ? 18 : (e.char ? 26 : 38);
       x = e.x - cam.x; y = e.y - h - (e.z || 0) - cam.y + ((e.def && e.def.perch) || 0) - (e.char ? 10 : 0);
     }
     const W = stage.clientWidth, H = stage.clientHeight;
@@ -1796,13 +1811,14 @@ const G = (() => {
   // =================================================================== FOLLOWERS (dragon sisters)
   function setParty(list) {
     S.party = list.map(p => Object.assign({}, p));
-    followers = list.map(p => Object.assign({ x: player.x, y: player.y, dir: 'down', t: Math.random() * 3, frame: 0, color: '#7a5530', voice: 1 }, p));
+    drive = list.find(p => p.kind === 'drive') || null; driveJumpSaid = false;
+    followers = list.filter(p => p.kind !== 'drive').map(p => Object.assign({ x: player.x, y: player.y, dir: 'down', t: Math.random() * 3, frame: 0, color: '#7a5530', voice: 1 }, p));
     seedTrail();
   }
   // Lay the trail out behind the player (followers walk along it, one pixel per point), and put followers in place.
   function seedTrail() {
     const d = { up: [0, 1], down: [0, -1], left: [1, 0], right: [-1, 0] }[player.dir] || [0, -1];
-    trail = []; for (let i = 0; i < 160; i++) trail.push({ x: player.x + d[0] * i, y: player.y + d[1] * i });
+    trail = []; for (let i = 0; i < 300; i++) trail.push({ x: player.x + d[0] * i, y: player.y + d[1] * i });
     let idx = 0; followers.forEach(f => { idx += f.gap || 16; const tp = trail[Math.min(trail.length - 1, idx)]; f.x = tp.x; f.y = tp.y; f.dir = player.dir; });
   }
   function setFollowers(list) { followers = list.map(ch => ({ id: ch, char: ch, x: player.x, y: player.y, dir: 'right', t: Math.random() * 3, name: GFX.CHAR[ch] ? ch[0].toUpperCase() + ch.slice(1) : ch, color: ch === 'sianna' ? '#1f8ea8' : ch === 'yennefer' ? '#b8901a' : '#a02a80', voice: 1.6, kind: 'dragon' })); }
@@ -2158,14 +2174,15 @@ const G = (() => {
     autosaveT = 0;
     mode = 'play';
     MAPS.reset();
-    held = null; setHeld(null); followers = [];
+    held = null; setHeld(null); followers = []; drive = null;
     if (inputMode === 'pad') setTimeout(() => tipLater('pad'), 0); // the controller tip, once S exists
     if (saved) {
       S = Object.assign(newState(), saved);
       S.met = S.met || {};
       if (STORY.advance) STORY.advance(S);
       loadMap(S.map, { x: S.x, y: S.y, dir: S.dir });
-      if (S.party && S.party.length) setParty(S.party);
+      // saves from before Luminara drove her own wagon had a loose horse and wagon following her: swap in the new caravan
+      if (S.party && S.party.length) setParty(S.party.some(p => p.sprite === 'wagon') && STORY.caravan && STORY.caravan() || S.party);
       hud();
       run(async () => { if (STORY.onLoad) await STORY.onLoad(); if (STORY.onEnter) await STORY.onEnter(S.map); });
     } else {
@@ -2199,7 +2216,7 @@ const G = (() => {
       player.x = e.x * T + 8; player.y = e.y * T + 12; checkExits(); await wait(60); await DBG.idle();
     },
     place(tx, ty, dir) { player.x = tx * T + 8; player.y = ty * T + 12; if (dir) player.dir = dir; lastSafe = { x: player.x, y: player.y }; },
-    jump() { tryJump(); }, keys, get input() { return inputMode; }, get busy() { return busy; }, get dialog() { return !!dialog; }, combine: (a, b) => run(() => STORY.combine(a, b)),
+    jump() { tryJump(); }, keys, get input() { return inputMode; }, get drive() { return drive; }, get busy() { return busy; }, get dialog() { return !!dialog; }, combine: (a, b) => run(() => STORY.combine(a, b)),
     cam: () => ({ x: cam.x, y: cam.y }), get player() { return player; }, get npcs() { return npcs; }, get mode() { return mode; }, walkable, findPath, tileAt,
   };
   // auto-advance dialogue during automated tests

@@ -70,6 +70,9 @@ then `docs/chapter-2-plan.md` (the design for the chapter being built).
   Brushwood Tavern. **Invented for the game:** Mistress Pell (baker), Marigold (fruit), Osric (spices, sells the
   sunstone), Tilda (cloth, gives the wick), Brenna (Iron Cauldron cook, gives tallow), Bertram and his horse Clover,
   Pip and Nell (the ball), Old Maud (golden leaves, gives Mother's thimble), Pemberton, Hamish, Old Tom, a tiny fox.
+- **The caravan:** on the road Luminara drives her own covered wagon (horse: Clover, or Biscuit if Clover wasn't
+  shod); Aldric (Juniper) and Ronald (Bramble) drive theirs behind her. She climbs down at stops. Never show a loose
+  horse or wagon trailing behind her on foot (Lisa noticed that and found it odd).
 - **Chapter Two onwards (book 3–6), coming:** Lorden (Lesterfield Tavern), Jorren (the strongbox test), Augustus "Gus"
   (stablemaster, childhood friend), **Gwendolyn "Gwen"** (golden hair, blue eyes; Luminara's dear friend at the
   Lesterfield Inn; `friendName` in js/game.js), Helena, Madame Beatrice and her crow, the bookkeeper of the Enchanted

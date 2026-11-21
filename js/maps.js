@@ -354,19 +354,26 @@ const MAPS = (() => {
     m.spr(S.flatRock, 19, 5, { dx: 10, solid: false, id: 'flatRock', name: 'Flat Rock', act: 'flatRock', if: s => !s.flags.gotFlatRock });
     m.spr(S.rock, 7, 9, { id: 'roundRock1', name: 'Round Rock', look: 'A round, mossy rock. It would roll right out from under anything.' });
     m.spr(S.rock, 22, 8, { id: 'roundRock2', name: 'Round Rock', look: 'Smooth and round. Not much use for propping anything up.' });
-    // Ronald's wagon, stopped across the path with a loose wheel; the barrels beside it once unloaded
+    // While Ronald's wheel is mended, the three wagons stand in a line on the path facing south, horses still hitched:
+    // Luminara's at the front, Aldric's behind it, and Ronald's at the back (the barrels beside it once unloaded).
     const stopped = s => s.flags.wheelStopped && !s.flags.wheelFixed;
-    m.spr(S.wagon, 12, 11, { fw: 3, id: 'ronWagon', name: "Ronald's Wagon", act: 'ronWagon', if: stopped });
-    m.spr(S.flatRock, 13, 12, { solid: false, decal: true, id: 'rockUnder', if: s => stopped(s) && s.flags.rockPlaced });
-    for (const [x, y] of [[16, 10], [17, 10], [16, 11]]) m.spr(S.barrel, x, y, { if: s => stopped(s) && s.flags.barrelsOff && !s.flags.barrelsBack });
-    m.npc({ id: 'ronaldF', char: 'ronald', x: 11, y: 10, dir: 'right', name: 'Ronald', act: 'ronaldF', color: '#7a5a3a', voice: 0.7, if: stopped });
-    m.npc({ id: 'aldricF', char: 'aldric', x: 18, y: 9, dir: 'left', name: 'Aldric', act: 'aldricF', color: '#3a6a9a', voice: 1.05, if: stopped });
+    const parked = (horse, gy, o) => { const r = GFX.rig(horse, null, 'down'); // gy: the ground line below the bench, in pixels
+      return m.spr(r.c, 14, gy / T - 2, Object.assign({ fw: 2, fh: 2, dx: 232 - r.ax - 14 * T, dy: r.c.height - r.ay }, o)); };
+    parked('horse', 176, { id: 'myWagonC', name: 'Your Wagon', act: 'myWagon', if: s => stopped(s) && s.flags.shod });
+    parked('horseCream', 176, { id: 'myWagonB', name: 'Your Wagon', act: 'myWagon', if: s => stopped(s) && !s.flags.shod });
+    parked('horseDark', 112, { id: 'aldWagon', name: "Aldric's Wagon", act: 'aldWagon', if: stopped });
+    parked('horseGrey', 64, { id: 'ronWagon', name: "Ronald's Wagon", act: 'ronWagon', if: stopped });
+    m.spr(S.flatRock, 13, 3, { solid: false, noShadow: true, dx: 6, dy: 3, sortOff: 1, id: 'rockUnder', if: s => stopped(s) && s.flags.rockPlaced });
+    for (const [x, y] of [[17, 2], [18, 2], [17, 3]]) m.spr(S.barrel, x, y, { if: s => stopped(s) && s.flags.barrelsOff && !s.flags.barrelsBack });
+    m.npc({ id: 'ronaldF', char: 'ronald', x: 12, y: 4, dir: 'right', name: 'Ronald', act: 'ronaldF', color: '#7a5a3a', voice: 0.7, if: stopped });
+    m.npc({ id: 'aldricF', char: 'aldric', x: 17, y: 6, dir: 'left', name: 'Aldric', act: 'aldricF', color: '#3a6a9a', voice: 1.05, if: stopped });
     m.keep(9, 0, 10, 14); m.keepRoad('fpath');
     m.scatter((x, y) => m.pine(x, y), 150, [0, 0, 28, 48], new Set(['forest', 'mud']), 211, 2);
     m.zone(0, 7, 28, 2, 'wheelStop', s => !s.flags.wheelStopped);
     m.zone(0, 30, 28, 2, 'luminaWisp', s => s.flags.lanternLit && !s.flags.wispSeen);
     m.exit(13, 47, 4, 1, 'forest_bog', 'north', { gate: 'toBog' });
     m.spawn('north', 14, 2, 'down'); m.spawn('south', 14, 45, 'up');
+    m.spawn('wheel', 12, 9, 'up'); m.spawn('drive', 14, 10, 'down');   // climbing down from her wagon, and back up
     return m;
   };
 

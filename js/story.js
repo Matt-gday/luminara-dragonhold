@@ -135,10 +135,13 @@ const STORY = (() => {
     return h + '</div>';
   }
 
+  function caravan() { const c = chapter(); return c.caravan ? c.caravan() : null; }
+  function partyFor(id) { const c = chapter(); return c.partyFor ? c.partyFor(id) : null; }
+
   return {
     register, H, ITEMS, QUESTS, SPEAKERS, CHAPTERS, LINKS, ACT, USE,
     get TOTAL_LEAVES() { return LEAVES.length; },
     get chapterInfo() { return chapter(); },
-    intro, interact, combine, useSelf, zone, gate, onEnter, onLoad, onFlash, particlesFor, nextChapter, advance, objective, compass, journal, summaryHTML, musicFor, tintFor, darkFor, boundsFor,
+    intro, interact, combine, useSelf, zone, gate, onEnter, onLoad, onFlash, particlesFor, nextChapter, advance, objective, compass, journal, summaryHTML, musicFor, tintFor, darkFor, boundsFor, caravan, partyFor,
   };
 })();

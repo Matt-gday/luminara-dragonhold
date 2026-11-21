@@ -445,8 +445,56 @@ const GFX = (() => {
       p.r(3, 4, 1, 4, '#f4ece0');
       p.outline(OUT); return p;
     });
-    return { left: fr.map(p => p.c), right: fr.map(p => p.flipped()), w: 36, h: 30 };
+    return { left: fr.map(p => p.c), right: fr.map(p => p.flipped()), w: 36, h: 30, b, m };
   }
+  // The same horse seen from the front (walking towards you, in harness) and from behind. Two frames: legs step.
+  function horseFront(b, m) {
+    return [0, 1].map(f => {
+      const p = new Pix(18, 31), bd = dk(b[1], 0.3);
+      p.e(9, 18, 7.5, 5.5, b[1]); p.e(9, 17, 6.5, 4.5, b[0]);                          // chest and shoulders
+      const lift = [f ? 2 : 0, f ? 0 : 2];                                                // one foreleg lifts as it steps
+      [[4, lift[0]], [11, lift[1]]].forEach(([x, l]) => { p.r(x, 21, 3, 7 - l, b[0]); p.r(x, 21, 1, 7 - l, b[2]); p.r(x, 26 - l, 3, 2, m); p.r(x, 28 - l, 3, 2, '#3a2a20'); });
+      p.r(8, 21, 2, 6, bd);                                                               // the far legs, in shadow
+      p.e(9, 15, 7, 2.2, '#5a3020'); p.r(3, 14, 12, 1, P.gold[0]);                         // harness collar
+      p.poly([[5, 2], [13, 2], [13.5, 11], [11.5, 14.5], [6.5, 14.5], [4.5, 11]], b[0]);   // long face
+      p.poly([[5, 2], [6.5, 2], [6, 12], [5, 11]], b[2]);
+      p.r(8, 3, 2, 9, '#f4ece0');                                                          // white blaze
+      p.e(9, 13, 3.2, 1.8, b[1]); p.p(8, 13, '#2a1a10'); p.p(10, 13, '#2a1a10');            // muzzle, nostrils
+      p.poly([[4.5, 3], [4.5, -1], [7, 2]], b[0]); p.poly([[11, 2], [13.5, -1], [13.5, 3]], b[0]); // ears
+      p.r(7, 0, 4, 3, m); p.p(9, 3, m);                                                    // forelock
+      p.p(5, 6, '#1c1424'); p.p(12, 6, '#1c1424');                                          // eyes
+      p.ln(5, 9, 12, 9, '#5a3020'); p.p(4, 9, P.gold[0]); p.p(13, 9, P.gold[0]);             // bridle
+      p.outline(OUT); return p.c;
+    });
+  }
+  function horseBack(b, m) {
+    return [0, 1].map(f => {
+      const p = new Pix(20, 30), md = dk(m, 0.18);
+      [[4, f ? 2 : 0], [13, f ? 0 : 2]].forEach(([x, l]) => { p.r(x, 20, 3, 7 - l, b[1]); p.r(x, 27 - l, 3, 2, '#3a2a20'); });
+      p.e(10, 15, 8, 6.5, b[0]); p.e(10, 12, 6.5, 3, b[2]); p.e(10, 19, 7, 2.5, b[1]);     // rump
+      p.r(9, 13, 3, 9, md); p.r(9, 13, 2, 10, m); p.p(10, 23, md);                          // tail
+      p.poly([[7, 9], [13, 9], [12, 3], [8, 3]], b[0]); p.r(9, 2, 2, 9, m);                 // neck and mane
+      p.poly([[7, 3], [7.5, -1], [9, 2]], b[0]); p.poly([[11, 2], [12.5, -1], [13, 3]], b[0]); // ears
+      p.r(5, 10, 10, 1, '#5a3020');                                                         // harness strap
+      p.outline(OUT); return p.c;
+    });
+  }
+  // A covered wagon seen from the front (the driver's bench in front of the opening) and from behind.
+  const WAGON_FRONT = () => mk(44, 38, p => {
+    p.r(1, 22, 5, 15, '#5a3a1e'); p.r(38, 22, 5, 15, '#5a3a1e'); p.r(2, 23, 2, 13, '#8a5a30'); p.r(39, 23, 2, 13, '#8a5a30');
+    p.r(5, 22, 34, 11, '#8a5a30'); p.r(5, 22, 34, 2, '#a87440'); p.r(5, 27, 34, 1, '#6a4426');
+    p.e(22, 13, 20, 12, '#e8dcc0'); p.r(2, 13, 40, 10, '#e8dcc0'); p.e(22, 12, 18, 10, '#f4ecd8');
+    p.e(22, 15, 13, 9, '#3a2a24'); p.r(9, 15, 26, 8, '#3a2a24');                            // the dark inside
+    for (const x of [12, 22, 32]) p.r(x, 4, 1, 3, '#d8ccb0');                                 // the hoops of the cover
+    p.r(20, 33, 4, 5, '#6a4426');                                                           // the shaft to the horse
+  });
+  const WAGON_BACK = () => mk(44, 38, p => {
+    p.r(1, 22, 5, 15, '#5a3a1e'); p.r(38, 22, 5, 15, '#5a3a1e'); p.r(2, 23, 2, 13, '#8a5a30'); p.r(39, 23, 2, 13, '#8a5a30');
+    p.r(5, 21, 34, 12, '#8a5a30'); p.r(5, 21, 34, 2, '#a87440'); for (let x = 12; x < 38; x += 8) p.r(x, 23, 1, 10, '#6a4426');
+    p.e(22, 13, 20, 12, '#e8dcc0'); p.r(2, 13, 40, 9, '#e8dcc0'); p.e(22, 11, 17, 9, '#f4ecd8');
+    p.e(22, 15, 6, 5, '#3a2a24');                                                           // the drawn-up back opening
+    for (const [x, y] of [[13, 9], [31, 9], [12, 18], [32, 18]]) p.ln(22, 15, x, y, '#c8bca0');
+  });
   function deerUpright() {
     return [0, 1].map(f => {
       const p = new Pix(18, 34), c = '#3a3048', d = '#2a2234';
@@ -1027,5 +1075,44 @@ const GFX = (() => {
   function deadSprite(seed) { const k = 'dead' + seed % 3; return cache[k] || (cache[k] = deadTree(300 + seed % 3)); }
   function houseSprite(key, o) { return cache['h' + key] || (cache['h' + key] = house(o)); }
 
-  return { human, dragon, T, Pix, RNG, hash, cnv, mk, flipC, tint, renderGround, GROUND, SPR, ICONS, CHAR, buildCharacters, treeSprite, pineSprite, pineDark, deadSprite, houseSprite, house, signIcon, P };
+  // A horse hitched to a covered wagon, with a driver on the bench (or nobody, when it's parked), facing any way.
+  // Returns { c: canvas, ax, ay }: (ax, ay) is the point on the ground below the driver, which is where the
+  // driver "stands" in the world, so speech bubbles and the lantern line up with her.
+  function rig(horseName, driverName, dir = 'down', frame = 0) {
+    const key = ['rig', horseName, driverName, dir, frame].join('|'); if (cache[key]) return cache[key];
+    const H = CHAR[horseName], D = driverName ? CHAR[driverName] : null;
+    H.front = H.front || horseFront(H.b, H.m); H.back = H.back || horseBack(H.b, H.m);
+    cache.wagonFront = cache.wagonFront || WAGON_FRONT(); cache.wagonBack = cache.wagonBack || WAGON_BACK();
+    const seat = (p, img, x, y, rows) => p.g.drawImage(img, 0, 0, 22, rows, x, y, 22, rows);   // the top of a person, sitting
+    let out;
+    if (dir === 'down') {
+      const p = new Pix(44, 60);
+      p.g.drawImage(cache.wagonFront, 0, 0);
+      if (D) seat(p, D.frames.down[0], 11, 0, 27);
+      p.r(7, 25, 30, 3, '#6a4426'); p.r(7, 25, 30, 1, '#a87440'); p.r(6, 28, 32, 1, OUT);    // the driver's bench
+      p.g.drawImage(H.front[frame % 2], 13, 29);
+      if (D) { p.ln(16, 21, 18, 37, '#3a2416'); p.ln(28, 21, 26, 37, '#3a2416'); }           // reins
+      out = { c: p.c, ax: 22, ay: 38 };
+    } else if (dir === 'up') {
+      const p = new Pix(44, 58);
+      p.g.drawImage(H.back[frame % 2], 12, 0);
+      p.g.drawImage(cache.wagonBack, 0, 20);
+      out = { c: p.c, ax: 22, ay: 57 };
+    } else {
+      const p = new Pix(98, 42);
+      p.g.drawImage(SPR.wagon, 0, 2);
+      for (const cx of [9, 41]) {                                                          // spokes turn as it rolls
+        if (frame % 2) { p.ln(cx - 3, 29, cx + 3, 35, '#3a2416'); p.ln(cx - 3, 35, cx + 3, 29, '#3a2416'); }
+        else { p.r(cx - 4, 32, 9, 1, '#3a2416'); p.r(cx, 28, 1, 9, '#3a2416'); }
+      }
+      p.ln(50, 28, 84, 24, '#6a4426'); p.ln(50, 29, 84, 25, '#5a3a1e');                     // the shaft to the harness
+      p.g.drawImage(H.right[frame % 2], 62, 11);
+      if (D) { seat(p, D.frames.right[0], 41, 0, 27); p.r(41, 25, 20, 3, '#6a4426'); p.r(41, 25, 20, 1, '#a87440'); p.r(40, 28, 22, 1, OUT); p.ln(57, 17, 91, 18, '#3a2416'); }
+      out = { c: p.c, ax: 52, ay: 38 };
+      if (dir === 'left') out = { c: p.flipped(), ax: 98 - 52, ay: 38 };
+    }
+    return (cache[key] = out);
+  }
+
+  return { human, dragon, T, Pix, RNG, hash, cnv, mk, flipC, tint, renderGround, GROUND, SPR, ICONS, CHAR, buildCharacters, treeSprite, pineSprite, pineDark, deadSprite, houseSprite, house, signIcon, P, rig };
 })();
