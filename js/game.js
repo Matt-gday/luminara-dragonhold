@@ -1146,7 +1146,7 @@ const G = (() => {
     ctx.fillStyle = '#8a7a6a'; ctx.fillRect(cx - 0.5, cy - 9, 1, 2); ctx.fillRect(cx - 0.5, cy + 7, 1, 2); ctx.fillRect(cx - 9, cy - 0.5, 2, 1); ctx.fillRect(cx + 7, cy - 0.5, 2, 1);
     let a;
     if (tgt) a = Math.atan2(tgt.y * T + 8 - player.y, tgt.x * T + 8 - player.x);
-    else a = -Math.PI / 2 + Math.sin(time * 2) * 0.6;
+    else a = -Math.PI / 2 + time * 0.8; // no set place: turn slowly round and round, so it never looks like it's pointing somewhere
     const ex = Math.cos(a), ey = Math.sin(a);
     ctx.strokeStyle = '#c03030'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(cx + ex * 7, cy + ey * 7); ctx.stroke();
     ctx.strokeStyle = '#3a3a44'; ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(cx - ex * 5, cy - ey * 5); ctx.stroke();
@@ -1304,7 +1304,7 @@ const G = (() => {
     use: () => ({ target: '#bar [data-k=inv]', title: 'Using an item', text: isPad() ? `Open your <b>Satchel</b> ${glyph('inv')} → choose the item → choose <b>Use…</b> → then walk up to the thing you want to use it on and press ${glyph('act')}.`
       : ctl('Open your <b>Satchel</b> → {act:the item} → {btn:Use…} → then {act:the thing you want to use it on}.') }),
     combine: () => ({ target: '#bar [data-k=inv]', title: 'Combining items', text: `Some items work better together! Open your <b>Satchel</b>${isPad() ? ' ' + glyph('inv') : ''} → ${ctl(isPad() ? 'choose one item → {btn:Combine…} → then choose the other item.' : '{act:one item} → {btn:Combine…} → then {act:the other item}.')}` }),
-    compass: () => ({ target: 'compass', title: "Father's compass", text: 'This compass is special — it does <b>not</b> point north. Its <b style="color:#c03030">red needle</b> always points the way to your <b>next goal</b>. Follow it through doors and paths, and when you are in the right place it points straight at it.' }),
+    compass: () => ({ target: 'compass', title: "Father's compass", text: 'This compass is special — it does <b>not</b> point north. Its <b style="color:#c03030">red needle</b> always points the way to your <b>next goal</b>. Follow it through doors and paths, and when you are in the right place it points straight at it. If it turns slowly round and round, there is no particular place to head for just now.' }),
     jump: () => ({ target: isTouch() ? '#tbtns [data-b=jump]' : null, title: 'Jumping', text: ctl('{Press:jump} to leap — over logs, across streams, or up at things that are just out of reach.') }),
     light: () => ({ target: '#hLightRow', title: 'Lantern light', text: `This bar shows your lantern's light. ${ctl('{Press:light}')} to hold your lantern high and light up the darkness further. It uses a little light, and refills by itself.` }),
     hearts: () => ({ target: '#hHearts', title: 'Courage', text: `These hearts are Luminara's courage. Goblinites take one away if they catch her — keep them back with ${keyName('light', 'Raise Light')}. Hearts come back slowly, and if they run out she just picks herself up again.` }),
